@@ -1,26 +1,682 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+  --background: #f0fdf4;
+  --surface: #ffffff;
+  --surface-2: #dcfce7;
+  --border: #bbf7d0;
+  --border-strong: #86efac;
+  --foreground: #374151;
+  --muted: #6b7280;
+  --muted-2: #9ca3af;
+  --primary: #16a34a;
+  --primary-foreground: #ffffff;
+  --primary-soft: #dcfce7;
+  --accent: #4ade80;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --ring: #22c55e;
+  --shadow: 0 1px 2px rgba(22, 163, 74, 0.06), 0 6px 24px rgba(22, 163, 74, 0.09);
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #071a0f;
+  --surface: #0e2a19;
+  --surface-2: #163823;
+  --border: #1e4d30;
+  --border-strong: #276641;
+  --foreground: #e8f5ee;
+  --muted: #86b89a;
+  --muted-2: #5f8971;
+  --primary: #4ade80;
+  --primary-foreground: #071a0f;
+  --primary-soft: #14532d;
+  --accent: #86efac;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #f87171;
+  --ring: #4ade80;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.40), 0 8px 24px rgba(0, 0, 0, 0.50);
+}
+
+/* Admin and Teacher portals share the same white + blue palette as the main
+   site for a consistent EduPortal identity. We keep the class hooks so future
+   per-role tweaks (e.g. a subtle accent shift) are easy to layer in. */
+.admin-theme,
+.teacher-theme {
+  background-color: var(--background);
+  background-image:
+    radial-gradient(700px 500px at 100% -10%, color-mix(in oklab, var(--primary) 14%, transparent), transparent),
+    radial-gradient(600px 400px at -10% 100%, color-mix(in oklab, var(--accent) 14%, transparent), transparent);
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-muted: var(--muted);
+  --color-muted-2: var(--muted-2);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-accent: var(--accent);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: var(--border);
 }
 
+html,
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background-image:
+    radial-gradient(800px 600px at 100% -10%, color-mix(in oklab, var(--primary) 14%, transparent), transparent),
+    radial-gradient(700px 500px at -10% 100%, color-mix(in oklab, var(--accent) 12%, transparent), transparent);
+  background-attachment: fixed;
+}
+
+/* Scrollbar — Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--muted) 28%, transparent) transparent;
+}
+
+/* Scrollbar — WebKit / Chromium */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--muted) 22%, transparent);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background-color 0.2s ease;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklab, var(--primary) 55%, transparent);
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:active {
+  background: color-mix(in oklab, var(--primary) 75%, transparent);
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Thinner variant for compact areas (sidebars, dropdowns) */
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  border: 1px solid transparent;
+}
+
+/* Auto-hide: thumb only appears on hover / scroll */
+.scrollbar-fade::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+.scrollbar-fade:hover::-webkit-scrollbar-thumb,
+.scrollbar-fade:focus-within::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--muted) 30%, transparent);
+  background-clip: padding-box;
+}
+
+/* Animations */
+/* Blob morph — for decorative background shapes */
+@keyframes blobMorph {
+  0%, 100% { border-radius: 60% 40% 55% 45% / 50% 60% 40% 50%; transform: scale(1) rotate(0deg); }
+  33%       { border-radius: 40% 60% 45% 55% / 60% 40% 60% 40%; transform: scale(1.04) rotate(3deg); }
+  66%       { border-radius: 55% 45% 60% 40% / 40% 55% 45% 60%; transform: scale(0.97) rotate(-2deg); }
+}
+/* Wave — horizontal repeating wave for section dividers */
+@keyframes waveDrift {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+/* Gentle bob — more pronounced than float-slow */
+@keyframes bob {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%       { transform: translateY(-12px) rotate(1.5deg); }
+}
+/* Stagger reveal — children use animation-delay with this */
+@keyframes revealUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+/* Pulse ring — expanding ring for CTAs / active indicators */
+@keyframes pulseRing {
+  0%   { transform: scale(1); opacity: 0.4; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+/* Scan line — subtle progress sweep */
+@keyframes scanLine {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulseDot { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes typing { 0% { transform: translateY(0); } 50% { transform: translateY(-3px); } 100% { transform: translateY(0); } }
+@keyframes float-slow { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(24px) scale(0.97); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes popIn {
+  0%   { opacity: 0; transform: scale(0.85); }
+  60%  { opacity: 1; transform: scale(1.04); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes checkDraw {
+  from { stroke-dashoffset: 24; }
+  to   { stroke-dashoffset: 0; }
+}
+@keyframes ringExpand {
+  0%   { transform: scale(0.6); opacity: 0; }
+  50%  { opacity: 0.4; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes drawStroke {
+  from { stroke-dashoffset: var(--draw-length, 200); }
+  to   { stroke-dashoffset: 0; }
+}
+@keyframes spinSlow {
+  to { transform: rotate(360deg); }
+}
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+@keyframes chatPop {
+  0%   { opacity: 0; transform: translateY(8px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes accordionDown {
+  from { opacity: 0; max-height: 0; }
+  to   { opacity: 1; max-height: 360px; }
+}
+
+@keyframes selectDropIn {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.select-dropdown-in { animation: selectDropIn 0.18s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+.fade-in { animation: fadeIn 0.35s ease-out both; }
+.pulse-dot { animation: pulseDot 1.4s ease-in-out infinite; }
+.typing-dot { animation: typing 1s ease-in-out infinite; }
+.toast-in { animation: toastIn 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.pop-in { animation: popIn 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+.check-draw { stroke-dasharray: 24; animation: checkDraw 0.5s ease-out 0.15s both; }
+.ring-expand { animation: ringExpand 1.4s ease-out infinite; }
+.slide-up { animation: slideUp 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.draw-stroke { animation: drawStroke 1.4s ease-out forwards; }
+.spin-slow { animation: spinSlow 22s linear infinite; }
+.chat-pop { animation: chatPop 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.accordion-down { animation: accordionDown 0.32s ease-out both; }
+.gradient-animated {
+  background-size: 200% 200%;
+  animation: gradientShift 8s ease-in-out infinite;
+}
+.blob-morph { animation: blobMorph 12s ease-in-out infinite; }
+.wave-drift  { animation: waveDrift 18s linear infinite; }
+.bob         { animation: bob 4s ease-in-out infinite; }
+.reveal-up   { animation: revealUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.pulse-ring  { animation: pulseRing 1.6s ease-out infinite; }
+.scan-line   { animation: scanLine 2s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-in, .slide-up, .chat-pop, .pop-in, .toast-in, .accordion-down,
+  .pulse-dot, .typing-dot, .ring-expand, .spin-slow, .gradient-animated,
+  .check-draw, .draw-stroke, .blob-morph, .wave-drift, .bob,
+  .reveal-up, .pulse-ring, .scan-line, .select-dropdown-in {
+    animation: none !important;
+  }
+}
+
+/* OpenStreetMap iframe — soften the bright map tiles when the rest of the
+   site is in dark mode. Filter the iframe so the map blends with the theme
+   without losing legibility. */
+.dark .contact-map-frame {
+  filter: invert(0.92) hue-rotate(180deg) brightness(0.95) contrast(0.95) saturate(0.85);
+}
+
+/* Link pending hint — used with next/link's useLinkStatus.
+   Always rendered so it reserves space (no layout shift); only becomes
+   visible if navigation actually takes longer than 100ms. */
+.link-hint {
+  display: inline-block;
+  width: 0.5em;
+  height: 0.5em;
+  margin-left: 0.4em;
+  border-radius: 9999px;
+  background: currentColor;
+  opacity: 0;
+  visibility: hidden;
+  vertical-align: middle;
+}
+.link-hint.is-pending {
+  visibility: visible;
+  animation-name: linkHintFadeIn, linkHintPulse;
+  animation-duration: 200ms, 1s;
+  animation-delay: 100ms, 100ms;
+  animation-timing-function: ease, ease-in-out;
+  animation-iteration-count: 1, infinite;
+  animation-fill-mode: forwards, none;
+}
+@keyframes linkHintFadeIn { to { opacity: 0.55; } }
+@keyframes linkHintPulse  { 50% { opacity: 0.2; } }
+
+/* Top-level navigation progress bar driven by any pending link */
+@keyframes navProgressIndeterminate {
+  0%   { transform: translateX(-60%); }
+  100% { transform: translateX(160%); }
+}
+.nav-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 60;
+  background: transparent;
+  pointer-events: none;
+}
+.nav-progress::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, var(--primary), var(--accent), transparent);
+  transform: translateX(-60%);
+  animation: navProgressIndeterminate 1.1s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .link-hint.is-pending { animation: none !important; opacity: 0.45; }
+  .nav-progress::after  { animation: none !important; }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--muted) 18%, transparent), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s linear infinite;
+}
+
+.glass {
+  background: color-mix(in oklab, var(--surface) 80%, transparent);
+  backdrop-filter: saturate(140%) blur(10px);
+  -webkit-backdrop-filter: saturate(140%) blur(10px);
+}
+
+.card-shadow {
+  box-shadow: var(--shadow);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.gradient-border {
+  position: relative;
+}
+.gradient-border::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), color-mix(in oklab, var(--primary) 70%, var(--accent) 30%));
+  color: var(--primary-foreground);
+}
+.btn-primary:hover { filter: brightness(1.06); }
+
+/* Native <select> dropdown — make the popup match the theme.
+   The closed trigger is styled by the Select component; this targets the
+   popup options that the browser renders, which only respect a tiny subset
+   of CSS. Chromium honors background-color / color on <option>. */
+select {
+  background-color: var(--surface);
+  color: var(--foreground);
+}
+select option,
+select optgroup {
+  background-color: var(--surface);
+  color: var(--foreground);
+  padding: 6px 10px;
+}
+select option:checked,
+select option:hover {
+  background-color: color-mix(in oklab, var(--primary) 18%, var(--surface));
+  color: var(--foreground);
+}
+select option:disabled {
+  color: var(--muted-2);
+}
+
+/* Range slider for video player */
+input[type=range].pretty {
+  -webkit-appearance: none;
+  background: transparent;
+  height: 16px;
+}
+input[type=range].pretty::-webkit-slider-runnable-track {
+  height: 4px;
+  background: color-mix(in oklab, var(--muted) 30%, transparent);
+  border-radius: 999px;
+}
+input[type=range].pretty::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 14px;
+  width: 14px;
+  background: var(--primary);
+  border-radius: 999px;
+  margin-top: -5px;
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--primary) 30%, transparent);
+}
+
+/* Markdown prose tweaks for chat */
+.prose-chat p { margin: 0 0 0.5rem; }
+.prose-chat pre {
+  background: var(--surface-2);
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  overflow-x: auto;
+  font-size: 0.85rem;
+  border: 1px solid var(--border);
+}
+.prose-chat code {
+  background: var(--surface-2);
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.35rem;
+  font-size: 0.85em;
+}
+.prose-chat ul, .prose-chat ol { padding-left: 1.25rem; margin: 0.25rem 0 0.5rem; }
+.prose-chat li { margin: 0.15rem 0; }
+.prose-chat h1, .prose-chat h2, .prose-chat h3 { font-weight: 600; margin: 0.5rem 0; }
+.prose-chat a { color: var(--primary); text-decoration: underline; text-underline-offset: 2px; }
+
+/* ============================================================
+   Enhanced Design System — Utilities & Micro-interactions
+   ============================================================ */
+
+/* Hover lift — interactive cards, buttons, and list items */
+.hover-lift {
+  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.18s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow), 0 10px 30px color-mix(in oklab, var(--primary) 10%, transparent);
+}
+.hover-lift:active {
+  transform: translateY(0px);
+}
+
+/* Interactive card — lift + border highlight */
+.card-interactive {
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+  cursor: pointer;
+}
+.card-interactive:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow), 0 14px 36px color-mix(in oklab, var(--primary) 12%, transparent);
+  border-color: var(--border-strong);
+}
+.card-interactive:active {
+  transform: translateY(-1px);
+}
+
+/* Button micro-lift — add to any button for tactile feel */
+.btn-lift {
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+}
+.btn-lift:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+.btn-lift:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Glow effects */
+.glow-primary {
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 20%, transparent),
+              0 0 20px color-mix(in oklab, var(--primary) 15%, transparent);
+}
+.glow-success {
+  box-shadow: 0 0 20px color-mix(in oklab, var(--success) 25%, transparent);
+}
+
+/* Text utilities */
+.text-balance { text-wrap: balance; }
+.text-pretty  { text-wrap: pretty; }
+
+/* Gradient text variants */
+.gradient-text-vivid {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 55%, #86efac 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.gradient-text-warm {
+  background: linear-gradient(135deg, #f59e0b, #ef4444);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Number stat display — subtle foreground→primary gradient */
+.number-stat {
+  background: linear-gradient(160deg, var(--foreground), color-mix(in oklab, var(--primary) 55%, var(--foreground)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Background patterns */
+.bg-dots {
+  background-image: radial-gradient(
+    circle,
+    color-mix(in oklab, var(--muted) 20%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 24px 24px;
+}
+.bg-grid {
+  background-image:
+    linear-gradient(color-mix(in oklab, var(--border) 55%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in oklab, var(--border) 55%, transparent) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Hero / section gradient backgrounds */
+.hero-gradient {
+  background-image:
+    radial-gradient(ellipse 90% 60% at 50% 0%, color-mix(in oklab, var(--primary) 11%, transparent), transparent),
+    radial-gradient(ellipse 50% 35% at 85% 85%, color-mix(in oklab, var(--accent) 8%, transparent), transparent);
+}
+.section-glow-top {
+  background-image: radial-gradient(ellipse 70% 40% at 50% 0%, color-mix(in oklab, var(--primary) 8%, transparent), transparent);
+}
+
+/* Gradient divider line */
+.divider-gradient {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-strong), transparent);
+  border: none;
+}
+
+/* Sidebar-specific active nav item */
+.nav-active-bar {
+  position: relative;
+}
+.nav-active-bar::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  border-radius: 0 3px 3px 0;
+  background: var(--primary);
+}
+
+/* Progress bar glow tip */
+.progress-glow {
+  position: relative;
+  overflow: visible !important;
+}
+.progress-glow::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px 2px color-mix(in oklab, var(--accent) 60%, transparent);
+}
+
+/* Notification badge pulse */
+@keyframes badgePulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--danger) 40%, transparent); }
+  60%       { box-shadow: 0 0 0 5px color-mix(in oklab, var(--danger) 0%, transparent); }
+}
+.badge-pulse { animation: badgePulse 2.5s ease-in-out infinite; }
+
+/* Page enter — applied to main content areas */
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.page-enter { animation: pageEnter 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+/* Stagger children delays */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.10s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.20s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.30s; }
+
+/* Scale-in entrance */
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.scale-in { animation: scaleIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+/* Marquee ticker */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.marquee { animation: marquee 28s linear infinite; }
+.marquee:hover { animation-play-state: paused; }
+
+/* Avatar ring hover */
+.avatar-ring {
+  ring: 2px;
+  ring-offset: 2px;
+  ring-color: var(--primary);
+  transition: box-shadow 0.2s ease;
+}
+.avatar-ring:hover {
+  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--primary);
+}
+
+/* Skeleton loading with improved shimmer */
+@keyframes skeletonShimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skeleton-pulse {
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 25%,
+    color-mix(in oklab, var(--muted) 12%, var(--surface-2)) 50%,
+    var(--surface-2) 75%
+  );
+  background-size: 800px 100%;
+  animation: skeletonShimmer 1.6s ease-in-out infinite;
+}
+
+/* Inline status dot */
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.status-dot.online  { background: var(--success); box-shadow: 0 0 0 3px color-mix(in oklab, var(--success) 25%, transparent); }
+.status-dot.away    { background: var(--warning); }
+.status-dot.offline { background: var(--muted-2); }
+
+/* Keyboard shortcut chip */
+kbd.shortcut {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* Smooth color transitions for interactive elements */
+a, button { transition-property: color, background-color, border-color, box-shadow, opacity, transform; transition-duration: 0.15s; transition-timing-function: ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hover-lift:hover, .card-interactive:hover, .btn-lift:hover { transform: none; }
+  .badge-pulse, .page-enter, .scale-in, .marquee, .skeleton-pulse { animation: none !important; }
 }
