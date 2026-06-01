@@ -122,53 +122,137 @@ const teamColors: Record<string, string> = {
 
 export default function CareersPage() {
   return (
-    <div>
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-16 lg:pt-20 lg:pb-20">
-        <div className="max-w-3xl">
-          <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Careers</p>
-          <h1 className="mt-2 text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight">
-            Build the future of <span className="gradient-text">how people learn</span>.
-          </h1>
-          <p className="mt-5 text-lg text-[var(--muted)]">
-            We&apos;re a small, focused team on a mission: give every learner an AI-powered tutor that meets them
-            where they are. If that sounds like work worth doing, come build with us.
-          </p>
-          <div className="mt-7 flex flex-col sm:flex-row gap-3">
-            <Link href="#open-roles">
-              <Button size="lg">
-                See open roles <Icon.ChevronRight size={18} />
-              </Button>
-            </Link>
-            <Link href="/about">
-              <Button size="lg" variant="outline">
-                <Icon.Sparkles size={18} /> Meet the team
-              </Button>
-            </Link>
+    <div className="overflow-hidden">
+      {/* Hero */}
+      <section className="relative">
+        <div className="absolute inset-0 bg-dots opacity-30 pointer-events-none" />
+        <div className="absolute inset-0 hero-gradient pointer-events-none" />
+        <div className="absolute -top-32 right-0 w-[600px] h-[500px] rounded-full bg-gradient-to-bl from-[var(--primary)]/10 via-transparent to-transparent blur-3xl pointer-events-none" />
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-16 lg:pt-20 lg:pb-24 grid lg:grid-cols-2 gap-12 items-center">
+          <div className="reveal-up">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--primary-soft)] border border-[var(--primary)]/20 text-[var(--primary)] text-xs font-bold uppercase tracking-wider mb-5">
+              <Icon.Users size={12} /> Careers
+            </div>
+            <h1 className="text-4xl sm:text-5xl xl:text-[3.3rem] font-bold tracking-tight leading-[1.1] text-balance">
+              Build the future of <span className="gradient-text">how people learn</span>.
+            </h1>
+            <p className="mt-5 text-lg text-[var(--muted)] leading-relaxed max-w-lg">
+              We&apos;re a small, focused team on a mission: give every learner an AI-powered tutor that meets them where they are. If that sounds like work worth doing, come build with us.
+            </p>
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Link href="#open-roles">
+                <Button size="lg">
+                  See open roles <Icon.ChevronRight size={18} />
+                </Button>
+              </Link>
+              <Link href="/about">
+                <Button size="lg" variant="outline">
+                  <Icon.Users size={16} /> Meet the team
+                </Button>
+              </Link>
+            </div>
+            <div className="mt-7 grid grid-cols-3 gap-4">
+              {[
+                { value: "84", label: "Team members" },
+                { value: "17", label: "Countries" },
+                { value: "100%", label: "Remote-first" },
+              ].map((s) => (
+                <div key={s.label} className="text-center">
+                  <p className="text-2xl font-bold gradient-text">{s.value}</p>
+                  <p className="text-xs text-[var(--muted)] mt-0.5">{s.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right: team photo */}
+          <div className="hidden lg:block relative">
+            <div className="rounded-3xl overflow-hidden shadow-2xl shadow-black/15">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=700&h=500&fit=crop&q=85"
+                alt="EduPortal team working together"
+                className="w-full h-[420px] object-cover"
+              />
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
+            </div>
+            {/* Floating: remote-first badge */}
+            <div className="absolute -bottom-4 -left-5 bg-[var(--surface)] rounded-2xl px-4 py-3 border border-[var(--border)] shadow-xl flex items-center gap-3 pop-in">
+              <div className="h-9 w-9 rounded-xl bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center shrink-0">
+                <Icon.Globe size={16} />
+              </div>
+              <div>
+                <p className="text-sm font-bold">Remote-first</p>
+                <p className="text-[10px] text-[var(--muted)]">Work from anywhere</p>
+              </div>
+            </div>
+            {/* Floating: roles badge */}
+            <div className="absolute -top-4 -right-4 bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white rounded-2xl px-4 py-3 shadow-lg shadow-green-500/25 pop-in" style={{ animationDelay: "0.2s" }}>
+              <p className="text-xl font-extrabold">{roles.length}</p>
+              <p className="text-[10px] font-semibold opacity-85">Open roles</p>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="border-y border-[var(--border)] bg-[var(--surface)]/60">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
-          <div className="text-center max-w-2xl mx-auto">
-            <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Why EduPortal</p>
-            <h2 className="mt-2 text-3xl sm:text-4xl font-bold">Benefits that work in real life</h2>
+      {/* Culture photo strip */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="grid grid-cols-4 gap-3">
+          {[
+            { src: "photo-1531482615713-2afd69097998", alt: "Team workshop" },
+            { src: "photo-1522202176988-66273c2fd55f", alt: "Collaboration session" },
+            { src: "photo-1559136555-9303baea8ebd", alt: "Remote work setup" },
+            { src: "photo-1552664730-d307ca884978", alt: "Team offsite" },
+          ].map((img, i) => (
+            <div key={i} className="relative aspect-square overflow-hidden rounded-2xl group">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`https://images.unsplash.com/${img.src}?w=300&h=300&fit=crop&q=80`}
+                alt={img.alt}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="border-y border-[var(--border)] bg-[var(--surface)]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-24">
+          <div className="text-center max-w-2xl mx-auto mb-14">
+            <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--primary)] mb-3">
+              <span className="h-px w-6 bg-[var(--primary)] inline-block" /> Why EduPortal
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold">Benefits that work in real life</h2>
             <p className="mt-3 text-[var(--muted)]">
               We don&apos;t pad the careers page. Here&apos;s what every full-time teammate actually gets.
             </p>
           </div>
-          <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {perks.map((p) => (
-              <Card key={p.title} className="h-full">
-                <CardBody className="space-y-3">
-                  <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-green-500/15 to-emerald-400/15 text-[var(--primary)] flex items-center justify-center">
-                    {p.icon}
-                  </div>
-                  <h3 className="font-semibold text-lg">{p.title}</h3>
-                  <p className="text-sm text-[var(--muted)] leading-relaxed">{p.description}</p>
-                </CardBody>
-              </Card>
-            ))}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {perks.map((p, i) => {
+              const colors = [
+                "from-sky-500/15 to-blue-400/10 text-sky-600 dark:text-sky-400",
+                "from-rose-500/15 to-pink-400/10 text-rose-600 dark:text-rose-400",
+                "from-violet-500/15 to-purple-400/10 text-violet-600 dark:text-violet-400",
+                "from-amber-500/15 to-orange-400/10 text-amber-600 dark:text-amber-400",
+                "from-emerald-500/15 to-teal-400/10 text-emerald-600 dark:text-emerald-400",
+                "from-green-500/15 to-emerald-400/10 text-[var(--primary)]",
+              ];
+              return (
+                <Card key={p.title} className="h-full group hover-lift">
+                  <CardBody className="space-y-4">
+                    <div className={`h-12 w-12 rounded-2xl bg-gradient-to-br ${colors[i % colors.length]} flex items-center justify-center border border-[var(--border)] group-hover:scale-105 transition-transform`}>
+                      {p.icon}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg">{p.title}</h3>
+                      <p className="text-sm text-[var(--muted)] leading-relaxed mt-1.5">{p.description}</p>
+                    </div>
+                  </CardBody>
+                </Card>
+              );
+            })}
           </div>
         </div>
       </section>

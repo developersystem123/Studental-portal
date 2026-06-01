@@ -120,17 +120,23 @@ export default function AffiliatePage() {
   }
 
   return (
-    <div>
-      <section className="relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-16 lg:pt-20 lg:pb-24 grid lg:grid-cols-2 gap-10 items-center">
-          <div>
-            <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Affiliate program</p>
-            <h1 className="mt-2 text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight">
+    <div className="overflow-hidden">
+      <section className="relative">
+        {/* Background */}
+        <div className="absolute inset-0 bg-dots opacity-30 pointer-events-none" />
+        <div className="absolute inset-0 hero-gradient pointer-events-none" />
+        <div className="absolute -top-32 right-0 w-[600px] h-[500px] rounded-full bg-gradient-to-bl from-[var(--primary)]/10 via-transparent to-transparent blur-3xl pointer-events-none" />
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-16 lg:pt-20 lg:pb-24 grid lg:grid-cols-2 gap-12 items-center">
+          <div className="reveal-up">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--primary-soft)] border border-[var(--primary)]/20 text-[var(--primary)] text-xs font-bold uppercase tracking-wider mb-5">
+              <Icon.TrendingUp size={12} /> Affiliate program
+            </div>
+            <h1 className="text-4xl sm:text-5xl xl:text-[3.3rem] font-bold tracking-tight leading-[1.1] text-balance">
               Earn while you <span className="gradient-text">share what you love</span>.
             </h1>
-            <p className="mt-5 text-lg text-[var(--muted)]">
-              Tell your audience about EduPortal and earn 30% recurring commission on every Pro subscription. Honest
-              tools, generous payouts, no hard sells.
+            <p className="mt-5 text-lg text-[var(--muted)] leading-relaxed max-w-lg">
+              Tell your audience about EduPortal and earn <strong className="text-[var(--foreground)]">30% recurring commission</strong> on every Pro subscription. Honest tools, generous payouts, no hard sells.
             </p>
             <div className="mt-7 flex flex-col sm:flex-row gap-3">
               <Link href="#apply">
@@ -144,100 +150,176 @@ export default function AffiliatePage() {
                 </Button>
               </Link>
             </div>
-          </div>
-          <Card className="relative overflow-hidden">
-            <div className="p-6 bg-gradient-to-br from-[var(--primary-soft)] to-transparent">
-              <p className="text-xs uppercase tracking-wider text-[var(--muted)] font-semibold">Earnings simulator</p>
-              <div className="mt-3 grid grid-cols-2 gap-3">
-                <div className="rounded-xl bg-[var(--surface)] border border-[var(--border)] p-4">
-                  <p className="text-xs text-[var(--muted)]">10 referrals/mo</p>
-                  <p className="text-2xl font-bold mt-1 gradient-text">$359/mo</p>
-                  <p className="text-[10px] text-[var(--muted-2)] mt-0.5">After year 1</p>
-                </div>
-                <div className="rounded-xl bg-[var(--surface)] border border-[var(--border)] p-4">
-                  <p className="text-xs text-[var(--muted)]">50 referrals/mo</p>
-                  <p className="text-2xl font-bold mt-1 gradient-text">$1,798/mo</p>
-                  <p className="text-[10px] text-[var(--muted-2)] mt-0.5">After year 1</p>
-                </div>
-                <div className="rounded-xl bg-[var(--surface)] border border-[var(--border)] p-4">
-                  <p className="text-xs text-[var(--muted)]">100 referrals/mo</p>
-                  <p className="text-2xl font-bold mt-1 gradient-text">$3,597/mo</p>
-                  <p className="text-[10px] text-[var(--muted-2)] mt-0.5">After year 1</p>
-                </div>
-                <div className="rounded-xl bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white p-4">
-                  <p className="text-xs opacity-85">250 referrals/mo</p>
-                  <p className="text-2xl font-bold mt-1">$8,992/mo</p>
-                  <p className="text-[10px] opacity-75 mt-0.5">After year 1</p>
-                </div>
-              </div>
-              <p className="mt-3 text-xs text-[var(--muted)]">
-                Assumes Pro plan at $9.99/mo, average 12-month retention, no annual upgrades.
-              </p>
+            <div className="mt-7 flex flex-wrap gap-4 text-sm text-[var(--muted)]">
+              <span className="flex items-center gap-1.5"><Icon.Check size={13} className="text-emerald-500" /> Free to join</span>
+              <span className="flex items-center gap-1.5"><Icon.Check size={13} className="text-emerald-500" /> Monthly payouts</span>
+              <span className="flex items-center gap-1.5"><Icon.Check size={13} className="text-emerald-500" /> 60-day cookie</span>
             </div>
-          </Card>
+          </div>
+
+          {/* Right: image + earnings card */}
+          <div className="relative">
+            {/* Main photo */}
+            <div className="rounded-3xl overflow-hidden shadow-2xl shadow-black/12">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=700&h=480&fit=crop&q=85"
+                alt="Content creator at desk with laptop"
+                className="w-full h-[320px] object-cover"
+              />
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
+            </div>
+
+            {/* Floating earnings card */}
+            <div className="absolute -bottom-5 -left-5 bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-xl p-4 pop-in min-w-[160px]">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--muted-2)] mb-1">Top earner / mo</p>
+              <p className="text-2xl font-extrabold gradient-text">$8,992</p>
+              <p className="text-[10px] text-emerald-500 font-semibold flex items-center gap-1 mt-0.5"><Icon.TrendingUp size={10} /> 250 referrals</p>
+            </div>
+
+            {/* Floating commission badge */}
+            <div className="absolute -top-4 -right-4 bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white rounded-2xl px-4 py-3 shadow-lg shadow-green-500/25 pop-in" style={{ animationDelay: "0.2s" }}>
+              <p className="text-xl font-extrabold">30%</p>
+              <p className="text-[10px] font-semibold opacity-85">Recurring commission</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Earnings simulator - now as full-width section */}
+      <section className="border-y border-[var(--border)] bg-[var(--surface)]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="text-center mb-8">
+            <p className="text-xs font-bold uppercase tracking-wider text-[var(--primary)]">Earnings simulator</p>
+            <h2 className="text-2xl font-bold mt-1">What could you make?</h2>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl mx-auto">
+            {[
+              { referrals: "10/mo", earnings: "$359/mo", note: "After year 1", highlight: false },
+              { referrals: "50/mo", earnings: "$1,798/mo", note: "After year 1", highlight: false },
+              { referrals: "100/mo", earnings: "$3,597/mo", note: "After year 1", highlight: true },
+              { referrals: "250/mo", earnings: "$8,992/mo", note: "Elite tier", highlight: false },
+            ].map((t) => (
+              <Card key={t.referrals} className={t.highlight ? "ring-2 ring-[var(--primary)] relative" : ""}>
+                {t.highlight && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-[var(--primary)] text-white text-[10px] font-bold">Most popular</div>
+                )}
+                <CardBody className="text-center space-y-2 py-5">
+                  <p className="text-xs text-[var(--muted)] font-semibold">{t.referrals} referrals</p>
+                  <p className="text-2xl font-bold gradient-text">{t.earnings}</p>
+                  <p className="text-[10px] text-[var(--muted-2)]">{t.note}</p>
+                </CardBody>
+              </Card>
+            ))}
+          </div>
+          <p className="text-center mt-4 text-xs text-[var(--muted)]">
+            Assumes Pro plan at $9.99/mo · avg 12-month retention · no annual upgrades
+          </p>
         </div>
       </section>
 
       <section id="how-it-works" className="border-y border-[var(--border)] bg-[var(--surface)]/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-24">
-          <div className="text-center max-w-2xl mx-auto">
-            <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Why join</p>
-            <h2 className="mt-2 text-3xl sm:text-4xl font-bold">A program built for serious creators</h2>
+          <div className="text-center max-w-2xl mx-auto mb-14">
+            <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--primary)] mb-3">
+              <span className="h-px w-6 bg-[var(--primary)] inline-block" /> Why join
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold">A program built for serious creators</h2>
           </div>
-          <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {perks.map((p) => (
-              <Card key={p.title} className="h-full">
-                <CardBody className="space-y-3">
-                  <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-green-500/15 to-emerald-400/15 text-[var(--primary)] flex items-center justify-center">
-                    {p.icon}
-                  </div>
-                  <h3 className="font-semibold text-lg">{p.title}</h3>
-                  <p className="text-sm text-[var(--muted)] leading-relaxed">{p.description}</p>
-                </CardBody>
-              </Card>
-            ))}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {perks.map((p, i) => {
+              const colors = [
+                "from-emerald-500/15 to-teal-400/10 text-emerald-600 dark:text-emerald-400",
+                "from-sky-500/15 to-blue-400/10 text-sky-600 dark:text-sky-400",
+                "from-amber-500/15 to-orange-400/10 text-amber-600 dark:text-amber-400",
+                "from-violet-500/15 to-purple-400/10 text-violet-600 dark:text-violet-400",
+                "from-rose-500/15 to-pink-400/10 text-rose-600 dark:text-rose-400",
+                "from-green-500/15 to-emerald-400/10 text-[var(--primary)]",
+              ];
+              return (
+                <Card key={p.title} className="h-full group hover-lift">
+                  <CardBody className="space-y-4">
+                    <div className={`h-12 w-12 rounded-2xl bg-gradient-to-br ${colors[i % colors.length]} flex items-center justify-center border border-[var(--border)] group-hover:scale-105 transition-transform`}>
+                      {p.icon}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg">{p.title}</h3>
+                      <p className="text-sm text-[var(--muted)] leading-relaxed mt-1.5">{p.description}</p>
+                    </div>
+                  </CardBody>
+                </Card>
+              );
+            })}
           </div>
         </div>
       </section>
+
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-24">
-        <div className="text-center max-w-2xl mx-auto">
-          <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Who it&apos;s for</p>
-          <h2 className="mt-2 text-3xl sm:text-4xl font-bold">Built for these creators</h2>
+        <div className="text-center max-w-2xl mx-auto mb-14">
+          <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--primary)] mb-3">
+            <span className="h-px w-6 bg-[var(--primary)] inline-block" /> Who it&apos;s for
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-bold">Built for these creators</h2>
         </div>
-        <div className="mt-12 grid md:grid-cols-3 gap-5">
-          {audiences.map((a) => (
-            <Card key={a.title} className="h-full">
-              <CardBody className="space-y-3">
-                <div className="h-10 w-10 rounded-xl bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center">
-                  {a.icon}
+        <div className="grid md:grid-cols-3 gap-5">
+          {audiences.map((a, i) => {
+            const imgs = [
+              "photo-1611532736597-de2d4265fba3",
+              "photo-1543269865-cbf427effbad",
+              "photo-1519389950473-47ba0277781c",
+            ];
+            return (
+              <Card key={a.title} className="h-full overflow-hidden group hover-lift">
+                <div className="relative h-36 overflow-hidden bg-[var(--surface-2)]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`https://images.unsplash.com/${imgs[i]}?w=400&h=200&fit=crop&q=80`}
+                    alt={a.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                  <div className="absolute bottom-3 left-3 h-8 w-8 rounded-xl bg-white/20 backdrop-blur-sm text-white flex items-center justify-center border border-white/25">
+                    {a.icon}
+                  </div>
                 </div>
-                <h3 className="font-semibold text-lg">{a.title}</h3>
-                <p className="text-sm text-[var(--muted)] leading-relaxed">{a.description}</p>
-              </CardBody>
-            </Card>
-          ))}
+                <CardBody className="space-y-2">
+                  <h3 className="font-bold text-lg">{a.title}</h3>
+                  <p className="text-sm text-[var(--muted)] leading-relaxed">{a.description}</p>
+                </CardBody>
+              </Card>
+            );
+          })}
         </div>
       </section>
 
-      <section className="bg-[var(--surface)]/60 border-y border-[var(--border)]">
+      <section className="bg-[var(--surface)] border-y border-[var(--border)]">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-24">
-          <div className="text-center mb-10">
-            <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Tiers</p>
-            <h2 className="mt-2 text-3xl sm:text-4xl font-bold">The more you refer, the more you earn</h2>
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--primary)] mb-3">
+              <span className="h-px w-6 bg-[var(--primary)] inline-block" /> Commission tiers
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold">The more you refer, the more you earn</h2>
           </div>
           <div className="grid md:grid-cols-3 gap-5">
             {tiers.map((t, i) => (
-              <Card key={t.name} className={i === 2 ? "ring-2 ring-[var(--primary)]" : undefined}>
-                <CardBody className="space-y-3">
-                  <p className="text-xs uppercase tracking-wider text-[var(--muted-2)] font-semibold">{t.name}</p>
-                  <p className="text-2xl font-bold">
-                    {t.min}+ <span className="text-sm text-[var(--muted)] font-normal">referrals/quarter</span>
-                  </p>
-                  <ul className="space-y-2 pt-2">
+              <Card key={t.name} className={`relative ${i === 2 ? "ring-2 ring-[var(--primary)] shadow-lg shadow-green-500/10" : ""}`}>
+                {i === 2 && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-[var(--primary)] text-white text-[10px] font-bold">
+                    Most powerful
+                  </div>
+                )}
+                <CardBody className="space-y-4 pt-6">
+                  <div>
+                    <p className="text-xs uppercase tracking-widest text-[var(--muted-2)] font-bold">{t.name}</p>
+                    <p className="text-2xl font-bold mt-1">
+                      {t.min}+ <span className="text-sm text-[var(--muted)] font-normal">referrals/quarter</span>
+                    </p>
+                  </div>
+                  <ul className="space-y-2.5 pt-1 border-t border-[var(--border)]">
                     {t.perks.map((p) => (
                       <li key={p} className="flex items-start gap-2 text-sm">
-                        <Icon.CheckCircle size={16} className="text-emerald-500 shrink-0 mt-0.5" />
+                        <Icon.CheckCircle size={15} className="text-emerald-500 shrink-0 mt-0.5" />
                         <span>{p}</span>
                       </li>
                     ))}
@@ -251,11 +333,12 @@ export default function AffiliatePage() {
 
       <section id="apply" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-24 grid lg:grid-cols-5 gap-10">
         <div className="lg:col-span-2">
-          <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Apply</p>
-          <h2 className="mt-2 text-3xl sm:text-4xl font-bold">Get your unique link</h2>
+          <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--primary)] mb-3">
+            <span className="h-px w-6 bg-[var(--primary)] inline-block" /> Apply
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-bold">Get your unique link</h2>
           <p className="mt-4 text-[var(--muted)] leading-relaxed">
-            Tell us about your audience. We review and approve most applications within 2–3 business days. No upfront
-            fees, no minimums to start.
+            Tell us about your audience. We review and approve most applications within 2–3 business days. No upfront fees, no minimums to start.
           </p>
           <div className="mt-6 space-y-3">
             {faqs.slice(0, 2).map((f) => (

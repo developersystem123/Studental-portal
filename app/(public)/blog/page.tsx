@@ -11,48 +11,100 @@ export const metadata = {
 };
 
 export default function BlogPage() {
-  const [featured, ...rest] = [...BLOG_POSTS].sort(
-    (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
-  );
+  const sorted = [...BLOG_POSTS].sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+  const [featured, ...rest] = sorted;
 
   return (
-    <div>
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-10 lg:pt-20 text-center">
-        <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Blog</p>
-        <h1 className="mt-2 text-4xl sm:text-5xl font-bold tracking-tight">
-          Stories from the <span className="gradient-text">EduPortal</span> community
-        </h1>
-        <p className="mt-4 text-lg text-[var(--muted)] max-w-2xl mx-auto">
-          Tutorials, product updates, career advice, and reflections on learning.
-        </p>
+    <div className="overflow-hidden">
+      {/* Hero */}
+      <section className="relative">
+        <div className="absolute inset-0 bg-dots opacity-30 pointer-events-none" />
+        <div className="absolute inset-0 hero-gradient pointer-events-none" />
+        <div className="absolute -top-32 right-0 w-[600px] h-[500px] rounded-full bg-gradient-to-bl from-[var(--primary)]/10 via-transparent to-transparent blur-3xl pointer-events-none" />
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 lg:pt-20 pb-14">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div className="reveal-up">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--primary-soft)] border border-[var(--primary)]/20 text-[var(--primary)] text-xs font-bold uppercase tracking-wider mb-5">
+                <Icon.Book size={12} /> Blog
+              </div>
+              <h1 className="text-4xl sm:text-5xl xl:text-[3.3rem] font-bold tracking-tight leading-[1.1] text-balance">
+                Stories from the <span className="gradient-text">EduPortal</span> community
+              </h1>
+              <p className="mt-4 text-lg text-[var(--muted)] leading-relaxed max-w-lg">
+                Tutorials, product updates, career advice, and reflections on the science of learning.
+              </p>
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                {["All", "Product", "Learning", "Careers", "AI"].map((cat) => (
+                  <span key={cat} className={`px-3 h-8 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
+                    cat === "All"
+                      ? "bg-[var(--primary)] text-white border-transparent"
+                      : "bg-[var(--surface)] border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)] hover:border-[var(--border-strong)]"
+                  }`}>
+                    {cat}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Right: featured post preview card */}
+            {featured && (
+              <Link href={`/blog/${featured.slug}`} className="group hidden lg:block">
+                <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-black/12 card-interactive">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={featured.thumbnail}
+                    alt={featured.title}
+                    className="w-full h-[300px] object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-6">
+                    <Badge variant="primary" className="mb-2 backdrop-blur bg-white/20 text-white border-white/20">
+                      {featured.category}
+                    </Badge>
+                    <h2 className="text-white font-bold text-lg leading-snug line-clamp-2">{featured.title}</h2>
+                    <p className="text-white/70 text-xs mt-2 flex items-center gap-2">
+                      <span>{featured.author}</span>·<span>{formatDate(featured.publishedAt)}</span>·<span>{featured.readMinutes} min read</span>
+                    </p>
+                  </div>
+                  {/* Featured badge */}
+                  <div className="absolute top-4 right-4 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white text-[10px] font-bold border border-white/20">
+                    ✦ Featured
+                  </div>
+                </div>
+              </Link>
+            )}
+          </div>
+        </div>
       </section>
 
+      {/* Featured post (mobile) + grid */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-        {/* Featured */}
-        <Link href={`/blog/${featured.slug}`} className="group block">
-          <Card className="overflow-hidden grid md:grid-cols-2 gap-0">
-            <div className="relative h-64 md:h-auto">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={featured.thumbnail} alt="" className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform" />
-            </div>
-            <CardBody className="p-8 flex flex-col justify-center">
-              <Badge variant="primary">{featured.category}</Badge>
-              <h2 className="mt-3 text-2xl sm:text-3xl font-bold group-hover:text-[var(--primary)] transition">
-                {featured.title}
-              </h2>
-              <p className="mt-3 text-[var(--muted)]">{featured.excerpt}</p>
-              <p className="mt-4 text-xs text-[var(--muted-2)] flex items-center gap-3">
-                <span>{featured.author}</span>
-                <span>·</span>
-                <span>{formatDate(featured.publishedAt)}</span>
-                <span>·</span>
-                <span>{featured.readMinutes} min read</span>
-              </p>
-            </CardBody>
-          </Card>
-        </Link>
+        {/* Mobile featured */}
+        {featured && (
+          <div className="lg:hidden mb-8">
+            <Link href={`/blog/${featured.slug}`} className="group block">
+              <Card className="overflow-hidden">
+                <div className="relative h-52">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={featured.thumbnail} alt={featured.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                  <div className="absolute bottom-4 left-4 right-4">
+                    <Badge variant="primary" className="mb-2">✦ Featured · {featured.category}</Badge>
+                    <h2 className="text-white font-bold text-lg leading-snug">{featured.title}</h2>
+                  </div>
+                </div>
+              </Card>
+            </Link>
+          </div>
+        )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-10">
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-xl font-bold">Latest posts</h2>
+          <span className="text-sm text-[var(--muted)]">{BLOG_POSTS.length} articles</span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {rest.map((p) => (
             <MediaCard
               key={p.slug}
@@ -61,17 +113,48 @@ export default function BlogPage() {
               imageAlt={p.title}
               fallbackIcon={<Icon.Edit size={28} />}
               scrim={false}
+              bodyClassName="p-4 space-y-2.5"
             >
-              <Badge variant="default">{p.category}</Badge>
-              <h3 className="mt-3 text-lg font-semibold group-hover:text-[var(--primary)] transition line-clamp-2">
+              <div className="flex items-center gap-2">
+                <Badge variant="default">{p.category}</Badge>
+                <span className="text-[10px] text-[var(--muted-2)] flex items-center gap-1">
+                  <Icon.Clock size={10} /> {p.readMinutes} min
+                </span>
+              </div>
+              <h3 className="font-bold leading-snug group-hover:text-[var(--primary)] transition line-clamp-2">
                 {p.title}
               </h3>
-              <p className="mt-2 text-sm text-[var(--muted)] line-clamp-3 flex-1">{p.excerpt}</p>
-              <p className="mt-4 text-xs text-[var(--muted-2)] flex items-center gap-2">
-                <Icon.Clock size={12} /> {p.readMinutes} min · {formatDate(p.publishedAt)}
-              </p>
+              <p className="text-sm text-[var(--muted)] line-clamp-2 flex-1">{p.excerpt}</p>
+              <div className="flex items-center gap-2 pt-1 border-t border-[var(--border)]">
+                <div className="h-6 w-6 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-[10px] text-white font-bold shrink-0">
+                  {p.author[0]}
+                </div>
+                <span className="text-xs text-[var(--muted)]">{p.author} · {formatDate(p.publishedAt)}</span>
+              </div>
             </MediaCard>
           ))}
+        </div>
+
+        {/* Newsletter CTA */}
+        <div className="mt-14 relative overflow-hidden rounded-3xl bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] p-8 sm:p-10 text-white">
+          <div className="absolute inset-0 bg-dots opacity-15 mix-blend-overlay pointer-events-none" />
+          <div className="absolute -top-12 -right-12 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
+          <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
+            <div>
+              <h3 className="text-xl font-bold">Get the best posts in your inbox</h3>
+              <p className="text-white/80 text-sm mt-1">Weekly digest of learning tips, product news, and career guides.</p>
+            </div>
+            <div className="flex gap-2 shrink-0 w-full sm:w-auto">
+              <input
+                type="email"
+                placeholder="you@example.com"
+                className="flex-1 sm:w-52 h-10 px-4 rounded-xl text-sm bg-white/15 border border-white/25 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-white/40"
+              />
+              <button className="h-10 px-4 rounded-xl bg-white text-[var(--primary)] text-sm font-semibold hover:bg-white/90 transition shrink-0">
+                Subscribe
+              </button>
+            </div>
+          </div>
         </div>
       </section>
     </div>

@@ -3,16 +3,16 @@
 import Link from "next/link";
 import { useState } from "react";
 import Icon from "@/components/icons";
-import { Button, Card, CardBody, Input } from "@/components/ui";
+import { Button, Card, CardBody } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
 const CATEGORIES = [
-  { id: "all", label: "All" },
-  { id: "general", label: "Getting started" },
-  { id: "courses", label: "Courses" },
-  { id: "payments", label: "Payments" },
-  { id: "certificates", label: "Certificates" },
-  { id: "account", label: "Account" },
+  { id: "all",          label: "All",            icon: <Icon.Compass size={14} /> },
+  { id: "general",      label: "Getting started", icon: <Icon.Sparkles size={14} /> },
+  { id: "courses",      label: "Courses",         icon: <Icon.Book size={14} /> },
+  { id: "payments",     label: "Payments",        icon: <Icon.CreditCard size={14} /> },
+  { id: "certificates", label: "Certificates",    icon: <Icon.Award size={14} /> },
+  { id: "account",      label: "Account",         icon: <Icon.User size={14} /> },
 ];
 
 type FAQ = { category: string; q: string; a: string };
@@ -37,10 +37,18 @@ const FAQS: FAQ[] = [
 
 export const dynamic = "force-static";
 
+const CATEGORY_COLORS: Record<string, string> = {
+  general:      "from-violet-500/15 to-purple-400/10 text-violet-600 dark:text-violet-400",
+  courses:      "from-emerald-500/15 to-teal-400/10 text-emerald-600 dark:text-emerald-400",
+  payments:     "from-amber-500/15 to-orange-400/10 text-amber-600 dark:text-amber-400",
+  certificates: "from-sky-500/15 to-blue-400/10 text-sky-600 dark:text-sky-400",
+  account:      "from-rose-500/15 to-pink-400/10 text-rose-600 dark:text-rose-400",
+};
+
 export default function FAQPage() {
   const [activeCat, setActiveCat] = useState("all");
-  const [search, setSearch] = useState("");
-  const [openIdx, setOpenIdx] = useState<number | null>(null);
+  const [search, setSearch]       = useState("");
+  const [openIdx, setOpenIdx]     = useState<number | null>(null);
 
   const filtered = FAQS.filter((f) => {
     if (activeCat !== "all" && f.category !== activeCat) return false;
@@ -48,84 +56,177 @@ export default function FAQPage() {
     return true;
   });
 
+  const countFor = (id: string) =>
+    id === "all" ? FAQS.length : FAQS.filter((f) => f.category === id).length;
+
   return (
-    <div>
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-10 lg:pt-20 lg:pb-12 text-center">
-        <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Help Center</p>
-        <h1 className="mt-2 text-4xl sm:text-5xl font-bold tracking-tight">
-          Frequently asked <span className="gradient-text">questions</span>
-        </h1>
-        <p className="mt-4 text-lg text-[var(--muted)] max-w-2xl mx-auto">
-          Can&apos;t find what you&apos;re looking for? Reach out — we usually reply within 24 hours.
-        </p>
-        <div className="mt-6 max-w-xl mx-auto">
-          <Input
-            icon={<Icon.Search size={18} />}
-            placeholder="Search questions…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+    <div className="overflow-hidden">
+      {/* ── Hero ── */}
+      <section className="relative">
+        <div className="absolute inset-0 bg-dots opacity-30 pointer-events-none" />
+        <div className="absolute inset-0 hero-gradient pointer-events-none" />
+        <div className="absolute -top-32 left-1/2 -translate-x-1/2 h-96 w-[40rem] rounded-full bg-[var(--primary)]/10 blur-3xl pointer-events-none" />
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 lg:pt-20 pb-14 text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--primary-soft)] border border-[var(--primary)]/20 text-[var(--primary)] text-xs font-bold uppercase tracking-wider mb-5">
+            <Icon.Help size={12} /> Frequently Asked Questions
+          </div>
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1]">
+            Got questions?<br />
+            <span className="gradient-text">We&apos;ve got answers.</span>
+          </h1>
+          <p className="mt-4 text-lg text-[var(--muted)] max-w-xl mx-auto leading-relaxed">
+            Can&apos;t find what you&apos;re looking for? Reach out — we usually reply within 24 hours.
+          </p>
+
+          {/* Search bar */}
+          <div className="mt-8 max-w-xl mx-auto relative">
+            <Icon.Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)] pointer-events-none" />
+            <input
+              type="search"
+              placeholder="Search questions…"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setOpenIdx(null); }}
+              className={cn(
+                "w-full h-14 pl-12 pr-12 rounded-2xl text-base",
+                "bg-[var(--surface)] border border-[var(--border)] shadow-sm",
+                "focus:outline-none focus:ring-2 focus:ring-[var(--ring)]/35 focus:border-[var(--border-strong)]",
+                "placeholder:text-[var(--muted-2)] transition-all",
+              )}
+            />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--foreground)] transition"
+              >
+                <Icon.X size={16} />
+              </button>
+            )}
+          </div>
+
+          {/* Result count when searching */}
+          {search.trim() && (
+            <p className="mt-3 text-sm text-[var(--muted)]">
+              <strong className="text-[var(--foreground)]">{filtered.length}</strong> question{filtered.length !== 1 ? "s" : ""} match &ldquo;{search}&rdquo;
+            </p>
+          )}
         </div>
       </section>
 
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-        <div className="flex flex-wrap gap-2 justify-center mb-8">
-          {CATEGORIES.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => setActiveCat(c.id)}
-              className={cn(
-                "px-4 h-9 rounded-full text-sm font-medium transition",
-                activeCat === c.id
-                  ? "bg-[var(--primary)] text-white"
-                  : "bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)]"
-              )}
-            >
-              {c.label}
-            </button>
-          ))}
+      {/* ── Category tabs ── */}
+      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-4">
+        <div className="flex flex-wrap gap-2 justify-center">
+          {CATEGORIES.map((c) => {
+            const active = activeCat === c.id;
+            return (
+              <button
+                key={c.id}
+                onClick={() => { setActiveCat(c.id); setOpenIdx(null); }}
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-4 h-10 rounded-full text-sm font-semibold transition-all",
+                  active
+                    ? "bg-[var(--primary)] text-white shadow-sm shadow-green-500/20"
+                    : "bg-[var(--surface)] border border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)] hover:border-[var(--border-strong)]",
+                )}
+              >
+                <span className={active ? "text-white" : "text-[var(--primary)]"}>{c.icon}</span>
+                {c.label}
+                <span className={cn(
+                  "text-[10px] px-1.5 py-0.5 rounded-full font-bold ml-0.5",
+                  active ? "bg-white/20 text-white" : "bg-[var(--surface-2)] text-[var(--muted-2)]",
+                )}>
+                  {countFor(c.id)}
+                </span>
+              </button>
+            );
+          })}
         </div>
+      </section>
 
+      {/* ── FAQ list ── */}
+      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-16">
         {filtered.length === 0 ? (
-          <Card><CardBody>
-            <p className="text-center text-[var(--muted)] py-8">No questions match your search.</p>
-          </CardBody></Card>
+          <Card>
+            <CardBody className="text-center py-14">
+              <div className="h-14 w-14 rounded-2xl bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center mx-auto mb-3">
+                <Icon.Search size={24} />
+              </div>
+              <p className="font-bold text-lg">No matches found</p>
+              <p className="text-sm text-[var(--muted)] mt-1.5">
+                Try different keywords, or{" "}
+                <Link href="/contact" className="text-[var(--primary)] hover:underline font-semibold">
+                  contact support
+                </Link>.
+              </p>
+              <Button variant="outline" className="mt-5" onClick={() => { setSearch(""); setActiveCat("all"); }}>
+                Clear filters
+              </Button>
+            </CardBody>
+          </Card>
         ) : (
-          <ul className="space-y-3">
-            {filtered.map((f, idx) => (
-              <li key={`${f.category}-${idx}`}>
-                <Card>
-                  <button
-                    onClick={() => setOpenIdx(openIdx === idx ? null : idx)}
-                    className="w-full text-left p-5 flex items-center gap-3"
-                  >
-                    <span className="h-8 w-8 rounded-lg bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center shrink-0">
-                      <Icon.Help size={16} />
-                    </span>
-                    <span className="flex-1 text-sm font-semibold">{f.q}</span>
-                    <Icon.ChevronDown
-                      size={18}
-                      className={cn("text-[var(--muted)] transition-transform", openIdx === idx && "rotate-180")}
-                    />
-                  </button>
-                  {openIdx === idx && (
-                    <div className="px-5 pb-5 -mt-2 pl-16">
-                      <p className="text-sm text-[var(--muted)] leading-relaxed">{f.a}</p>
-                    </div>
-                  )}
-                </Card>
-              </li>
-            ))}
+          <ul className="space-y-2">
+            {filtered.map((f, idx) => {
+              const isOpen = openIdx === idx;
+              const color = CATEGORY_COLORS[f.category] ?? "from-green-500/15 to-emerald-400/10 text-[var(--primary)]";
+              return (
+                <li key={`${f.category}-${idx}`}>
+                  <Card className={cn("overflow-hidden transition-all", isOpen && "ring-1 ring-[var(--primary)]/20 shadow-md")}>
+                    <button
+                      onClick={() => setOpenIdx(isOpen ? null : idx)}
+                      className="w-full text-left px-5 py-4 flex items-center gap-4 hover:bg-[var(--surface-2)] transition-colors"
+                    >
+                      {/* Category icon */}
+                      <span className={cn(
+                        "h-9 w-9 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0 border border-[var(--border)]",
+                        color,
+                      )}>
+                        {CATEGORIES.find((c) => c.id === f.category)?.icon ?? <Icon.Help size={15} />}
+                      </span>
+                      <span className="flex-1 text-sm font-semibold text-[var(--foreground)]">{f.q}</span>
+                      <Icon.ChevronDown
+                        size={16}
+                        className={cn(
+                          "shrink-0 text-[var(--muted)] transition-transform duration-200",
+                          isOpen && "rotate-180 text-[var(--primary)]",
+                        )}
+                      />
+                    </button>
+
+                    {isOpen && (
+                      <div className="px-5 pb-5 accordion-down border-t border-[var(--border)]">
+                        <p className="text-sm text-[var(--muted)] leading-relaxed pt-4 pl-[52px]">{f.a}</p>
+                      </div>
+                    )}
+                  </Card>
+                </li>
+              );
+            })}
           </ul>
         )}
 
-        <Card className="mt-12 bg-gradient-to-br from-[var(--primary-soft)] to-transparent">
-          <CardBody className="text-center py-10">
-            <p className="text-xl font-semibold">Still need help?</p>
-            <p className="text-sm text-[var(--muted)] mt-2 mb-5">Our support team is happy to help.</p>
-            <Link href="/contact"><Button><Icon.Mail size={14} /> Contact us</Button></Link>
-          </CardBody>
-        </Card>
+        {/* Still need help CTA */}
+        <div className="mt-12 relative overflow-hidden rounded-3xl bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] p-8 text-white">
+          <div className="absolute inset-0 bg-dots opacity-15 mix-blend-overlay pointer-events-none" />
+          <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
+          <div className="relative flex flex-col sm:flex-row items-center justify-between gap-5">
+            <div>
+              <h3 className="text-xl font-bold">Still have questions?</h3>
+              <p className="text-white/80 text-sm mt-1">Our support team replies within 24 hours, often much sooner.</p>
+            </div>
+            <div className="flex gap-3 shrink-0">
+              <Link href="/help">
+                <Button className="bg-white/15 text-white border border-white/25 hover:bg-white/25">
+                  <Icon.Book size={15} /> Help Center
+                </Button>
+              </Link>
+              <Link href="/contact">
+                <Button className="bg-white text-[var(--primary)] hover:bg-white/90 shadow-lg shadow-black/15 font-semibold">
+                  <Icon.Mail size={15} /> Contact us
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
       </section>
     </div>
   );

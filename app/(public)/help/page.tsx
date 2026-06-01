@@ -111,41 +111,56 @@ export default function HelpCenterPage() {
   const matched = filtered.reduce((sum, c) => sum + c.articles.length, 0);
 
   return (
-    <div>
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 -z-10 pointer-events-none">
-          <div className="absolute -top-32 left-1/2 -translate-x-1/2 h-96 w-[40rem] rounded-full bg-[var(--primary)]/10 blur-3xl" />
-        </div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-10 lg:pt-20 lg:pb-12 text-center">
-          <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Help Center</p>
-          <h1 className="mt-2 text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight">
+    <div className="overflow-hidden">
+      {/* Hero */}
+      <section className="relative">
+        <div className="absolute inset-0 bg-dots opacity-30 pointer-events-none" />
+        <div className="absolute -top-32 left-1/2 -translate-x-1/2 h-96 w-[40rem] rounded-full bg-[var(--primary)]/12 blur-3xl pointer-events-none" />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 lg:pt-20 pb-12 text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--primary-soft)] border border-[var(--primary)]/20 text-[var(--primary)] text-xs font-bold uppercase tracking-wider mb-5">
+            <Icon.Help size={12} /> Help Center
+          </div>
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1]">
             How can we <span className="gradient-text">help you</span>?
           </h1>
           <p className="mt-4 text-lg text-[var(--muted)] max-w-2xl mx-auto">
-            Search {totalArticles} articles, or browse by topic. Most answers are 3 minutes away.
+            Search <strong className="text-[var(--foreground)]">{totalArticles} articles</strong>, or browse by topic. Most answers are 3 minutes away.
           </p>
-          <div className="mt-7 max-w-2xl mx-auto">
-            <Input
-              icon={<Icon.Search size={18} />}
-              placeholder="Search for an article…"
+
+          {/* Search */}
+          <div className="mt-7 max-w-2xl mx-auto relative">
+            <Icon.Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)] pointer-events-none" />
+            <input
+              type="search"
+              placeholder="Search articles, topics, or keywords…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="h-12 text-base"
+              className={cn(
+                "w-full h-14 pl-12 pr-4 rounded-2xl text-base",
+                "bg-[var(--surface)] border border-[var(--border)] shadow-sm",
+                "focus:outline-none focus:ring-2 focus:ring-[var(--ring)]/35 focus:border-[var(--border-strong)]",
+                "placeholder:text-[var(--muted-2)] transition-all",
+              )}
             />
             {query.trim() && (
-              <p className="mt-2 text-xs text-[var(--muted)]">
-                {matched} {matched === 1 ? "article" : "articles"} match &ldquo;{query}&rdquo;
-              </p>
+              <button onClick={() => setQuery("")} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--foreground)] transition">
+                <Icon.X size={16} />
+              </button>
             )}
           </div>
-          {!query.trim() && (
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
-              <span className="text-xs uppercase tracking-wider text-[var(--muted-2)] font-semibold">Popular:</span>
+
+          {query.trim() ? (
+            <p className="mt-3 text-sm text-[var(--muted)]">
+              <strong className="text-[var(--foreground)]">{matched}</strong> {matched === 1 ? "article" : "articles"} match &ldquo;{query}&rdquo;
+            </p>
+          ) : (
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+              <span className="text-xs text-[var(--muted-2)] font-semibold">Popular searches:</span>
               {popular.map((p) => (
                 <Link
                   key={p.label}
                   href={p.href}
-                  className="text-xs px-3 h-8 rounded-full bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--primary-soft)] inline-flex items-center transition"
+                  className="text-xs px-3 h-8 rounded-full bg-[var(--surface)] border border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)] hover:border-[var(--border-strong)] hover:bg-[var(--primary-soft)] inline-flex items-center transition-all"
                 >
                   {p.label}
                 </Link>
@@ -153,6 +168,25 @@ export default function HelpCenterPage() {
             </div>
           )}
         </div>
+
+        {/* Category quick-nav (only when not searching) */}
+        {!query.trim() && (
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              {categories.map((c) => (
+                <a key={c.id} href={`#${c.id}`}
+                  className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--primary)]/30 hover:bg-[var(--primary-soft)] hover:-translate-y-0.5 transition-all group text-center"
+                >
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[var(--primary-soft)] to-[var(--surface-2)] text-[var(--primary)] flex items-center justify-center border border-[var(--border)] group-hover:scale-105 transition-transform">
+                    {c.icon}
+                  </div>
+                  <p className="text-xs font-semibold text-[var(--foreground)] leading-tight">{c.title}</p>
+                  <p className="text-[10px] text-[var(--muted)]">{c.articles.length} articles</p>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 space-y-10">

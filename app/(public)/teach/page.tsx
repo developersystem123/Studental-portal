@@ -265,17 +265,22 @@ export default function TeachPage() {
   }
 
   return (
-    <div>
-      <section className="relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-16 lg:pt-20 lg:pb-24 grid lg:grid-cols-2 gap-10 items-center">
-          <div>
-            <Badge variant="primary" className="mb-4">
+    <div className="overflow-hidden">
+      <section className="relative">
+        {/* Background */}
+        <div className="absolute inset-0 bg-dots opacity-30 pointer-events-none" />
+        <div className="absolute inset-0 hero-gradient pointer-events-none" />
+        <div className="absolute -top-32 right-0 w-[600px] h-[500px] rounded-full bg-gradient-to-bl from-[var(--primary)]/10 via-transparent to-transparent blur-3xl pointer-events-none" />
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-16 lg:pt-20 lg:pb-24 grid lg:grid-cols-2 gap-12 items-center">
+          <div className="reveal-up">
+            <Badge variant="primary" className="mb-5">
               <Icon.Sparkles size={12} /> Now accepting Spring 2026 instructors
             </Badge>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight">
+            <h1 className="text-4xl sm:text-5xl xl:text-[3.3rem] font-bold tracking-tight leading-[1.1] text-balance">
               Turn your expertise into a <span className="gradient-text">thriving course</span>.
             </h1>
-            <p className="mt-5 text-lg text-[var(--muted)]">
+            <p className="mt-5 text-lg text-[var(--muted)] leading-relaxed max-w-lg">
               Whether you&apos;ve taught for years or want to share what you know for the first time, EduPortal gives
               you the tools, audience, and AI assist to do it well.
             </p>
@@ -291,15 +296,10 @@ export default function TeachPage() {
                 </Button>
               </Link>
             </div>
-            <div className="mt-8 flex items-center gap-6 text-sm text-[var(--muted)]">
-              <div className="flex items-center gap-2">
-                <Icon.Check size={16} className="text-emerald-500" />
-                <span>Free to apply</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Icon.Check size={16} className="text-emerald-500" />
-                <span>No exclusivity</span>
-              </div>
+            <div className="mt-8 flex flex-wrap items-center gap-5 text-sm text-[var(--muted)]">
+              <span className="flex items-center gap-1.5"><Icon.Check size={14} className="text-emerald-500" /> Free to apply</span>
+              <span className="flex items-center gap-1.5"><Icon.Check size={14} className="text-emerald-500" /> No exclusivity</span>
+              <span className="flex items-center gap-1.5"><Icon.Check size={14} className="text-emerald-500" /> Keep 70% revenue</span>
             </div>
           </div>
           <div className="relative">
@@ -333,40 +333,86 @@ export default function TeachPage() {
         </div>
       </section>
 
-      <section className="border-y border-[var(--border)] bg-[var(--surface)]/60">
+      {/* Real instructor photo strip */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="grid grid-cols-3 gap-3 rounded-3xl overflow-hidden">
+          {[
+            { src: "photo-1524178232363-1fb2b075b655", alt: "Teacher presenting to students" },
+            { src: "photo-1531482615713-2afd69097998", alt: "Online class in session" },
+            { src: "photo-1516321318423-f06f85e504b3", alt: "Instructor recording a course" },
+          ].map((img, i) => (
+            <div key={i} className="relative aspect-video overflow-hidden rounded-2xl group">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`https://images.unsplash.com/${img.src}?w=400&h=250&fit=crop&q=80`}
+                alt={img.alt}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="border-y border-[var(--border)] bg-[var(--surface)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-24">
-          <div className="text-center max-w-2xl mx-auto">
-            <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">What you get</p>
-            <h2 className="mt-2 text-3xl sm:text-4xl font-bold">Built for instructors who care</h2>
+          <div className="text-center max-w-2xl mx-auto mb-14">
+            <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--primary)] mb-3">
+              <span className="h-px w-6 bg-[var(--primary)] inline-block" /> What you get
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold">Built for instructors who care</h2>
           </div>
-          <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {benefits.map((b) => (
-              <Card key={b.title} className="h-full">
-                <CardBody className="space-y-3">
-                  <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-green-500/15 to-emerald-400/15 text-[var(--primary)] flex items-center justify-center">
-                    {b.icon}
-                  </div>
-                  <h3 className="font-semibold text-lg">{b.title}</h3>
-                  <p className="text-sm text-[var(--muted)] leading-relaxed">{b.description}</p>
-                </CardBody>
-              </Card>
-            ))}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {benefits.map((b, i) => {
+              const colors = [
+                "from-emerald-500/15 to-teal-400/10 text-emerald-600 dark:text-emerald-400",
+                "from-violet-500/15 to-purple-400/10 text-violet-600 dark:text-violet-400",
+                "from-sky-500/15 to-blue-400/10 text-sky-600 dark:text-sky-400",
+                "from-amber-500/15 to-orange-400/10 text-amber-600 dark:text-amber-400",
+                "from-rose-500/15 to-pink-400/10 text-rose-600 dark:text-rose-400",
+                "from-green-500/15 to-emerald-400/10 text-[var(--primary)]",
+              ];
+              return (
+                <Card key={b.title} className="h-full group hover-lift">
+                  <CardBody className="space-y-4">
+                    <div className={`h-12 w-12 rounded-2xl bg-gradient-to-br ${colors[i % colors.length]} flex items-center justify-center border border-[var(--border)] group-hover:scale-105 transition-transform`}>
+                      {b.icon}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg">{b.title}</h3>
+                      <p className="text-sm text-[var(--muted)] leading-relaxed mt-1.5">{b.description}</p>
+                    </div>
+                  </CardBody>
+                </Card>
+              );
+            })}
           </div>
         </div>
       </section>
 
       <section id="how-it-works" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-24">
-        <div className="text-center max-w-2xl mx-auto">
-          <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">How it works</p>
-          <h2 className="mt-2 text-3xl sm:text-4xl font-bold">From idea to launch in three steps</h2>
+        <div className="text-center max-w-2xl mx-auto mb-14">
+          <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--primary)] mb-3">
+            <span className="h-px w-6 bg-[var(--primary)] inline-block" /> How it works
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-bold">From idea to launch in three steps</h2>
         </div>
-        <div className="mt-12 grid md:grid-cols-3 gap-5">
-          {steps.map((s) => (
-            <Card key={s.n} className="h-full">
-              <CardBody className="space-y-3">
-                <span className="inline-block text-3xl font-extrabold gradient-text">{s.n}</span>
-                <h3 className="font-semibold text-lg">{s.title}</h3>
-                <p className="text-sm text-[var(--muted)] leading-relaxed">{s.description}</p>
+        <div className="grid md:grid-cols-3 gap-5 relative">
+          {/* Connecting line */}
+          <div className="hidden md:block absolute top-10 left-1/4 right-1/4 h-px bg-gradient-to-r from-transparent via-[var(--border-strong)] to-transparent" />
+          {steps.map((s, i) => (
+            <Card key={s.n} className="h-full relative hover-lift">
+              <CardBody className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-4xl font-extrabold gradient-text">{s.n}</span>
+                  {i < steps.length - 1 && (
+                    <Icon.ChevronRight size={18} className="text-[var(--border-strong)] hidden md:block" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">{s.title}</h3>
+                  <p className="text-sm text-[var(--muted)] leading-relaxed mt-1.5">{s.description}</p>
+                </div>
               </CardBody>
             </Card>
           ))}
