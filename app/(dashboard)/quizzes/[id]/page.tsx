@@ -60,7 +60,7 @@ export default function TakeQuizPage() {
   }, [secondsLeft]);
 
   async function submit() {
-    if (!quiz) return;
+    if (!quiz || submitting) return;
     setSubmitting(true);
     const r = await fetch(`/api/quizzes/${id}`, {
       method: "POST",
@@ -107,7 +107,11 @@ export default function TakeQuizPage() {
             </p>
             <div className="flex justify-center gap-2 mt-6">
               <Link href="/quizzes"><Button variant="outline">Back to quizzes</Button></Link>
-              <Button onClick={() => router.refresh()}>Retake</Button>
+              <Button onClick={() => {
+                setResult(null);
+                setAnswers({});
+                if (quiz) setSecondsLeft(quiz.durationMinutes * 60);
+              }}>Retake</Button>
             </div>
           </CardBody>
         </Card>
@@ -167,7 +171,7 @@ export default function TakeQuizPage() {
         </Card>
       ))}
 
-      <div className="flex items-center justify-between sticky bottom-4 p-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl card-shadow">
+      <div className="flex items-center justify-between sticky bottom-4 z-10 p-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl card-shadow">
         <p className="text-sm text-[var(--muted)]">
           {answered}/{quiz.questions.length} answered
         </p>

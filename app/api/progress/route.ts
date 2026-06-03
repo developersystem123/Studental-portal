@@ -13,6 +13,7 @@ export async function GET() {
       prisma.quizAttempt.findMany({
         where: { userId: me.id, completedAt: { not: null } },
         orderBy: { completedAt: "desc" },
+        include: { quiz: { select: { title: true } } },
       }),
       prisma.assignmentSubmission.findMany({
         where: { userId: me.id },
@@ -62,6 +63,7 @@ export async function GET() {
       })),
       recentQuizzes: quizAttempts.slice(0, 5).map((a) => ({
         id: a.id,
+        quizTitle: a.quiz.title,
         percentage: a.percentage,
         passed: a.passed,
         completedAt: a.completedAt?.toISOString() ?? null,

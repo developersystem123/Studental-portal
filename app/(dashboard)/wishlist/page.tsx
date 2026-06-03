@@ -126,7 +126,7 @@ function WishlistCard({ item, enrolledIds, removing, enrolling, onRemove, onEnro
       <div className="flex flex-col flex-1 p-4 gap-3">
         <div>
           <Link
-            href={`/my-courses/${course.id}`}
+            href={`/explore/${course.id}`}
             className="font-semibold text-sm leading-snug line-clamp-2 hover:text-[var(--primary)] transition-colors"
           >
             {course.title}
@@ -244,6 +244,8 @@ export default function WishlistPage() {
       await fetch(`/api/wishlist?courseId=${encodeURIComponent(courseId)}`, { method: "DELETE" });
       setItems((prev) => prev.filter((i) => i.courseId !== courseId));
       push({ title: "Enrolled successfully!", tone: "success" });
+    } catch {
+      push({ title: "Couldn't enroll in course. Please try again.", tone: "danger" });
     } finally {
       setEnrolling((prev) => {
         const next = new Set(prev);

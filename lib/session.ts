@@ -5,12 +5,19 @@ import { cookies } from "next/headers";
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 const COOKIE_NAME = "eduportal_session";
-const MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 days
+const MAX_AGE_ADMIN   = 60 * 60 * 24 * 30; // 30 days  — Admin
+const MAX_AGE_DEFAULT = 60 * 60 * 24;       // 24 hours — Student / Instructor
 
 function getSecret(): string {
-  // SESSION_SECRET should be set in .env for production. Falls back to a
-  // dev-only default so local development just works.
-  return process.env.SESSION_SECRET || "eduportal-dev-secret-change-me";
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("SESSION_SECRET environment variable is not set. Cannot sign session cookies.");
+    }
+    // Dev-only fallback — never used in production.
+    return "eduportal-dev-secret-change-me";
+  }
+  return secret;
 }
 
 function sign(payload: string): string {
@@ -40,14 +47,15 @@ export async function getSessionUserId(): Promise<string | null> {
   return unpack(store.get(COOKIE_NAME)?.value);
 }
 
-export async function setSession(userId: string): Promise<void> {
+export async function setSession(userId: string, role?: string): Promise<void> {
+  const maxAge = role === "Admin" ? MAX_AGE_ADMIN : MAX_AGE_DEFAULT;
   const store = await cookies();
   store.set(COOKIE_NAME, pack(userId), {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: MAX_AGE_SECONDS,
+    maxAge,
   });
 }
 

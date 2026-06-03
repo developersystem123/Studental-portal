@@ -6,6 +6,7 @@ import {
   fallbackReferences,
   hasClaudeKey,
 } from "@/lib/claude";
+import { requireUser } from "@/lib/auth-server";
 
 export const runtime = "nodejs";
 
@@ -43,6 +44,12 @@ const referencesTool = {
 };
 
 export async function POST(req: NextRequest) {
+  try {
+    await requireUser();
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const body = await req.json();
   const action: "outline" | "draft" | "polish" | "rewrite" | "references" = body.action;
   if (!action) return NextResponse.json({ error: "action required" }, { status: 400 });
@@ -85,6 +92,9 @@ export async function POST(req: NextRequest) {
 
     if (action === "polish" || action === "rewrite") {
       const { text } = body;
+      if (!text || typeof text !== "string" || text.length > 5000) {
+        return NextResponse.json({ error: "Text must be between 1 and 5000 characters." }, { status: 400 });
+      }
       const instruction =
         action === "polish"
           ? "Improve clarity, grammar, and flow. Keep the same meaning. Return the revised text only."

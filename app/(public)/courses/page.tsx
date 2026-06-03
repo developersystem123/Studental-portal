@@ -531,27 +531,35 @@ export default function PublicCoursesPage() {
 
       {/* ── CTA banner ────────────────────────────────── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[var(--primary)] via-[color-mix(in_oklab,var(--primary)_75%,var(--accent))] to-[var(--accent)] p-1">
+        <div className="relative overflow-hidden rounded-3xl p-px bg-gradient-to-br from-green-400 via-emerald-500 to-teal-500 dark:from-green-700 dark:via-emerald-800 dark:to-teal-900">
           {/* Inner card */}
-          <div className="relative rounded-[20px] overflow-hidden bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] p-8 sm:p-10">
-            {/* Dot pattern overlay */}
-            <div className="absolute inset-0 bg-dots opacity-15 mix-blend-overlay pointer-events-none" />
-            {/* Glow */}
-            <div className="absolute -top-16 -right-16 h-64 w-64 rounded-full bg-white/10 blur-3xl pointer-events-none" />
-            <div className="absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-white/8 blur-3xl pointer-events-none" />
+          <div className="relative rounded-[20px] overflow-hidden p-8 sm:p-10
+            bg-gradient-to-br from-green-500 via-emerald-500 to-teal-400
+            dark:bg-none dark:bg-[#0b1f14]">
+
+            {/* Dark mode layered glow */}
+            <div className="absolute inset-0 hidden dark:block bg-gradient-to-br from-green-950 via-[#0a1f13] to-[#071510]" />
+            <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-green-500/10 blur-3xl pointer-events-none dark:bg-green-400/8" />
+            <div className="absolute -bottom-20 -left-20 h-56 w-56 rounded-full bg-emerald-400/10 blur-3xl pointer-events-none dark:bg-emerald-500/6" />
+            {/* Subtle grid lines in dark mode */}
+            <div className="absolute inset-0 hidden dark:block opacity-[0.04]"
+              style={{ backgroundImage: "linear-gradient(var(--tw-gradient-stops))", backgroundSize: "40px 40px",
+                background: "repeating-linear-gradient(0deg,transparent,transparent 39px,#4ade80 39px,#4ade80 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,#4ade80 39px,#4ade80 40px)" }} />
 
             <div className="relative flex flex-col md:flex-row items-center justify-between gap-6">
               <div className="max-w-xl">
-                <div className="inline-flex items-center gap-1.5 text-xs px-3 py-1 rounded-full bg-white/15 border border-white/20 text-white font-medium mb-4">
+                <div className="inline-flex items-center gap-1.5 text-xs px-3 py-1 rounded-full
+                  bg-white/15 border border-white/20 text-white font-medium mb-4
+                  dark:bg-green-400/10 dark:border-green-400/25 dark:text-green-300">
                   <Icon.Sparkles size={11} /> Powered by AI
                 </div>
-                <h2 className="text-2xl sm:text-3xl font-bold text-white leading-tight">
+                <h2 className="text-2xl sm:text-3xl font-bold leading-tight text-white dark:text-white">
                   Not sure where to start?
                 </h2>
-                <p className="mt-2 text-white/80 text-sm sm:text-base leading-relaxed">
+                <p className="mt-2 text-sm sm:text-base leading-relaxed text-white/80 dark:text-green-100/60">
                   Tell us your goals and our AI will suggest a personalised learning path. Or just sign up free and explore at your own pace.
                 </p>
-                <div className="mt-4 flex flex-wrap gap-3 text-xs text-white/75">
+                <div className="mt-4 flex flex-wrap gap-3 text-xs text-white/75 dark:text-green-300/60">
                   <span className="flex items-center gap-1.5"><Icon.CheckCircle size={12} /> No credit card required</span>
                   <span className="flex items-center gap-1.5"><Icon.CheckCircle size={12} /> Free forever plan</span>
                   <span className="flex items-center gap-1.5"><Icon.CheckCircle size={12} /> AI tutor included</span>
@@ -561,7 +569,8 @@ export default function PublicCoursesPage() {
                 <Link href={user ? "/dashboard" : "/register"}>
                   <Button
                     size="lg"
-                    className="bg-white text-[var(--primary)] hover:bg-white/90 shadow-lg shadow-black/20 font-semibold"
+                    className="bg-white text-green-700 hover:bg-white/90 shadow-lg shadow-black/20 font-semibold
+                      dark:bg-green-400 dark:text-green-950 dark:hover:bg-green-300 dark:shadow-green-900/40"
                   >
                     {user ? "Open dashboard" : "Start for free"} <Icon.ChevronRight size={16} />
                   </Button>
@@ -570,7 +579,8 @@ export default function PublicCoursesPage() {
                   <Button
                     size="lg"
                     variant="outline"
-                    className="border-white/30 text-white hover:bg-white/10 hover:border-white/50"
+                    className="border-white/30 text-white hover:bg-white/10 hover:border-white/50
+                      dark:border-green-500/30 dark:text-green-300 dark:hover:bg-green-500/10 dark:hover:border-green-400/50"
                   >
                     Talk to us
                   </Button>

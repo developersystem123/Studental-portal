@@ -34,6 +34,19 @@ export function Topbar({
 
   const userMenuRef = React.useRef<HTMLDivElement>(null);
   const notifRef = React.useRef<HTMLDivElement>(null);
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Implement the ⌘K / Ctrl+K shortcut to focus the search input.
+  React.useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   React.useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -59,7 +72,7 @@ export function Topbar({
       </button>
 
       {/* Search */}
-      <div className="flex-1 flex justify-center min-w-0 mx-1">
+      <div className="flex-1 flex justify-center min-w-0 mx-1 sm:mx-2">
         <div className={cn(
           "relative transition-all duration-200 w-full max-w-lg",
           searchFocused ? "scale-[1.01]" : "",
@@ -72,16 +85,18 @@ export function Topbar({
             )}
           />
           <input
+            ref={searchInputRef}
             type="search"
+            aria-label="Search"
             placeholder={
               isAdmin
-                ? "Search students, courses, enrollments…"
+                ? "Search students, courses…"
                 : isTeacher
-                  ? "Search your courses or students…"
-                  : "Search courses, AI tools, or anything…"
+                  ? "Search courses or students…"
+                  : "Search courses, AI tools…"
             }
             className={cn(
-              "w-full h-10 pl-10 pr-20 rounded-xl text-sm transition-all duration-200",
+              "w-full h-10 pl-10 pr-4 md:pr-20 rounded-xl text-sm transition-all duration-200",
               "bg-[var(--surface-2)] border border-transparent",
               "focus:outline-none focus:bg-[var(--surface)] focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[var(--ring)]/30",
               "placeholder:text-[var(--muted-2)] text-[var(--foreground)]",
@@ -92,12 +107,16 @@ export function Topbar({
             }}
             onBlur={() => setSearchFocused(false)}
             onKeyDown={(e) => {
-              if (e.key === "Enter")
-                router.push(isAdmin ? "/admin/students" : isTeacher ? "/teacher/students" : "/explore");
+              if (e.key === "Enter") {
+                const q = (e.target as HTMLInputElement).value.trim();
+                if (isAdmin) router.push("/admin/students");
+                else if (isTeacher) router.push("/teacher/students");
+                else router.push(q ? `/explore?q=${encodeURIComponent(q)}` : "/explore");
+              }
             }}
           />
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none">
-            <kbd className="hidden md:flex items-center gap-0.5 px-1.5 h-5 rounded-md bg-[var(--surface)] border border-[var(--border)] text-[10px] font-mono text-[var(--muted)]">
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden md:flex items-center gap-1 pointer-events-none">
+            <kbd className="flex items-center gap-0.5 px-1.5 h-5 rounded-md bg-[var(--surface)] border border-[var(--border)] text-[10px] font-mono text-[var(--muted)]">
               <span className="text-[11px]">⌘</span>K
             </kbd>
           </div>

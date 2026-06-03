@@ -15,9 +15,12 @@ export function hashPassword(password: string): string {
 
 export function verifyPassword(password: string, stored: string): boolean {
   // Backwards-compat: if the stored value is plaintext (legacy seed),
-  // do a straight comparison so old logins still work.
+  // use a timing-safe comparison to avoid timing attacks.
   if (!stored.startsWith(`${PREFIX}$`)) {
-    return stored === password;
+    const storedBuf = Buffer.from(stored);
+    const passwordBuf = Buffer.from(password);
+    if (storedBuf.length !== passwordBuf.length) return false;
+    return timingSafeEqual(storedBuf, passwordBuf);
   }
   const [, saltHex, hashHex] = stored.split("$");
   if (!saltHex || !hashHex) return false;

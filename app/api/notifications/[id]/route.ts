@@ -33,6 +33,10 @@ export async function DELETE(
     const { id } = await params;
     const n = await visible(id, me.id);
     if (!n) return Response.json({ error: "Not found." }, { status: 404 });
+    // Prevent deletion of broadcast notifications — they belong to all users.
+    if (n.userId === null) {
+      return Response.json({ error: "Cannot delete a broadcast notification." }, { status: 403 });
+    }
     await prisma.notification.delete({ where: { id } });
     return Response.json({ ok: true });
   } catch (err) {

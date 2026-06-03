@@ -1,9 +1,16 @@
 import { NextRequest } from "next/server";
 import { claudeStream, fallbackChatReply, hasClaudeKey, type ClaudeMessage } from "@/lib/claude";
+import { requireUser } from "@/lib/auth-server";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  try {
+    await requireUser();
+  } catch {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
   const body = await req.json();
   const messages = (body.messages ?? []) as ClaudeMessage[];
   const courseTitle: string | undefined = body.courseTitle;

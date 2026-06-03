@@ -217,13 +217,18 @@ export default function SchedulePage() {
     };
     const url = editTarget ? `/api/schedule/${editTarget.id}` : "/api/schedule";
     const method = editTarget ? "PATCH" : "POST";
-    const r = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-    setSaving(false);
-    if (!r.ok) { push({ title: "Couldn't save", tone: "danger" }); return; }
-    push({ title: editTarget ? "Event updated" : "Event added", tone: "success" });
-    setOpen(false);
-    setEditTarget(null);
-    load();
+    try {
+      const r = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      if (!r.ok) { push({ title: "Couldn't save", tone: "danger" }); return; }
+      push({ title: editTarget ? "Event updated" : "Event added", tone: "success" });
+      setOpen(false);
+      setEditTarget(null);
+      load();
+    } catch {
+      push({ title: "Network error — couldn't save event", tone: "danger" });
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function remove(id: string) {

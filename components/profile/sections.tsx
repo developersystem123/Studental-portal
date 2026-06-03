@@ -101,9 +101,13 @@ export function ProfileHero({
     }
   }
 
-  function removeAvatar() {
-    updateUser({ avatar: null });
-    toast.push({ title: "Avatar removed", tone: "success" });
+  async function removeAvatar() {
+    try {
+      await updateUser({ avatar: null });
+      toast.push({ title: "Avatar removed", tone: "success" });
+    } catch {
+      toast.push({ title: "Couldn't remove avatar", tone: "danger" });
+    }
   }
 
   async function onBannerUpload(file?: File) {
@@ -137,9 +141,13 @@ export function ProfileHero({
     }
   }
 
-  function removeBanner() {
-    updateUser({ banner: null });
-    toast.push({ title: "Cover photo removed", tone: "success" });
+  async function removeBanner() {
+    try {
+      await updateUser({ banner: null });
+      toast.push({ title: "Cover photo removed", tone: "success" });
+    } catch {
+      toast.push({ title: "Couldn't remove cover photo", tone: "danger" });
+    }
   }
 
   return (
@@ -313,22 +321,25 @@ export function PersonalInfoCard({
 
   const phoneError = validatePhone(phone, false);
 
-  function save(e: React.FormEvent) {
+  async function save(e: React.FormEvent) {
     e.preventDefault();
     const err = validateName(name, "Full name") ?? validateEmail(email) ?? phoneError;
     if (err) return toast.push({ title: err, tone: "danger" });
     setSaving(true);
-    updateUser({
-      name: name.trim(),
-      email: email.trim(),
-      bio: bio.trim(),
-      phone: phone.trim(),
-      ...(showEducation ? { education } : {}),
-    });
-    setTimeout(() => {
-      setSaving(false);
+    try {
+      await updateUser({
+        name: name.trim(),
+        email: email.trim(),
+        bio: bio.trim(),
+        phone: phone.trim(),
+        ...(showEducation ? { education } : {}),
+      });
       toast.push({ title: "Profile updated", tone: "success" });
-    }, 250);
+    } catch (err) {
+      toast.push({ title: "Couldn't save profile", description: (err as Error).message, tone: "danger" });
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -437,6 +448,7 @@ export function ChangePasswordCard() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!current) return toast.push({ title: "Enter your current password", tone: "danger" });
+    if (next.length < 8) return toast.push({ title: "New password must be at least 8 characters", tone: "danger" });
     if (next !== confirm) return toast.push({ title: "Passwords don't match", tone: "danger" });
     setSaving(true);
     const res = await changePassword(current, next);
@@ -570,7 +582,7 @@ function PasswordField({
           type="button"
           onClick={onToggleShow}
           tabIndex={-1}
-          className="absolute right-3 top-[22px] -translate-y-1/2 text-[var(--muted)] hover:text-[var(--foreground)] transition"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--foreground)] transition"
         >
           {show ? <Icon.EyeOff size={16} /> : <Icon.Eye size={16} />}
         </button>

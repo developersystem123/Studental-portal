@@ -11,6 +11,7 @@ import { randomBytes } from "node:crypto";
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024; // 4 MB
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
 
+// SVG is intentionally excluded: it can contain embedded scripts.
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
 const DOC_TYPES = [
   "application/pdf",

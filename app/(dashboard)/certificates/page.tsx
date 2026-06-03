@@ -17,21 +17,6 @@ function scoreGrade(score: number): { label: string; color: string; bg: string }
   return { label: "Pass", color: "text-orange-700", bg: "bg-orange-100 dark:bg-orange-900/30" };
 }
 
-function SkeletonCard() {
-  return (
-    <div className="rounded-2xl border border-[var(--border)] overflow-hidden animate-pulse">
-      <div className="h-44 bg-[var(--surface-2)]" />
-      <div className="p-4 space-y-3">
-        <div className="h-4 w-2/3 rounded bg-[var(--surface-2)]" />
-        <div className="h-3 w-1/2 rounded bg-[var(--surface-2)]" />
-        <div className="flex gap-2">
-          <div className="h-9 flex-1 rounded-lg bg-[var(--surface-2)]" />
-          <div className="h-9 w-20 rounded-lg bg-[var(--surface-2)]" />
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function CertificatesPage() {
   const { certificates } = useData();
@@ -130,16 +115,19 @@ export default function CertificatesPage() {
 </div>
 <script>window.onload = () => setTimeout(() => window.print(), 250);</script>
 </body></html>`;
-    const w = window.open("", "_blank");
+    // Use a Blob URL instead of document.write() which is deprecated and may be
+    // blocked by some browsers and Content Security Policies.
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url, "_blank");
     if (!w) {
       toast.push({ title: "Popup blocked", description: "Allow popups to download.", tone: "danger" });
+      URL.revokeObjectURL(url);
       return;
     }
-    w.document.write(html);
-    w.document.close();
+    // Revoke the object URL after a short delay to free memory.
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
   }
-
-  const loading = false; // data is synchronous from store
 
   return (
     <div className="space-y-6">
@@ -214,11 +202,7 @@ export default function CertificatesPage() {
         </div>
       )}
 
-      {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {[0, 1, 2].map((i) => <SkeletonCard key={i} />)}
-        </div>
-      ) : items.length === 0 ? (
+      {items.length === 0 ? (
         <EmptyState
           icon={<Icon.Award size={28} />}
           title="No certificates yet"

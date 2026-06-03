@@ -101,10 +101,10 @@ export default function TeacherStudentsPage() {
   }
 
   function SortIcon({ col }: { col: SortKey }) {
-    if (sortKey !== col) return <Icon.ArrowUpDown size={12} className="text-[var(--muted-2)] ml-1" />;
+    if (sortKey !== col) return <Icon.ArrowUp size={12} className="text-[var(--muted-2)] ml-1 opacity-40" />;
     return sortDir === "asc"
       ? <Icon.ArrowUp size={12} className="text-[var(--primary)] ml-1" />
-      : <Icon.ArrowDown size={12} className="text-[var(--primary)] ml-1" />;
+      : <Icon.ArrowUp size={12} className="text-[var(--primary)] ml-1 rotate-180" />;
   }
 
   return (

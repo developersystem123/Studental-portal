@@ -4,7 +4,7 @@ import Link from "next/link";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen grid lg:grid-cols-2">
+    <div className="force-light min-h-screen grid lg:grid-cols-2">
       {/* Left: Form panel */}
       <div className="relative flex flex-col p-6 sm:p-10 justify-between overflow-hidden bg-[var(--background)]">
         {/* Background blobs */}
@@ -63,13 +63,13 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         </div>
       </div>
 
-      {/* Right: Illustration panel */}
-      <div className="hidden lg:flex relative overflow-hidden m-5 rounded-3xl bg-gradient-to-br from-[var(--primary)] via-[color-mix(in_oklab,var(--primary)_80%,var(--accent))] to-[var(--accent)] text-white">
+      {/* Right: Illustration panel — intentionally theme-locked to always show green */}
+      <div className="hidden lg:flex relative overflow-hidden m-5 rounded-3xl bg-linear-to-br from-green-700 via-green-600 to-green-500 text-white">
         <AuthArtworkBackground />
         <div className="relative p-10 flex flex-col justify-between w-full">
           {/* Top content */}
           <div className="space-y-4">
-            <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-white/15 backdrop-blur border border-white/20 font-medium">
+            <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-white/15 backdrop-blur border !border-white/20 font-medium">
               <Icon.Sparkles size={11} /> Powered by Claude AI
             </span>
             <div>
@@ -90,7 +90,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
                 { icon: <Icon.Award size={11} />, label: "Certificates" },
                 { icon: <Icon.TrendingUp size={11} />, label: "Progress tracking" },
               ].map((f) => (
-                <span key={f.label} className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-white/12 border border-white/15 font-medium">
+                <span key={f.label} className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-white/12 border !border-white/15 font-medium">
                   {f.icon} {f.label}
                 </span>
               ))}
@@ -116,7 +116,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl bg-white/10 backdrop-blur-sm border border-white/15 p-4 hover:bg-white/15 transition-colors">
+    <div className="rounded-2xl bg-white/10 backdrop-blur-sm border !border-white/40 p-4 hover:bg-white/15 transition-colors">
       <p className="text-2xl font-bold">{value}</p>
       <p className="text-xs text-white/75 mt-0.5">{label}</p>
     </div>

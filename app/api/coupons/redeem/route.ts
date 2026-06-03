@@ -15,13 +15,20 @@ export async function POST(request: Request) {
     if (!coupon || !coupon.active) throw new HttpError(400, "That coupon isn't valid.");
     if (coupon.expiresAt && coupon.expiresAt.getTime() < Date.now())
       throw new HttpError(400, "This coupon has expired.");
-    if (coupon.maxUses !== null && coupon.usedCount >= coupon.maxUses)
-      throw new HttpError(409, "This coupon has reached its usage limit.");
 
-    await prisma.coupon.update({
-      where: { id: coupon.id },
+    // Atomically increment usedCount only if the limit has not been reached.
+    // This prevents the TOCTOU race condition where two concurrent requests
+    // both pass the check and both increment, exceeding maxUses.
+    const updated = await prisma.coupon.updateMany({
+      where: {
+        id: coupon.id,
+        ...(coupon.maxUses !== null ? { usedCount: { lt: coupon.maxUses } } : {}),
+      },
       data: { usedCount: { increment: 1 } },
     });
+    if (updated.count === 0) {
+      throw new HttpError(409, "This coupon has reached its usage limit.");
+    }
     return Response.json({ ok: true });
   } catch (err) {
     return errorResponse(err);

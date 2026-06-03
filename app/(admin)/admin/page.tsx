@@ -216,7 +216,7 @@ export default function AdminOverviewPage() {
       label: "Certificates",
       value: stats.certificates,
       icon: <Icon.Award size={18} />,
-      href: "/admin/enrollments",
+      href: "/admin/certificates",
       hint: "Awarded so far",
       series: sparkCerts,
     },
@@ -463,9 +463,12 @@ export default function AdminOverviewPage() {
                 </h2>
                 <p className="text-xs text-[var(--muted)]">Platform MRR growth — last 12 months</p>
               </div>
-              <span className="inline-flex items-center gap-1.5 text-[11px] px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold">
-                <Icon.TrendingUp size={12} /> $47,500 / mo
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold">Sample data</span>
+                <span className="inline-flex items-center gap-1.5 text-[11px] px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold">
+                  <Icon.TrendingUp size={12} /> $47,500 / mo
+                </span>
+              </div>
             </div>
             <div className="h-[220px] mt-3">
               <LineChart data={MRR_MOCK} yFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />

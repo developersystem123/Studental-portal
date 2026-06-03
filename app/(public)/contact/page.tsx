@@ -39,7 +39,7 @@ const channels = [
     title: "Community forum",
     description: "3,000+ learners who can help you instantly.",
     value: "Visit the forum",
-    href: "/about",
+    href: "/forum",
     color: "from-sky-500/15 to-blue-400/10 text-sky-600 dark:text-sky-400",
     badge: "Community",
   },
@@ -77,6 +77,7 @@ export default function ContactPage() {
   const toast = useToast();
   const [submitting, setSubmitting] = React.useState(false);
   const [submitted, setSubmitted] = React.useState(false);
+  const [submittedEmail, setSubmittedEmail] = React.useState("");
   const [openFaq, setOpenFaq] = React.useState<number | null>(null);
   const [form, setForm] = React.useState({
     name: "",
@@ -115,6 +116,7 @@ export default function ContactPage() {
         toast.push({ title: "Couldn't send message", description: data.error ?? "Please try again.", tone: "danger" });
         return;
       }
+      setSubmittedEmail(form.email);
       setForm({ name: "", email: "", reason: reasons[0], message: "" });
       setSubmitted(true);
       toast.push({ title: "Message sent!", description: "Thanks — we'll be in touch shortly.", tone: "success" });
@@ -278,7 +280,7 @@ export default function ContactPage() {
                   <div>
                     <h3 className="text-xl font-bold">Message sent!</h3>
                     <p className="text-[var(--muted)] mt-1.5 text-sm max-w-xs mx-auto">
-                      Thanks for reaching out. We&apos;ll reply to <span className="font-medium text-[var(--foreground)]">{form.email || "your email"}</span> within 24 hours.
+                      Thanks for reaching out. We&apos;ll reply to <span className="font-medium text-[var(--foreground)]">{submittedEmail || "your email"}</span> within 24 hours.
                     </p>
                   </div>
                   <Button variant="outline" onClick={() => setSubmitted(false)}>

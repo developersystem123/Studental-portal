@@ -1,12 +1,14 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   Badge, Button, Card, CardBody, CardHeader, CardTitle,
   Input, Label, Select, useToast,
 } from "@/components/ui";
 import Icon from "@/components/icons";
 import { cn, formatDate, uid } from "@/lib/utils";
+import { useAuth } from "@/lib/store";
 
 type Question = { q: string; options: string[]; answerIndex: number; explanation: string };
 type Phase = "setup" | "quiz" | "result";
@@ -76,6 +78,25 @@ function TimerCircle({ remaining, total }: { remaining: number; total: number })
 
 export default function AiQuizPage() {
   const toast = useToast();
+  const { user } = useAuth();
+  const isPro = user?.plan === "pro" || user?.plan === "team";
+
+  if (user && !isPro) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4 space-y-5">
+        <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-[var(--primary-soft)] to-[var(--surface-2)] text-[var(--primary)] flex items-center justify-center border border-[var(--border)]">
+          <Icon.Crown size={28} />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold">Quiz Generator requires Pro</h1>
+          <p className="text-[var(--muted)] mt-2 max-w-sm">Upgrade to a Pro plan to unlock unlimited AI quiz generation.</p>
+        </div>
+        <Link href="/subscription">
+          <Button><Icon.Sparkles size={14} /> Upgrade to Pro</Button>
+        </Link>
+      </div>
+    );
+  }
 
   // Setup state
   const [topic, setTopic] = React.useState("");

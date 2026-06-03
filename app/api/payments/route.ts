@@ -52,6 +52,16 @@ export async function POST(request: Request) {
     if (!description) throw new HttpError(400, "Description is required.");
     if (method && !VALID_METHODS.includes(method)) throw new HttpError(400, "Invalid method.");
 
+    // Validate that courseId references a real course and that the amount matches.
+    if (courseId) {
+      const course = await prisma.course.findUnique({ where: { id: courseId } });
+      if (!course) throw new HttpError(404, "Course not found.");
+      // Allow a small rounding tolerance (1 cent) but reject amounts far from actual price.
+      if (Math.abs(course.price - amount) > 1) {
+        throw new HttpError(400, "Payment amount does not match course price.");
+      }
+    }
+
     const payMethod: PaymentMethod = method ?? "card";
 
     // ---- Real Stripe Checkout ----

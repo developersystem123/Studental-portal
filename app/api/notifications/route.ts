@@ -62,12 +62,14 @@ export async function POST(request: Request) {
   }
 }
 
-// Mark all visible notifications read.
+// Mark all user-targeted notifications read.
+// Broadcast notifications (userId = null) share a single DB row and cannot
+// be marked read per-user here, so we only update the user's own rows.
 export async function PATCH() {
   try {
     const me = await requireUser();
     await prisma.notification.updateMany({
-      where: { OR: [{ userId: null }, { userId: me.id }] },
+      where: { userId: me.id },
       data: { read: true },
     });
     return Response.json({ ok: true });

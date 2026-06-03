@@ -21,7 +21,7 @@ type LiveClass = {
   maxAttendees: number | null;
 };
 
-type FilterStatus = "all" | "live" | "upcoming" | "ended";
+type FilterStatus = "all" | "live" | "upcoming" | "past";
 
 const STATUS_BADGE: Record<LiveClass["status"], "primary" | "success" | "default" | "danger"> = {
   upcoming: "primary",
@@ -150,7 +150,9 @@ export default function LiveClassesPage() {
         push({ title: `Reminder removed for "${title}"`, tone: "info" });
       } else {
         next.add(id);
-        push({ title: `You'll be reminded about "${title}"`, tone: "success" });
+        // Note: reminders are stored in session state only and won't send
+        // a real notification. They serve as a visual "marked" indicator.
+        push({ title: `Reminder set for "${title}"`, description: "Saved for this session only.", tone: "success" });
       }
       return next;
     });
@@ -194,7 +196,7 @@ export default function LiveClassesPage() {
       {/* Filter bar */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-xs text-[var(--muted)]">Show:</span>
-        {(["all", "live", "upcoming", "ended"] as FilterStatus[]).map((f) => (
+        {(["all", "live", "upcoming", "past"] as FilterStatus[]).map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}

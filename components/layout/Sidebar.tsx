@@ -120,10 +120,17 @@ export function Sidebar({
           pathname={pathname}
           onClose={onClose}
           collapsed={collapsed}
+          locked={!isPro}
           badge={
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gradient-to-r from-[var(--primary-soft)] to-[color-mix(in_oklab,var(--accent)_15%,var(--surface-2))] text-[var(--primary)] font-bold border border-[var(--primary)]/15">
-              NEW
-            </span>
+            isPro ? (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gradient-to-r from-[var(--primary-soft)] to-[color-mix(in_oklab,var(--accent)_15%,var(--surface-2))] text-[var(--primary)] font-bold border border-[var(--primary)]/15">
+                NEW
+              </span>
+            ) : (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold border border-amber-500/20">
+                PRO
+              </span>
+            )
           }
         />
         <NavGroup title="Account" items={otherNav} pathname={pathname} onClose={onClose} collapsed={collapsed} />
@@ -194,6 +201,7 @@ function NavGroup({
   badge,
   onClose,
   collapsed,
+  locked,
 }: {
   title: string;
   items: { href: string; label: string; icon: (p: { size?: number }) => React.ReactElement }[];
@@ -201,6 +209,8 @@ function NavGroup({
   badge?: React.ReactNode;
   onClose?: () => void;
   collapsed?: boolean;
+  /** When true, all items link to /subscription instead of their normal href. */
+  locked?: boolean;
 }) {
   return (
     <div>
@@ -215,18 +225,22 @@ function NavGroup({
       <ul className="space-y-0.5">
         {items.map((item) => {
           const Icn = item.icon;
-          const active = pathname === item.href || pathname.startsWith(item.href + "/");
+          const active = !locked && (pathname === item.href || pathname.startsWith(item.href + "/"));
+          const href = locked ? "/subscription" : item.href;
+          const label = locked ? `${item.label} (Pro only)` : item.label;
           return (
             <li key={item.href}>
               <Link
-                href={item.href}
+                href={href}
                 onClick={onClose}
-                title={collapsed ? item.label : undefined}
-                aria-label={collapsed ? item.label : undefined}
+                title={collapsed ? label : (locked ? "Pro only — upgrade to access" : undefined)}
+                aria-label={collapsed ? label : undefined}
                 className={cn(
                   "relative flex items-center h-10 rounded-xl text-sm font-medium transition-all duration-150",
                   collapsed ? "justify-center px-0" : "gap-3 px-3",
-                  active
+                  locked
+                    ? "text-[var(--muted-2)] hover:bg-[var(--surface-2)] opacity-70"
+                    : active
                     ? [
                         "text-[var(--primary)]",
                         collapsed
@@ -241,7 +255,12 @@ function NavGroup({
                   <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-[var(--primary)]" />
                 )}
                 <NavLinkIcon icon={Icn} size={17} />
-                {!collapsed && <span className="truncate">{item.label}</span>}
+                {!collapsed && (
+                  <span className="truncate flex-1">{item.label}</span>
+                )}
+                {!collapsed && locked && (
+                  <Icon.Lock size={12} className="shrink-0 text-[var(--muted-2)]" />
+                )}
               </Link>
             </li>
           );

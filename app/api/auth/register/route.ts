@@ -2,20 +2,18 @@ import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
 import { setSession } from "@/lib/session";
 import { errorResponse } from "@/lib/auth-server";
-import type { EducationLevel, Role } from "@/lib/generated/prisma/client";
+import type { EducationLevel, Role } from "@/lib/generated/prisma/client"; // Role used for prisma.create type
 import { uid } from "@/lib/utils";
 import { sendEmailAsync, welcomeEmail } from "@/lib/email";
+import { EDUCATION_LEVELS } from "@/lib/mockData";
 
 type Body = {
   name?: string;
   email?: string;
   phone?: string;
   password?: string;
-  role?: Role;
   education?: EducationLevel;
 };
-
-const ALLOWED_ROLES: Role[] = ["Student", "Instructor", "Admin"];
 
 export async function POST(request: Request) {
   try {
@@ -24,12 +22,21 @@ export async function POST(request: Request) {
     const email = (body.email ?? "").trim().toLowerCase();
     const phone = (body.phone ?? "").trim();
     const password = body.password ?? "";
-    const role: Role = ALLOWED_ROLES.includes(body.role as Role) ? (body.role as Role) : "Student";
-    const education: EducationLevel | null =
-      role === "Student" ? (body.education ?? "None") : null;
+    const role: Role = "Student";
+    const rawEducation = body.education ?? "None";
+    if (!EDUCATION_LEVELS.includes(rawEducation as EducationLevel)) {
+      return Response.json({ error: "Invalid education level." }, { status: 400 });
+    }
+    const education: EducationLevel = rawEducation as EducationLevel;
 
+    const NAME_RE = /^[A-Za-z][A-Za-z\s.'-]*$/;
     if (name.length < 2) return Response.json({ error: "Name is too short." }, { status: 400 });
     if (name.length > 60) return Response.json({ error: "Name is too long." }, { status: 400 });
+    if (!NAME_RE.test(name))
+      return Response.json(
+        { error: "Name can only contain letters, spaces, dots, hyphens and apostrophes." },
+        { status: 400 },
+      );
     if (!email.match(/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/))
       return Response.json({ error: "Enter a valid email." }, { status: 400 });
 
@@ -71,9 +78,9 @@ export async function POST(request: Request) {
         phone,
       },
     });
-    await setSession(user.id);
+    await setSession(user.id, user.role);
 
-    // Send a welcome email (no-op console log when RESEND_API_KEY is unset).
+    // Send a welcome email asynchronously — never blocks the response.
     sendEmailAsync({ to: user.email, ...welcomeEmail(user.name) });
 
     const { password: _p, ...safe } = user;

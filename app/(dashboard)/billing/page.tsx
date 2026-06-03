@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Badge,
   Button,
@@ -74,24 +74,34 @@ export default function BillingPage() {
   const { push } = useToast();
 
   const load = useCallback(async () => {
-    const [pRes, sRes] = await Promise.all([
-      fetch("/api/payments").then((r) => r.json()).catch(() => ({})),
-      fetch("/api/subscription").then((r) => r.json()).catch(() => ({})),
-    ]);
-    setPayments(pRes.payments ?? []);
-    setSubscription(sRes.subscription ?? null);
-    setLoading(false);
-  }, []);
+    try {
+      const [pRes, sRes] = await Promise.all([
+        fetch("/api/payments").then((r) => r.json()).catch(() => ({})),
+        fetch("/api/subscription").then((r) => r.json()).catch(() => ({})),
+      ]);
+      setPayments(pRes.payments ?? []);
+      setSubscription(sRes.subscription ?? null);
+    } catch {
+      push({ title: "Couldn't load billing data", tone: "danger" });
+    } finally {
+      setLoading(false);
+    }
+  }, [push]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  // Handle Stripe redirect back.
+  // Handle Stripe redirect back. Uses a ref to prevent double-execution in strict mode.
+  const stripeHandledRef = React.useRef(false);
   useEffect(() => {
+    if (stripeHandledRef.current) return;
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get("session_id");
     const canceled = params.get("canceled");
+    if (sessionId || canceled) {
+      stripeHandledRef.current = true;
+    }
     if (sessionId) {
       (async () => {
         const r = await fetch(`/api/payments/verify?session_id=${encodeURIComponent(sessionId)}`);
@@ -110,8 +120,7 @@ export default function BillingPage() {
       push({ title: "Checkout canceled", tone: "info" });
       window.history.replaceState({}, "", "/billing");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [push, load]);
 
   // Derived stats.
   const completed = payments.filter((p) => p.status === "completed");
@@ -124,12 +133,12 @@ export default function BillingPage() {
   // Last 6 months spend chart.
   const monthlySpend = (() => {
     const now = new Date();
-    const months: { day: string; hours: number; iso: string }[] = [];
+    const months: { day: string; spend: number; iso: string }[] = [];
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       months.push({
         day: d.toLocaleString("en-US", { month: "short" }),
-        hours: 0,
+        spend: 0,
         iso: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
       });
     }
@@ -137,11 +146,11 @@ export default function BillingPage() {
       const d = new Date(p.createdAt);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
       const bucket = months.find((m) => m.iso === key);
-      if (bucket) bucket.hours += p.amount / 100;
+      if (bucket) bucket.spend += p.amount / 100;
     }
     return months;
   })();
-  const sparklineData = monthlySpend.map((m) => m.hours);
+  const sparklineData = monthlySpend.map((m) => m.spend);
 
   return (
     <div className="space-y-6">
@@ -255,7 +264,7 @@ export default function BillingPage() {
             <p className="text-xs text-[var(--muted)] mt-1">Last 6 months · completed transactions only</p>
           </div>
           <div className="hidden sm:flex items-center gap-2 text-xs text-[var(--muted)]">
-            <Sparkline data={sparklineData.length ? sparklineData : [0, 0]} width={120} height={28} />
+            <Sparkline data={sparklineData} width={120} height={28} />
             <span>{formatMoney(totalSpent)} total</span>
           </div>
         </CardHeader>
@@ -264,7 +273,7 @@ export default function BillingPage() {
             <Skeleton className="h-56" />
           ) : (
             <div className="h-56">
-              <LineChart data={monthlySpend} yFormatter={(v) => `$${v.toFixed(0)}`} />
+              <LineChart data={monthlySpend.map((m) => ({ day: m.day, hours: m.spend }))} yFormatter={(v) => `$${v.toFixed(0)}`} />
             </div>
           )}
         </CardBody>

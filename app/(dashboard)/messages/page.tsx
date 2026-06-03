@@ -199,7 +199,7 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4" style={{ height: "calc(100vh - 7rem)" }}>
+    <div className="flex flex-col gap-4" style={{ height: "calc(100dvh - 7rem)" }}>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0">
         <div>

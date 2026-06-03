@@ -4,9 +4,6 @@ import { useEffect, useState } from "react";
 import {
   Button,
   Card,
-  CardBody,
-  CardHeader,
-  CardTitle,
   Input,
   Modal,
   Select,
@@ -15,6 +12,7 @@ import {
 } from "@/components/ui";
 import Icon from "@/components/icons";
 import { useAuth, useTheme } from "@/lib/store";
+import { cn } from "@/lib/utils";
 
 type Settings = {
   emailNotifications: boolean;
@@ -91,8 +89,8 @@ export default function SettingsPage() {
       .catch(() => setLoading(false));
   }, [setTheme]);
 
-  async function patchSettings(patch: Partial<Settings>) {
-    await fetch("/api/settings", {
+  async function patchSettings(patch: Partial<Settings>): Promise<Response> {
+    return fetch("/api/settings", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
@@ -100,27 +98,45 @@ export default function SettingsPage() {
   }
 
   function setToggle(key: keyof Settings, value: boolean) {
+    const prev = settings[key];
     setSettings((s) => ({ ...s, [key]: value }));
     setAutoSaving(true);
-    patchSettings({ [key]: value }).finally(() => setAutoSaving(false));
+    patchSettings({ [key]: value })
+      .then((r) => {
+        if (!r.ok) {
+          // Rollback on server error.
+          setSettings((s) => ({ ...s, [key]: prev }));
+          push({ title: "Couldn't save setting", tone: "danger" });
+        }
+      })
+      .catch(() => {
+        setSettings((s) => ({ ...s, [key]: prev }));
+        push({ title: "Couldn't save setting", tone: "danger" });
+      })
+      .finally(() => setAutoSaving(false));
   }
 
   async function savePreferences() {
     setSaving(true);
-    const r = await fetch("/api/settings", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        language: settings.language,
-        timezone: settings.timezone,
-        theme: settings.theme,
-      }),
-    });
-    setSaving(false);
-    push(r.ok
-      ? { title: "Preferences saved", tone: "success" }
-      : { title: "Couldn't save", tone: "danger" }
-    );
+    try {
+      const r = await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          language: settings.language,
+          timezone: settings.timezone,
+          theme: settings.theme,
+        }),
+      });
+      push(r.ok
+        ? { title: "Preferences saved", tone: "success" }
+        : { title: "Couldn't save", tone: "danger" }
+      );
+    } catch {
+      push({ title: "Couldn't save", tone: "danger" });
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleChangePassword() {
@@ -130,8 +146,8 @@ export default function SettingsPage() {
     if (newPwd !== confirmPwd) {
       push({ title: "Passwords don't match", tone: "danger" }); return;
     }
-    if (newPwd.length < 6) {
-      push({ title: "New password must be at least 6 characters", tone: "danger" }); return;
+    if (newPwd.length < 8) {
+      push({ title: "New password must be at least 8 characters", tone: "danger" }); return;
     }
     setPwdBusy(true);
     const result = await changePassword(currentPwd, newPwd);
@@ -153,34 +169,35 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="max-w-3xl space-y-4">
+      <div className="space-y-4">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="h-44 rounded-2xl bg-[var(--surface-2)] animate-pulse" />
+          <div key={i} className="h-20 rounded-2xl bg-[var(--surface-2)] animate-pulse" />
         ))}
       </div>
     );
   }
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="space-y-4">
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold">Settings</h1>
         <p className="text-sm text-[var(--muted)] mt-1">Manage your preferences and account.</p>
       </div>
 
       {/* Notifications */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Notifications</CardTitle>
-            {autoSaving && (
-              <span className="text-xs text-[var(--muted)] flex items-center gap-1.5">
-                <Icon.Loader size={12} /> Saving…
-              </span>
-            )}
-          </div>
-        </CardHeader>
-        <CardBody className="space-y-5">
+      <CollapsibleCard
+        title="Notifications"
+        icon={<Icon.Bell size={16} />}
+        defaultOpen
+        extra={
+          autoSaving ? (
+            <span className="text-xs text-[var(--muted)] flex items-center gap-1.5 mr-2">
+              <Icon.Loader size={12} className="animate-spin" /> Saving…
+            </span>
+          ) : null
+        }
+      >
+        <div className="p-5 space-y-5">
           <ToggleRow
             label="Email notifications"
             description="Course updates, assignment reminders, and replies."
@@ -205,16 +222,20 @@ export default function SettingsPage() {
             checked={settings.marketingEmails}
             onChange={(v) => setToggle("marketingEmails", v)}
           />
-        </CardBody>
-      </Card>
+        </div>
+      </CollapsibleCard>
 
       {/* Region & Language */}
-      <Card>
-        <CardHeader><CardTitle>Region & Language</CardTitle></CardHeader>
-        <CardBody className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <CollapsibleCard
+        title="Region & Language"
+        icon={<Icon.Globe size={16} />}
+        defaultOpen
+      >
+        <div className="p-5 space-y-4">
           <div>
             <p className="text-sm font-medium mb-1.5">Language</p>
             <Select
+              className="w-full"
               value={settings.language}
               onChange={(e) => setSettings({ ...settings, language: e.target.value })}
             >
@@ -224,20 +245,24 @@ export default function SettingsPage() {
           <div>
             <p className="text-sm font-medium mb-1.5">Timezone</p>
             <Select
+              className="w-full"
               value={settings.timezone}
               onChange={(e) => setSettings({ ...settings, timezone: e.target.value })}
             >
               {TIMEZONES.map((t) => <option key={t} value={t}>{t}</option>)}
             </Select>
           </div>
-        </CardBody>
-      </Card>
+        </div>
+      </CollapsibleCard>
 
       {/* Appearance */}
-      <Card>
-        <CardHeader><CardTitle>Appearance</CardTitle></CardHeader>
-        <CardBody>
-          <p className="text-sm font-medium mb-1.5">Theme</p>
+      <CollapsibleCard
+        title="Appearance"
+        icon={<Icon.Sun size={16} />}
+        defaultOpen
+      >
+        <div className="p-5 space-y-3">
+          <p className="text-sm font-medium">Theme</p>
           <div className="flex gap-3 flex-wrap">
             {(["auto", "light", "dark"] as const).map((t) => {
               const active = settings.theme === t;
@@ -265,11 +290,11 @@ export default function SettingsPage() {
               );
             })}
           </div>
-          <p className="text-xs text-[var(--muted-2)] mt-2.5">
+          <p className="text-xs text-[var(--muted-2)]">
             Theme applies immediately. The toggle in the top bar also updates this setting.
           </p>
-        </CardBody>
-      </Card>
+        </div>
+      </CollapsibleCard>
 
       <div className="flex justify-end">
         <Button onClick={savePreferences} loading={saving}>
@@ -278,14 +303,12 @@ export default function SettingsPage() {
       </div>
 
       {/* Security */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Icon.Lock size={16} className="text-[var(--muted)]" />
-            <CardTitle>Security</CardTitle>
-          </div>
-        </CardHeader>
-        <CardBody className="space-y-4">
+      <CollapsibleCard
+        title="Security"
+        icon={<Icon.Lock size={16} />}
+        defaultOpen={false}
+      >
+        <div className="p-5 space-y-4">
           <div>
             <label className="text-sm font-medium mb-1.5 block">Current password</label>
             <div className="relative">
@@ -306,41 +329,39 @@ export default function SettingsPage() {
               </button>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">New password</label>
-              <div className="relative">
-                <Input
-                  type={showNewPwd ? "text" : "password"}
-                  placeholder="Min. 6 characters"
-                  value={newPwd}
-                  onChange={(e) => setNewPwd(e.target.value)}
-                  autoComplete="new-password"
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowNewPwd((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--foreground)] transition"
-                >
-                  {showNewPwd ? <Icon.EyeOff size={16} /> : <Icon.Eye size={16} />}
-                </button>
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Confirm new password</label>
+          <div>
+            <label className="text-sm font-medium mb-1.5 block">New password</label>
+            <div className="relative">
               <Input
-                type="password"
-                placeholder="Repeat new password"
-                value={confirmPwd}
-                onChange={(e) => setConfirmPwd(e.target.value)}
+                type={showNewPwd ? "text" : "password"}
+                placeholder="Min. 8 characters"
+                value={newPwd}
+                onChange={(e) => setNewPwd(e.target.value)}
                 autoComplete="new-password"
+                className="pr-10"
               />
+              <button
+                type="button"
+                onClick={() => setShowNewPwd((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--foreground)] transition"
+              >
+                {showNewPwd ? <Icon.EyeOff size={16} /> : <Icon.Eye size={16} />}
+              </button>
             </div>
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1.5 block">Confirm new password</label>
+            <Input
+              type="password"
+              placeholder="Repeat new password"
+              value={confirmPwd}
+              onChange={(e) => setConfirmPwd(e.target.value)}
+              autoComplete="new-password"
+            />
           </div>
           {newPwd && confirmPwd && newPwd !== confirmPwd && (
             <p className="text-xs text-[var(--danger)] flex items-center gap-1">
-              <Icon.AlertCircle size={12} /> Passwords don't match
+              <Icon.AlertCircle size={12} /> Passwords don&apos;t match
             </p>
           )}
           <div className="flex justify-end">
@@ -348,18 +369,20 @@ export default function SettingsPage() {
               <Icon.Lock size={14} /> Update password
             </Button>
           </div>
-        </CardBody>
-      </Card>
+        </div>
+      </CollapsibleCard>
 
       {/* Danger Zone */}
-      <Card className="border-[var(--danger)]/25">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Icon.AlertCircle size={16} className="text-[var(--danger)]" />
-            <CardTitle className="text-[var(--danger)]">Danger Zone</CardTitle>
-          </div>
-        </CardHeader>
-        <CardBody>
+      <CollapsibleCard
+        title="Danger Zone"
+        icon={<Icon.AlertCircle size={16} />}
+        defaultOpen={false}
+        iconColor="text-[var(--danger)]"
+        iconBg="bg-red-500/10"
+        titleColor="text-[var(--danger)]"
+        cardClassName="border-[var(--danger)]/25"
+      >
+        <div className="p-5">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
               <p className="text-sm font-medium">Delete account</p>
@@ -372,8 +395,8 @@ export default function SettingsPage() {
               <Icon.Trash size={14} /> Delete account
             </Button>
           </div>
-        </CardBody>
-      </Card>
+        </div>
+      </CollapsibleCard>
 
       {/* Delete confirmation modal */}
       <Modal
@@ -398,6 +421,7 @@ export default function SettingsPage() {
               value={deleteConfirm}
               onChange={(e) => setDeleteConfirm(e.target.value.toUpperCase())}
               placeholder="DELETE"
+              autoComplete="off"
             />
           </div>
           <div className="flex gap-2">
@@ -423,6 +447,62 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+// ─── Collapsible card ────────────────────────────────────────────────────────
+
+function CollapsibleCard({
+  title,
+  icon,
+  defaultOpen = true,
+  extra,
+  children,
+  cardClassName,
+  iconColor = "text-[var(--primary)]",
+  iconBg = "bg-[var(--primary-soft)]",
+  titleColor = "text-[var(--foreground)]",
+}: {
+  title: string;
+  icon: React.ReactNode;
+  defaultOpen?: boolean;
+  extra?: React.ReactNode;
+  children: React.ReactNode;
+  cardClassName?: string;
+  iconColor?: string;
+  iconBg?: string;
+  titleColor?: string;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <Card className={cardClassName}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-[var(--surface-2)] transition-colors rounded-2xl"
+      >
+        <span className={cn("h-8 w-8 rounded-xl flex items-center justify-center shrink-0", iconBg, iconColor)}>
+          {icon}
+        </span>
+        <span className={cn("flex-1 font-semibold text-base", titleColor)}>{title}</span>
+        {extra}
+        <Icon.ChevronDown
+          size={16}
+          className={cn(
+            "text-[var(--muted)] transition-transform duration-200 shrink-0",
+            open && "rotate-180",
+          )}
+        />
+      </button>
+      {open && (
+        <div className="border-t border-[var(--border)]">
+          {children}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+// ─── Toggle row ──────────────────────────────────────────────────────────────
 
 function ToggleRow({
   label,

@@ -466,6 +466,25 @@ export const Icon = {
       <circle cx="15" cy="9.5" r="1" fill="currentColor" />
     </Base>
   ),
+  SkipBack: (p: IconProps) => (
+    <Base {...p}>
+      <polygon points="19 20 9 12 19 4 19 20" />
+      <line x1="5" y1="19" x2="5" y2="5" />
+    </Base>
+  ),
+  SkipForward: (p: IconProps) => (
+    <Base {...p}>
+      <polygon points="5 4 15 12 5 20 5 4" />
+      <line x1="19" y1="5" x2="19" y2="19" />
+    </Base>
+  ),
+  VolumeX: (p: IconProps) => (
+    <Base {...p}>
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+      <line x1="23" y1="9" x2="17" y2="15" />
+      <line x1="17" y1="9" x2="23" y2="15" />
+    </Base>
+  ),
 };
 
 export default Icon;

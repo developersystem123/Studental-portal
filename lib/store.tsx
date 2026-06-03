@@ -304,7 +304,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
       },
       loginWithGoogle: async () => {
         const res = await tryApi<{ user: User }>("/api/auth/google", { method: "POST" });
-        if (res.ok) { writeCachedUser(res.data.user); setUser(res.data.user); }
+        if (!res.ok) throw new Error(res.error);
+        writeCachedUser(res.data.user);
+        setUser(res.data.user);
       },
       register: async (input) => {
         const res = await tryApi<{ user: User }>("/api/auth/register", {
@@ -344,7 +346,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
         return res.ok ? { ok: true } : { ok: false, error: res.error };
       },
       deleteAccount: async () => {
-        await tryApi("/api/auth/account", { method: "DELETE" });
+        const res = await tryApi("/api/auth/account", { method: "DELETE" });
+        if (!res.ok) throw new Error(res.error);
+        writeCachedUser(null);
         setUser(null);
       },
       refreshUser: async () => {
@@ -477,7 +481,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
         const res = await tryApi(`/api/applications/${encodeURIComponent(id)}`, {
           method: "DELETE",
         });
-        if (res.ok) setApplications((prev) => prev.filter((a) => a.id !== id));
+        if (!res.ok) throw new Error(res.error);
+        setApplications((prev) => prev.filter((a) => a.id !== id));
       },
     }),
     [enrollments, certificates, notifications, courses, applications, user],

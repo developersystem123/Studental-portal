@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { claudeChatJSON, fallbackQuiz, hasClaudeKey } from "@/lib/claude";
+import { requireUser } from "@/lib/auth-server";
 
 export const runtime = "nodejs";
 
@@ -42,6 +43,12 @@ const generateQuizTool = {
 };
 
 export async function POST(req: NextRequest) {
+  try {
+    await requireUser();
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { topic, difficulty = "Medium", count = 5 } = await req.json();
   if (!topic || typeof topic !== "string") {
     return NextResponse.json({ error: "topic is required" }, { status: 400 });

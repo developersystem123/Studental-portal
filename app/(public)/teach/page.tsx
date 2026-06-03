@@ -243,7 +243,7 @@ export default function TeachPage() {
     setErrors((e) => ({ ...e, [k]: undefined }));
   }
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     const next: typeof errors = {};
     if (!form.name.trim()) next.name = "Please tell us your name.";
@@ -253,15 +253,33 @@ export default function TeachPage() {
     if (Object.keys(next).length > 0) return;
 
     setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
+    try {
+      const r = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          reason: "Instructor application",
+          message: `Expertise: ${form.expertise}\nExperience: ${form.experience}\n\n${form.pitch}`,
+        }),
+      });
+      if (!r.ok) {
+        const data = await r.json().catch(() => ({}));
+        toast.push({ title: "Couldn't send application", description: data.error ?? "Please try again.", tone: "danger" });
+        return;
+      }
       setForm({ name: "", email: "", expertise: "Programming", experience: "1-3 years", pitch: "" });
       toast.push({
         title: "Application received",
         description: "We'll review it and get back within 3-5 business days.",
         tone: "success",
       });
-    }, 800);
+    } catch {
+      toast.push({ title: "Network error", description: "Please check your connection and try again.", tone: "danger" });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -275,7 +293,7 @@ export default function TeachPage() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-16 lg:pt-20 lg:pb-24 grid lg:grid-cols-2 gap-12 items-center">
           <div className="reveal-up">
             <Badge variant="primary" className="mb-5">
-              <Icon.Sparkles size={12} /> Now accepting Spring 2026 instructors
+              <Icon.Sparkles size={12} /> Now accepting instructors
             </Badge>
             <h1 className="text-4xl sm:text-5xl xl:text-[3.3rem] font-bold tracking-tight leading-[1.1] text-balance">
               Turn your expertise into a <span className="gradient-text">thriving course</span>.

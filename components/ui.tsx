@@ -16,7 +16,7 @@ export const Button = React.forwardRef<
     size?: BtnSize;
     loading?: boolean;
   }
->(({ className, variant = "primary", size = "md", loading, children, disabled, ...props }, ref) => {
+>(({ className, variant = "primary", size = "md", loading, children, disabled, type, ...props }, ref) => {
   const base =
     "inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)] disabled:opacity-50 disabled:pointer-events-none whitespace-nowrap";
   const sizes: Record<BtnSize, string> = {
@@ -36,6 +36,8 @@ export const Button = React.forwardRef<
   return (
     <button
       ref={ref}
+      // Default to "button" to prevent accidental form submission when used outside a submit context.
+      type={type ?? "button"}
       disabled={disabled || loading}
       className={cn(base, sizes[size], variants[variant], className)}
       {...props}
@@ -674,7 +676,7 @@ const TOAST_STYLES: Record<ToastTone | "default", {
     bar: "bg-gradient-to-b from-red-400 to-red-600",
     iconBg: "bg-red-500/15",
     iconColor: "text-red-600 dark:text-red-400",
-    icon: <Icon.X size={18} />,
+    icon: <Icon.AlertCircle size={18} />,
   },
   info: {
     ring: "border-sky-500/40",
@@ -688,7 +690,7 @@ const TOAST_STYLES: Record<ToastTone | "default", {
     bar: "bg-gradient-to-b from-amber-400 to-amber-600",
     iconBg: "bg-amber-500/15",
     iconColor: "text-amber-600 dark:text-amber-400",
-    icon: <Icon.Sparkles size={18} />,
+    icon: <Icon.AlertCircle size={18} />,
   },
   default: {
     ring: "border-[var(--border-strong)]",

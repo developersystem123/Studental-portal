@@ -1,12 +1,29 @@
 import { prisma } from "@/lib/db";
 import { sendEmailAsync } from "@/lib/email";
 import { errorResponse } from "@/lib/auth-server";
+import { createHmac } from "node:crypto";
+
+function signResetToken(userId: string, ts: number): string {
+  const secret = process.env.SESSION_SECRET ?? "eduportal-dev-secret-change-me";
+  const payload = `${userId}:${ts}`;
+  const sig = createHmac("sha256", secret).update(payload).digest("hex");
+  return Buffer.from(`${payload}:${sig}`).toString("base64url");
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
 
 export async function POST(request: Request) {
   try {
     const { email } = (await request.json()) as { email?: string };
-    if (!email) {
-      return Response.json({ error: "Email is required." }, { status: 400 });
+    if (!email || !email.match(/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/)) {
+      // Always return ok to prevent email enumeration.
+      return Response.json({ ok: true });
     }
 
     const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
@@ -16,8 +33,9 @@ export async function POST(request: Request) {
       return Response.json({ ok: true });
     }
 
-    // Build a simple signed token: base64(userId:timestamp) — sufficient for demo/dev.
-    const token = Buffer.from(`${user.id}:${Date.now()}`).toString("base64url");
+    // Build an HMAC-signed token: base64url(userId:timestamp:sig).
+    const ts = Date.now();
+    const token = signResetToken(user.id, ts);
     const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/reset-password?token=${token}`;
 
     sendEmailAsync({
@@ -26,7 +44,7 @@ export async function POST(request: Request) {
       html: `
         <div style="font-family:system-ui,sans-serif;max-width:500px;margin:auto;padding:32px 20px;">
           <h2 style="color:#16a34a">Reset your password</h2>
-          <p>Hi ${user.name},</p>
+          <p>Hi ${escapeHtml(user.name)},</p>
           <p>We received a request to reset your EduPortal password. Click the button below to choose a new one.</p>
           <p style="margin:28px 0;">
             <a href="${resetUrl}"

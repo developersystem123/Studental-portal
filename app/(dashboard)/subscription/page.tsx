@@ -110,12 +110,15 @@ export default function SubscriptionPage() {
 
   async function confirmSubscribe() {
     if (!pendingPlan) return;
+    // Capture both values before any state mutations to avoid stale-closure race.
+    const activeCoupon = coupon;
+    const activePlan = pendingPlan;
     setBusy(true);
     const r = await fetch("/api/subscription", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        planKey: pendingPlan.key,
+        planKey: activePlan.key,
         interval: annual ? "annual" : "monthly",
       }),
     });
@@ -127,17 +130,17 @@ export default function SubscriptionPage() {
       return;
     }
     // Mark the coupon as used now that checkout succeeded.
-    if (coupon) {
+    if (activeCoupon) {
       await fetch("/api/coupons/redeem", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: coupon.code }),
+        body: JSON.stringify({ code: activeCoupon.code }),
       }).catch(() => {});
     }
     push({
-      title: `You're on ${pendingPlan.name}`,
-      description: coupon
-        ? `Your plan is active — coupon ${coupon.code} applied.`
+      title: `You're on ${activePlan.name}`,
+      description: activeCoupon
+        ? `Your plan is active — coupon ${activeCoupon.code} applied.`
         : "Your plan is now active.",
       tone: "success",
     });

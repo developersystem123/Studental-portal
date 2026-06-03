@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   Badge,
   Button,
@@ -17,6 +18,7 @@ import {
 import Icon from "@/components/icons";
 import { Markdown } from "@/components/ai/Markdown";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/store";
 
 type AssignmentType = "Essay" | "Report" | "Research" | "Presentation" | "Case Study" | "Literature Review";
 type Tone = "Academic" | "Professional" | "Analytical" | "Creative" | "Simple";
@@ -40,6 +42,25 @@ function wordCount(text: string) {
 
 export default function AssignmentHelperPage() {
   const { push } = useToast();
+  const { user } = useAuth();
+  const isPro = user?.plan === "pro" || user?.plan === "team";
+
+  if (user && !isPro) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4 space-y-5">
+        <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-[var(--primary-soft)] to-[var(--surface-2)] text-[var(--primary)] flex items-center justify-center border border-[var(--border)]">
+          <Icon.Crown size={28} />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold">Assignment Helper requires Pro</h1>
+          <p className="text-[var(--muted)] mt-2 max-w-sm">Upgrade to a Pro plan to unlock AI-powered assignment assistance.</p>
+        </div>
+        <Link href="/subscription">
+          <Button><Icon.Sparkles size={14} /> Upgrade to Pro</Button>
+        </Link>
+      </div>
+    );
+  }
 
   // Step 1 inputs
   const [topic, setTopic] = React.useState("");

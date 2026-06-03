@@ -38,15 +38,19 @@ export async function PATCH(
     if (body.level !== undefined && LEVELS.includes(body.level)) data.level = body.level;
     if (body.featured !== undefined) data.featured = Boolean(body.featured);
 
-    // Courses are managed wholesale: if provided, replace the full set.
+    // Courses are managed wholesale: if provided, replace the full set atomically.
     if (body.courseIds !== undefined) {
-      await prisma.learningPathCourse.deleteMany({ where: { pathId: id } });
       data.courses = {
         create: body.courseIds.map((courseId, idx) => ({ courseId, order: idx })),
       };
+      // Run delete + update inside a transaction so a failed update doesn't leave orphaned state.
+      await prisma.$transaction([
+        prisma.learningPathCourse.deleteMany({ where: { pathId: id } }),
+        prisma.learningPath.update({ where: { id }, data }),
+      ]);
+    } else {
+      await prisma.learningPath.update({ where: { id }, data });
     }
-
-    await prisma.learningPath.update({ where: { id }, data });
     return Response.json({ ok: true });
   } catch (err) {
     return errorResponse(err);

@@ -23,21 +23,23 @@ export async function PATCH(
     }
 
     const prevName = target.name;
-    await prisma.user.update({
-      where: { id },
-      data: {
-        ...(body.name !== undefined ? { name: body.name } : {}),
-        ...(body.email !== undefined ? { email: body.email } : {}),
-        ...(body.phone !== undefined ? { phone: body.phone } : {}),
-        ...(body.bio !== undefined ? { bio: body.bio } : {}),
-      },
-    });
-    // Propagate name change to courses where they're the instructor.
+    const userUpdateData = {
+      ...(body.name !== undefined ? { name: body.name } : {}),
+      ...(body.email !== undefined ? { email: body.email } : {}),
+      ...(body.phone !== undefined ? { phone: body.phone } : {}),
+      ...(body.bio !== undefined ? { bio: body.bio } : {}),
+    };
+    // Propagate name change to courses atomically so user and course names stay in sync.
     if (body.name && body.name !== prevName) {
-      await prisma.course.updateMany({
-        where: { instructor: prevName },
-        data: { instructor: body.name },
-      });
+      await prisma.$transaction([
+        prisma.user.update({ where: { id }, data: userUpdateData }),
+        prisma.course.updateMany({
+          where: { instructor: prevName },
+          data: { instructor: body.name },
+        }),
+      ]);
+    } else {
+      await prisma.user.update({ where: { id }, data: userUpdateData });
     }
     return Response.json({ ok: true });
   } catch (err) {

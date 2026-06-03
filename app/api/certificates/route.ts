@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { errorResponse, requireUser } from "@/lib/auth-server";
 import { uid } from "@/lib/utils";
+import { randomBytes } from "node:crypto";
 
 function toClient(c: {
   id: string;
@@ -39,13 +40,32 @@ export async function POST(request: Request) {
     const course = await prisma.course.findUnique({ where: { id: courseId } });
     if (!course) return Response.json({ error: "Course not found." }, { status: 404 });
 
+    // Require the enrollment to be completed before awarding a certificate.
+    const enrollment = await prisma.enrollment.findFirst({
+      where: { userId: me.id, courseId },
+    });
+    if (!enrollment || !enrollment.completed) {
+      return Response.json(
+        { error: "Complete the course before claiming a certificate." },
+        { status: 400 },
+      );
+    }
+
+    // Prevent duplicate certificates.
+    const existing = await prisma.certificate.findFirst({
+      where: { userId: me.id, courseId },
+    });
+    if (existing) {
+      return Response.json({ certificate: toClient(existing) });
+    }
+
     const cert = await prisma.certificate.create({
       data: {
         id: uid(),
         userId: me.id,
         courseId,
         score: Math.max(0, Math.min(100, Math.round(score))),
-        verifyCode: `EDU-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
+        verifyCode: `EDU-${randomBytes(4).toString("hex").toUpperCase()}`,
       },
     });
     return Response.json({ certificate: toClient(cert) });

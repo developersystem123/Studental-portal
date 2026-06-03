@@ -1,23 +1,44 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Badge, Button, Card, CardBody, Input, Select, useToast } from "@/components/ui";
 import { CourseCard } from "@/components/course/CourseCard";
 import { PhysicalApplicationModal } from "@/components/course/PhysicalApplicationModal";
 import Icon from "@/components/icons";
 import { COURSES, type Course, type CourseCategory, type CourseLevel } from "@/lib/mockData";
-import { useData } from "@/lib/store";
+import { useData, useAuth } from "@/lib/store";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const CATEGORIES: CourseCategory[] = ["Web Dev", "Data Science", "Design", "Business", "Languages", "Math"];
 const LEVELS: CourseLevel[] = ["Beginner", "Intermediate", "Advanced"];
 
 export default function ExplorePage() {
-  const { enrollments, enroll, addNotification } = useData();
-  const toast = useToast();
+  return (
+    <Suspense fallback={
+      <div className="space-y-4">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="h-20 rounded-2xl bg-[var(--surface-2)] animate-pulse" />
+        ))}
+      </div>
+    }>
+      <ExploreContent />
+    </Suspense>
+  );
+}
 
-  const [searchInput, setSearchInput] = useState("");
-  const [q, setQ] = useState("");
+function ExploreContent() {
+  const { enrollments, enroll, addNotification } = useData();
+  const { user } = useAuth();
+  const toast = useToast();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Pre-populate search from ?q= URL param (e.g. from topbar search).
+  const initialQ = searchParams.get("q") ?? "";
+  const [searchInput, setSearchInput] = useState(initialQ);
+  const [q, setQ] = useState(initialQ);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [cats, setCats] = useState<Set<CourseCategory>>(new Set());
@@ -91,6 +112,7 @@ export default function ExplorePage() {
   }
 
   function handleEnroll(id: string, title: string) {
+    if (!user) { router.push("/login"); return; }
     enroll(id);
     addNotification({
       type: "achievement",
@@ -267,10 +289,10 @@ export default function ExplorePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {filtered.map((c) => (
                 <div key={c.id} className="relative">
-                  <CourseCard course={c} href={`/my-courses/${c.id}`} />
+                  <CourseCard course={c} href={`/explore/${c.id}`} />
                   <div className="absolute top-3 right-3 z-10 flex flex-col items-end gap-1.5">
                     {enrolledIds.has(c.id) ? (
-                      <Badge variant="success">
+                      <Badge variant="success" className="bg-white/90 text-emerald-600 shadow-sm backdrop-blur-sm">
                         <Icon.Check size={12} /> Enrolled
                       </Badge>
                     ) : (

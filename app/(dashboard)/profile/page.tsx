@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card, CardBody, Modal, useToast } from "@/components/ui";
+import { Badge, Button, Card, CardBody, Input, Label, Modal, useToast } from "@/components/ui";
 import Icon from "@/components/icons";
 import { useAuth, useData } from "@/lib/store";
 import {
@@ -19,6 +19,7 @@ export default function StudentProfilePage() {
   const router = useRouter();
   const toast = useToast();
   const [confirmDelete, setConfirmDelete] = React.useState(false);
+  const [deleteInput, setDeleteInput] = React.useState("");
 
   if (!user) return null;
 
@@ -61,7 +62,11 @@ export default function StudentProfilePage() {
                 </p>
               </div>
             </div>
-            <Button variant="outline" size="sm">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => toast.push({ title: "Google account linking coming soon", tone: "info" })}
+            >
               {user.googleConnected ? "Disconnect" : "Connect"}
             </Button>
           </div>
@@ -107,19 +112,40 @@ export default function StudentProfilePage() {
         </CardBody>
       </Card>
 
-      <Modal open={confirmDelete} onClose={() => setConfirmDelete(false)} title="Delete account?">
+      <Modal
+        open={confirmDelete}
+        onClose={() => { setConfirmDelete(false); setDeleteInput(""); }}
+        title="Delete account?"
+      >
         <div className="p-5 space-y-4">
           <p className="text-sm text-[var(--muted)]">
             Are you sure? This action cannot be undone. All your enrollments, certificates, and progress will be lost.
           </p>
+          <div>
+            <Label htmlFor="profile-delete-confirm">
+              Type <span className="font-mono font-bold">DELETE</span> to confirm
+            </Label>
+            <Input
+              id="profile-delete-confirm"
+              value={deleteInput}
+              onChange={(e) => setDeleteInput(e.target.value.toUpperCase())}
+              placeholder="DELETE"
+              autoComplete="off"
+            />
+          </div>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setConfirmDelete(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => { setConfirmDelete(false); setDeleteInput(""); }}>Cancel</Button>
             <Button
               variant="danger"
-              onClick={() => {
-                deleteAccount();
-                toast.push({ title: "Account deleted", tone: "success" });
-                router.replace("/login");
+              disabled={deleteInput !== "DELETE"}
+              onClick={async () => {
+                try {
+                  await deleteAccount();
+                  toast.push({ title: "Account deleted", tone: "success" });
+                  router.replace("/login");
+                } catch {
+                  toast.push({ title: "Couldn't delete account", tone: "danger" });
+                }
               }}
             >
               <Icon.Trash size={16} /> Yes, delete my account

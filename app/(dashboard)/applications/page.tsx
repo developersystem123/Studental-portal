@@ -11,7 +11,6 @@ import {
   CardTitle,
   EmptyState,
   Input,
-  Skeleton,
   StatCard,
   Tabs,
   useToast,
@@ -87,10 +86,14 @@ export default function StudentApplicationsPage() {
     return list;
   }, [applications, filter, search, courses, sortDesc]);
 
-  function handleWithdraw(id: string) {
-    withdrawApplication(id);
-    setWithdrawConfirmId(null);
-    toast.push({ title: "Application withdrawn", description: "Your application has been withdrawn successfully.", tone: "success" });
+  async function handleWithdraw(id: string) {
+    try {
+      await withdrawApplication(id);
+      setWithdrawConfirmId(null);
+      toast.push({ title: "Application withdrawn", description: "Your application has been withdrawn successfully.", tone: "success" });
+    } catch {
+      toast.push({ title: "Couldn't withdraw application", description: "Please try again.", tone: "danger" });
+    }
   }
 
   const rejectionRate = counts.all > 0 ? Math.round((counts.rejected / counts.all) * 100) : 0;

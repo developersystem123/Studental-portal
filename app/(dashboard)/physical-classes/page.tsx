@@ -84,7 +84,7 @@ export default function StudentPhysicalClassesPage() {
 
   React.useEffect(() => {
     fetch("/api/physical-classes")
-      .then((r) => r.json())
+      .then((r) => r.ok ? r.json() : Promise.reject(r.status))
       .then((data) => setClasses(data.classes ?? []))
       .catch(() => setClasses([]))
       .finally(() => setLoading(false));

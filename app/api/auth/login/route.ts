@@ -10,13 +10,12 @@ export async function POST(request: Request) {
       return Response.json({ error: "Email and password are required." }, { status: 400 });
     }
     const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
-    if (!user) {
-      return Response.json({ error: "No account found with this email." }, { status: 404 });
+    if (!user || !verifyPassword(password, user.password)) {
+      // Use a consistent 401 for both cases to prevent email enumeration.
+      await new Promise((r) => setTimeout(r, 400)); // slow down brute-force
+      return Response.json({ error: "Invalid email or password." }, { status: 401 });
     }
-    if (!verifyPassword(password, user.password)) {
-      return Response.json({ error: "Incorrect password." }, { status: 401 });
-    }
-    await setSession(user.id);
+    await setSession(user.id, user.role);
     const { password: _p, ...safe } = user;
     return Response.json({ user: safe });
   } catch (err) {

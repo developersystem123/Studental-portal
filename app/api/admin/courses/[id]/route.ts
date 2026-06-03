@@ -28,32 +28,35 @@ export async function PATCH(
     if (body.reviews !== undefined) updateData.reviews = body.reviews;
     if (body.tags !== undefined) updateData.tags = body.tags;
 
-    // Chapters are managed wholesale: if provided, replace all.
+    // Chapters are managed wholesale: if provided, replace all atomically.
+    let updated;
     if (body.chapters !== undefined) {
-      await prisma.chapter.deleteMany({ where: { courseId: id } });
+      const newChapters = body.chapters.map((ch, idx) => ({
+        id: ch.id || uid(),
+        title: ch.title,
+        duration: ch.duration,
+        videoUrl: ch.videoUrl,
+        resources: ch.resources ? JSON.parse(JSON.stringify(ch.resources)) : null,
+        order: idx,
+        courseId: id,
+      }));
+      // Use a transaction so chapters are never deleted without the update succeeding.
+      await prisma.$transaction([
+        prisma.chapter.deleteMany({ where: { courseId: id } }),
+        prisma.chapter.createMany({ data: newChapters }),
+        prisma.course.update({ where: { id }, data: updateData }),
+      ]);
+      updated = await prisma.course.findUniqueOrThrow({
+        where: { id },
+        include: { chapters: { orderBy: { order: "asc" } } },
+      });
+    } else {
+      updated = await prisma.course.update({
+        where: { id },
+        data: updateData,
+        include: { chapters: { orderBy: { order: "asc" } } },
+      });
     }
-
-    const updated = await prisma.course.update({
-      where: { id },
-      data: {
-        ...updateData,
-        ...(body.chapters !== undefined
-          ? {
-              chapters: {
-                create: body.chapters.map((ch, idx) => ({
-                  id: ch.id || uid(),
-                  title: ch.title,
-                  duration: ch.duration,
-                  videoUrl: ch.videoUrl,
-                  resources: ch.resources ? JSON.parse(JSON.stringify(ch.resources)) : null,
-                  order: idx,
-                })),
-              },
-            }
-          : {}),
-      },
-      include: { chapters: { orderBy: { order: "asc" } } },
-    });
     return Response.json({ course: toClientCourse(updated) });
   } catch (err) {
     return errorResponse(err);

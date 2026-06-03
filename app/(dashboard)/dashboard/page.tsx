@@ -38,7 +38,7 @@ export default function DashboardPage() {
   const { enrollments, certificates } = useData();
   const [liveCount, setLiveCount] = React.useState(3842);
   React.useEffect(() => {
-    const id = setInterval(() => setLiveCount((n) => n + Math.floor(Math.random() * 5) - 2), 4000);
+    const id = setInterval(() => setLiveCount((n) => Math.max(0, n + Math.floor(Math.random() * 5) - 2)), 4000);
     return () => clearInterval(id);
   }, []);
 
@@ -119,57 +119,44 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Activity heatmap + Streak/XP */}
+    {/* Quiz scores + Hours by category */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2">
           <CardHeader className="flex items-center justify-between">
             <div>
-              <CardTitle>Study activity</CardTitle>
-              <p className="text-xs text-[var(--muted)] mt-1">
-                Last {heatmapWeeks} weeks · {STUDY_STREAK.daysActiveThisYear} active days this year
-              </p>
+              <CardTitle>Quiz scores over time</CardTitle>
+              <p className="text-xs text-[var(--muted)] mt-1">Last 12 attempts · trending up</p>
             </div>
             <Badge variant="success">
-              <Icon.TrendingUp size={12} /> Streak {STUDY_STREAK.current}d
+              <Icon.TrendingUp size={12} /> Avg {Math.round(
+                QUIZ_SCORE_HISTORY.reduce((s, q) => s + q.score, 0) / QUIZ_SCORE_HISTORY.length,
+              )}%
             </Badge>
           </CardHeader>
           <CardBody>
-            <div className="overflow-x-auto scrollbar-thin">
-              <div className="min-w-[560px] h-44">
-                <Heatmap cells={ACTIVITY_HEATMAP} weeks={heatmapWeeks} />
-              </div>
+            <div className="h-64">
+              <LineChart data={quizLineData} yFormatter={(v) => `${Math.round(v)}%`} />
             </div>
           </CardBody>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Level &amp; goals</CardTitle>
+            <CardTitle>Hours by category</CardTitle>
+            <p className="text-xs text-[var(--muted)] mt-1">This semester</p>
           </CardHeader>
-          <CardBody className="space-y-5">
-            <div className="flex items-center gap-3">
-              <Donut value={xpPct} size={84} label={`Lv ${XP_DATA.level}`} />
-              <div className="min-w-0">
-                <p className="text-sm font-semibold leading-tight">{XP_DATA.rank}</p>
-                <p className="text-xs text-[var(--muted)] mt-0.5">
-                  {XP_DATA.xp.toLocaleString()} / {XP_DATA.xpForNext.toLocaleString()} XP
-                </p>
-                <p className="text-xs text-emerald-500 mt-0.5">+{XP_DATA.weeklyXp} XP this week</p>
-              </div>
-            </div>
-            <div>
-              <ProgressBar
-                value={goalPct}
-                label={`Weekly goal — ${WEEKLY_GOAL.doneHours.toFixed(1)}h of ${WEEKLY_GOAL.goalHours}h`}
-                hint={`${Math.round(goalPct)}%`}
+          <CardBody>
+            <div className="h-64">
+              <BarChart
+                data={HOURS_BY_CATEGORY}
+                valueLabel={(v) => `${v}h`}
               />
-              <p className="text-xs text-[var(--muted-2)] mt-2">
-                {STUDY_STREAK.thisWeekSessions} of {STUDY_STREAK.weeklyGoalSessions} sessions logged this week
-              </p>
             </div>
           </CardBody>
         </Card>
       </div>
+
+      
 
       {/* Weekly hours + Skill mastery */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -217,38 +204,53 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Quiz scores + Hours by category */}
+      {/* Activity heatmap + Streak/XP */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2">
           <CardHeader className="flex items-center justify-between">
             <div>
-              <CardTitle>Quiz scores over time</CardTitle>
-              <p className="text-xs text-[var(--muted)] mt-1">Last 12 attempts · trending up</p>
+              <CardTitle>Study activity</CardTitle>
+              <p className="text-xs text-[var(--muted)] mt-1">
+                Last {heatmapWeeks} weeks · {STUDY_STREAK.daysActiveThisYear} active days this year
+              </p>
             </div>
             <Badge variant="success">
-              <Icon.TrendingUp size={12} /> Avg {Math.round(
-                QUIZ_SCORE_HISTORY.reduce((s, q) => s + q.score, 0) / QUIZ_SCORE_HISTORY.length,
-              )}%
+              <Icon.TrendingUp size={12} /> Streak {STUDY_STREAK.current}d
             </Badge>
           </CardHeader>
           <CardBody>
-            <div className="h-64">
-              <LineChart data={quizLineData} yFormatter={(v) => `${Math.round(v)}%`} />
+            <div className="overflow-x-auto scrollbar-thin">
+              <div className="min-w-[560px] h-44">
+                <Heatmap cells={ACTIVITY_HEATMAP} weeks={heatmapWeeks} />
+              </div>
             </div>
           </CardBody>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Hours by category</CardTitle>
-            <p className="text-xs text-[var(--muted)] mt-1">This semester</p>
+            <CardTitle>Level &amp; goals</CardTitle>
           </CardHeader>
-          <CardBody>
-            <div className="h-64">
-              <BarChart
-                data={HOURS_BY_CATEGORY}
-                valueLabel={(v) => `${v}h`}
+          <CardBody className="space-y-5">
+            <div className="flex items-center gap-3">
+              <Donut value={xpPct} size={84} label={`Lv ${XP_DATA.level}`} />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold leading-tight">{XP_DATA.rank}</p>
+                <p className="text-xs text-[var(--muted)] mt-0.5">
+                  {XP_DATA.xp.toLocaleString()} / {XP_DATA.xpForNext.toLocaleString()} XP
+                </p>
+                <p className="text-xs text-emerald-500 mt-0.5">+{XP_DATA.weeklyXp} XP this week</p>
+              </div>
+            </div>
+            <div>
+              <ProgressBar
+                value={goalPct}
+                label={`Weekly goal — ${WEEKLY_GOAL.doneHours.toFixed(1)}h of ${WEEKLY_GOAL.goalHours}h`}
+                hint={`${Math.round(goalPct)}%`}
               />
+              <p className="text-xs text-[var(--muted-2)] mt-2">
+                {STUDY_STREAK.thisWeekSessions} of {STUDY_STREAK.weeklyGoalSessions} sessions logged this week
+              </p>
             </div>
           </CardBody>
         </Card>
@@ -323,7 +325,8 @@ export default function DashboardPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {inProgress.slice(0, 3).map((e) => {
-                const course = COURSES.find((c) => c.id === e.courseId)!;
+                const course = COURSES.find((c) => c.id === e.courseId);
+                if (!course) return null;
                 return (
                   <Link key={e.courseId} href={`/my-courses/${course.id}`} className="group">
                     <div className="rounded-xl border border-[var(--border)] overflow-hidden hover:shadow-md transition">

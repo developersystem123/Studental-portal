@@ -198,7 +198,7 @@ export default function CareersPage() {
 
       {/* Culture photo strip */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             { src: "photo-1531482615713-2afd69097998", alt: "Team workshop" },
             { src: "photo-1522202176988-66273c2fd55f", alt: "Collaboration session" },

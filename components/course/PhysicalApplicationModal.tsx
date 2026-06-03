@@ -85,8 +85,6 @@ export function PhysicalApplicationModal({
     setHasAttempted(false);
   }, [open, user]);
 
-  if (!course) return null;
-
   const eligible = meetsMatriculationRequirement(education);
   const notSignedIn = !user;
   const wrongRole = !!user && user.role !== "Student";
@@ -228,6 +226,8 @@ export function PhysicalApplicationModal({
     if (!hasAttempted) return;
     setErrors(validate());
   }, [hasAttempted, validate]);
+
+  if (!course) return null;
 
   async function onSubmit(ev: React.FormEvent) {
     ev.preventDefault();

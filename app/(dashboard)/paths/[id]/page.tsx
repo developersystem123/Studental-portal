@@ -209,7 +209,7 @@ export default function LearningPathDetailPage() {
               )}
             </Button>
             {path.courses[0] && (
-              <Link href={`/my-courses/${path.courses[0].id}`}>
+              <Link href={path.enrolled ? `/my-courses/${path.courses[0].id}` : `/explore/${path.courses[0].id}`}>
                 <Button variant="soft">
                   <Icon.Play size={15} /> {path.enrolled ? "Continue" : "Start first course"}
                 </Button>

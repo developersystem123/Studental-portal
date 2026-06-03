@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button, Checkbox, Input, Label, useToast } from "@/components/ui";
 import Icon from "@/components/icons";
 import { useAuth } from "@/lib/store";
-import { validateEmail, validatePassword } from "@/lib/validation";
+import { validateEmail } from "@/lib/validation";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -32,9 +32,9 @@ export default function LoginPage() {
     e.preventDefault();
     const next: typeof errors = {};
     const emailErr = validateEmail(email);
-    const passwordErr = validatePassword(password);
+    // Login should only check presence, not length — existing accounts may predate length rules.
     if (emailErr) next.email = emailErr;
-    if (passwordErr) next.password = passwordErr;
+    if (!password) next.password = "Password is required.";
     setErrors(next);
     if (Object.keys(next).length) return;
 
@@ -47,12 +47,19 @@ export default function LoginPage() {
       return;
     }
     toast.push({ title: "Welcome back!", tone: "success" });
+    // Redirect handled by the useEffect watching user state.
   }
 
   async function onGoogle() {
     setGLoading(true);
-    await loginWithGoogle();
-    setGLoading(false);
+    try {
+      await loginWithGoogle();
+      // Redirect handled by the useEffect watching user state.
+    } catch {
+      toast.push({ title: "Google sign-in failed", tone: "danger" });
+    } finally {
+      setGLoading(false);
+    }
   }
 
   return (
@@ -82,7 +89,7 @@ export default function LoginPage() {
       </div>
 
       {/* Form */}
-      <form onSubmit={onSubmit} className="space-y-4">
+      <form onSubmit={onSubmit} className="space-y-4" noValidate>
         <div>
           <Label htmlFor="email">Email</Label>
           <Input
@@ -93,6 +100,7 @@ export default function LoginPage() {
             onChange={(e) => setEmail(e.target.value)}
             icon={<Icon.Mail size={16} />}
             error={errors.email}
+            autoComplete="email"
           />
         </div>
 
@@ -112,10 +120,14 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               icon={<Icon.Lock size={16} />}
               error={errors.password}
+              autoComplete="current-password"
             />
             <button
               type="button"
               onClick={() => setShow((s) => !s)}
+              aria-label={show ? "Hide password" : "Show password"}
+              aria-pressed={show}
+              tabIndex={-1}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--foreground)] transition"
             >
               {show ? <Icon.EyeOff size={18} /> : <Icon.Eye size={18} />}
@@ -146,28 +158,30 @@ export default function LoginPage() {
         </Link>
       </p>
 
-      {/* Demo accounts */}
-      <div className="rounded-xl border border-[var(--border)] overflow-hidden bg-[var(--surface-2)]">
-        <div className="flex items-center gap-2 px-3.5 py-2 border-b border-[var(--border)] bg-[var(--surface)]">
-          <Icon.AlertCircle size={13} className="text-[var(--muted)] shrink-0" />
-          <p className="text-xs font-semibold text-[var(--foreground)]">Demo accounts</p>
+      {/* Demo accounts — hidden in production to avoid exposing credentials */}
+      {process.env.NODE_ENV !== "production" && (
+        <div className="rounded-xl border border-[var(--border)] overflow-hidden bg-[var(--surface-2)]">
+          <div className="flex items-center gap-2 px-3.5 py-2 border-b border-[var(--border)] bg-[var(--surface)]">
+            <Icon.AlertCircle size={13} className="text-[var(--muted)] shrink-0" />
+            <p className="text-xs font-semibold text-[var(--foreground)]">Demo accounts</p>
+          </div>
+          <div className="p-3 space-y-2">
+            {[
+              { role: "Student", email: "student@demo.com" },
+              { role: "Instructor", email: "teacher@demo.com" },
+              { role: "Admin", email: "admin@demo.com" },
+            ].map((d) => (
+              <div key={d.role} className="flex items-center justify-between text-xs">
+                <span className="text-[var(--muted-2)]">
+                  <span className="font-medium text-[var(--foreground)]">{d.role}</span>
+                  {" · "}{d.email}
+                </span>
+                <span className="text-[var(--muted)] font-mono">demo1234</span>
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="p-3 space-y-2">
-          {[
-            { role: "Student", email: "student@demo.com" },
-            { role: "Instructor", email: "teacher@demo.com" },
-            { role: "Admin", email: "admin@demo.com" },
-          ].map((d) => (
-            <div key={d.role} className="flex items-center justify-between text-xs">
-              <span className="text-[var(--muted-2)]">
-                <span className="font-medium text-[var(--foreground)]">{d.role}</span>
-                {" · "}{d.email}
-              </span>
-              <span className="text-[var(--muted)] font-mono">demo1234</span>
-            </div>
-          ))}
-        </div>
-      </div>
+      )}
     </div>
   );
 }

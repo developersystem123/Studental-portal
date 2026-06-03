@@ -106,6 +106,35 @@ export default function CourseDetailPage() {
     );
   }
 
+  if (!enrollment) {
+    return (
+      <div className="max-w-lg mx-auto py-16 px-4 text-center space-y-6">
+        <div className="w-16 h-16 rounded-2xl bg-[var(--primary-soft)] flex items-center justify-center mx-auto">
+          <Icon.Book size={30} className="text-[var(--primary)]" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-xl font-bold">{course.title}</h2>
+          <p className="text-sm text-[var(--muted)]">
+            You are not enrolled in this course. Please enroll from the Explore page to access the content.
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2 justify-center">
+          <Link href="/explore">
+            <Button>
+              <Icon.Compass size={15} /> Browse courses
+            </Button>
+          </Link>
+          <button
+            onClick={() => router.back()}
+            className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition px-4 py-2"
+          >
+            ← Go back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (user && !isProfileComplete(user)) {
     return (
       <div className="max-w-lg mx-auto py-16 px-4 text-center space-y-6">
@@ -223,18 +252,6 @@ export default function CourseDetailPage() {
         {/* ── Main content ── */}
         <div className="space-y-4">
           <VideoPlayer title={ch.title} durationSeconds={ch.duration} />
-
-          {/* Keyboard hint */}
-          <p className="text-[11px] text-[var(--muted)] text-center -mt-1">
-            Press{" "}
-            <kbd className="px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--surface-2)] font-mono text-[10px]">
-              ←
-            </kbd>{" "}
-            <kbd className="px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--surface-2)] font-mono text-[10px]">
-              →
-            </kbd>{" "}
-            to navigate chapters
-          </p>
 
           {/* Chapter header + controls */}
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -488,88 +505,42 @@ function ResourcesTab({
   course: Course;
   activeChapterId: string;
 }) {
-  const [expanded, setExpanded] = useState<string>(activeChapterId);
+  const chapterIdx = course.chapters.findIndex((ch) => ch.id === activeChapterId);
+  const chapter = course.chapters[chapterIdx];
+  if (!chapter) return null;
 
-  useEffect(() => {
-    setExpanded(activeChapterId);
-  }, [activeChapterId]);
+  const resources = chapterResources(chapter, chapterIdx);
 
   return (
-    <div className="space-y-2">
-      {course.chapters.map((ch, i) => {
-        const isActive = ch.id === activeChapterId;
-        const isOpen = expanded === ch.id;
-        const resources = chapterResources(ch, i);
+    <div className="space-y-3">
+      {/* Header */}
+      <div className="flex items-center gap-2.5 pb-3 border-b border-[var(--border)]">
+        <span className="h-7 w-7 rounded-full bg-[var(--primary)] text-white flex items-center justify-center text-xs font-bold shrink-0">
+          {chapterIdx + 1}
+        </span>
+        <div>
+          <p className="text-sm font-semibold text-[var(--foreground)]">{chapter.title}</p>
+          <p className="text-xs text-[var(--muted)]">
+            {resources.length} file{resources.length !== 1 ? "s" : ""} available
+          </p>
+        </div>
+      </div>
 
-        return (
-          <div
-            key={ch.id}
-            className="rounded-xl border border-[var(--border)] overflow-hidden"
-          >
-            <button
-              onClick={() => setExpanded(isOpen ? "" : ch.id)}
-              className={cn(
-                "w-full flex items-center gap-3 px-4 py-3 text-left transition",
-                isOpen
-                  ? "bg-[var(--surface-2)]"
-                  : "hover:bg-[var(--surface-2)]",
-              )}
-            >
-              <span
-                className={cn(
-                  "h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
-                  isActive
-                    ? "bg-[var(--primary)] text-white"
-                    : "bg-[var(--surface-2)] text-[var(--muted)]",
-                )}
-              >
-                {i + 1}
-              </span>
-              <span
-                className={cn(
-                  "flex-1 text-sm font-medium truncate",
-                  isActive
-                    ? "text-[var(--primary)]"
-                    : "text-[var(--foreground)]",
-                )}
-              >
-                {ch.title}
-              </span>
-              <span className="text-xs text-[var(--muted)] shrink-0">
-                {resources.length} file{resources.length !== 1 ? "s" : ""}
-              </span>
-              <Icon.ChevronDown
-                size={14}
-                className={cn(
-                  "text-[var(--muted)] shrink-0 transition-transform",
-                  isOpen && "rotate-180",
-                )}
-              />
-            </button>
-
-            {isOpen && (
-              <ul className="border-t border-[var(--border)] divide-y divide-[var(--border)]">
-                {resources.map((r, ri) => (
-                  <li key={ri} className="flex items-center gap-3 px-4 py-2.5">
-                    <FileIcon type={r.type} />
-                    <span className="flex-1 text-sm text-[var(--foreground)] truncate">
-                      {r.name}
-                    </span>
-                    {r.size && (
-                      <span className="text-xs text-[var(--muted)] shrink-0">
-                        {r.size}
-                      </span>
-                    )}
-                    <Button size="sm" variant="ghost">
-                      <Icon.Download size={13} /> Download
-                    </Button>
-                  </li>
-                ))}
-              </ul>
+      {/* Files */}
+      <ul className="divide-y divide-[var(--border)] rounded-xl border border-[var(--border)] overflow-hidden">
+        {resources.map((r, ri) => (
+          <li key={ri} className="flex items-center gap-3 px-4 py-3 bg-[var(--surface)] hover:bg-[var(--surface-2)] transition-colors">
+            <FileIcon type={r.type} />
+            <span className="flex-1 text-sm text-[var(--foreground)] truncate">{r.name}</span>
+            {r.size && (
+              <span className="text-xs text-[var(--muted)] shrink-0">{r.size}</span>
             )}
-          </div>
-        );
-      })}
+            <Button size="sm" variant="ghost">
+              <Icon.Download size={13} /> Download
+            </Button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -583,29 +554,14 @@ type QAItem = {
   yours?: boolean;
 };
 
-const SEED_QA: QAItem[] = [
-  {
-    id: "qa-seed-1",
-    question: "How do I deploy this course project to production?",
-    answer:
-      "Push your code to GitHub then connect the repository on your preferred hosting platform (Vercel, Railway, etc.). The platform will auto-detect the framework.",
-  },
-  {
-    id: "qa-seed-2",
-    question: "Do I need prior experience to follow along?",
-    answer:
-      "Basic familiarity with the fundamentals helps, but each chapter starts from first principles — just follow along step by step.",
-  },
-];
-
 function QATab({ courseId }: { courseId: string }) {
   const toast = useToast();
   const [items, setItems] = useState<QAItem[]>(() => {
     try {
       const saved = localStorage.getItem(`qa-${courseId}`);
-      return saved ? (JSON.parse(saved) as QAItem[]) : SEED_QA;
+      return saved ? (JSON.parse(saved) as QAItem[]) : [];
     } catch {
-      return SEED_QA;
+      return [];
     }
   });
   const [question, setQuestion] = useState("");

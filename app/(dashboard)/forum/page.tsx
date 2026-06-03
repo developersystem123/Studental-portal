@@ -87,6 +87,7 @@ export default function ForumPage() {
   const [likes, setLikes] = useState<Record<string, number>>({});
   const [liked, setLiked] = useState<Record<string, boolean>>({});
   const [bookmarks, setBookmarks] = useState<Set<string>>(new Set());
+  const [showBookmarked, setShowBookmarked] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { push } = useToast();
 
@@ -118,10 +119,13 @@ export default function ForumPage() {
       if (!r.ok) { push({ title: "Couldn't load posts", tone: "danger" }); return; }
       const fetched: Post[] = data.posts ?? [];
       setPosts(fetched);
+      // Initialise like counts from view counts as a proxy engagement metric.
+      // Using random numbers caused flickering on every refetch; using views is
+      // stable across fetches. Actual likes would require a backend field.
       setLikes((prev) => {
         const next = { ...prev };
         fetched.forEach((post) => {
-          if (!(post.id in next)) next[post.id] = Math.floor(Math.random() * 18);
+          if (!(post.id in next)) next[post.id] = Math.round(post.views * 0.3);
         });
         return next;
       });
@@ -160,15 +164,16 @@ export default function ForumPage() {
   }
 
   const sorted = useMemo(() => {
-    const pinned = posts.filter((p) => p.pinned);
-    const rest = posts.filter((p) => !p.pinned);
+    const source = showBookmarked ? posts.filter((p) => bookmarks.has(p.id)) : posts;
+    const pinned = source.filter((p) => p.pinned);
+    const rest = source.filter((p) => !p.pinned);
     const sortFn = (a: Post, b: Post) => {
       if (sort === "popular") return b.views - a.views;
       if (sort === "replies") return b.replyCount - a.replyCount;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     };
     return [...pinned, ...rest.sort(sortFn)];
-  }, [posts, sort]);
+  }, [posts, sort, showBookmarked, bookmarks]);
 
   const stats = useMemo(() => ({
     total: posts.length,
@@ -286,11 +291,15 @@ export default function ForumPage() {
           ))}
           {bookmarks.size > 0 && (
             <button
-              onClick={() => setSort("newest")}
-              className="ml-auto text-xs px-3 py-1.5 rounded-lg font-medium bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 flex items-center gap-1"
+              onClick={() => setShowBookmarked((v) => !v)}
+              className={`ml-auto text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1 transition-colors ${
+                showBookmarked
+                  ? "bg-amber-500 text-white"
+                  : "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400"
+              }`}
             >
               <Icon.Bookmark size={11} />
-              {bookmarks.size} saved
+              {showBookmarked ? "All posts" : `${bookmarks.size} saved`}
             </button>
           )}
         </div>

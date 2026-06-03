@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { errorResponse, requireAdmin } from "@/lib/auth-server";
 import { uid } from "@/lib/utils";
+import { randomBytes } from "node:crypto";
 
 export async function GET() {
   try {

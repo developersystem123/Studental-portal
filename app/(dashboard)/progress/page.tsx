@@ -43,7 +43,7 @@ type ProgressData = {
     completed: boolean;
     category: string;
   }[];
-  recentQuizzes: { id: string; percentage: number; passed: boolean; completedAt: string | null }[];
+  recentQuizzes: { id: string; quizTitle: string; percentage: number; passed: boolean; completedAt: string | null }[];
   byCategory: Record<string, { enrolled: number; minutesLearned: number }>;
 };
 
@@ -96,9 +96,18 @@ export default function ProgressPage() {
               <CardTitle>Weekly learning hours</CardTitle>
               <p className="text-xs text-[var(--muted)] mt-1">Past 7 days</p>
             </div>
-            <Badge variant="primary">
-              <Icon.TrendingUp size={12} /> +18%
-            </Badge>
+            {(() => {
+              const lastWeek = WEEKLY_HOURS.slice(-7);
+              const thisHalf = lastWeek.slice(3).reduce((s, d) => s + d.hours, 0);
+              const prevHalf = lastWeek.slice(0, 3).reduce((s, d) => s + d.hours, 0);
+              const delta = prevHalf === 0 ? null : Math.round(((thisHalf - prevHalf) / prevHalf) * 100);
+              return delta !== null ? (
+                <Badge variant={delta >= 0 ? "primary" : "warning"}>
+                  {delta >= 0 ? <Icon.TrendingUp size={12} /> : <Icon.TrendingUp size={12} className="rotate-180" />}
+                  {delta >= 0 ? "+" : ""}{delta}%
+                </Badge>
+              ) : null;
+            })()}
           </CardHeader>
           <CardBody>
             <div className="h-56">
@@ -278,8 +287,10 @@ export default function ProgressPage() {
                     {a.passed ? <Icon.CheckCircle size={18} /> : <Icon.AlertCircle size={18} />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">{a.passed ? "Passed" : "Did not pass"}</p>
-                    <p className="text-xs text-[var(--muted-2)]">{a.completedAt ? formatDate(a.completedAt) : "—"}</p>
+                    <p className="text-sm font-medium truncate">{a.quizTitle}</p>
+                    <p className="text-xs text-[var(--muted-2)]">
+                      {a.passed ? "Passed" : "Did not pass"} · {a.completedAt ? formatDate(a.completedAt) : "—"}
+                    </p>
                   </div>
                   <Badge variant={a.passed ? "success" : "warning"}>{a.percentage}%</Badge>
                 </li>

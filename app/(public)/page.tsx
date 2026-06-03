@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import Icon from "@/components/icons";
 import { Button, Card, CardBody, Badge, Select } from "@/components/ui";
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { COURSES, type CourseCategory } from "@/lib/mockData";
 import { formatHours } from "@/lib/utils";
 import { useAuth } from "@/lib/store";
@@ -195,10 +196,30 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Decorative hero illustration */}
-          <div className="relative">
-            <div className="absolute -inset-6 bg-gradient-to-tr from-[var(--primary)]/20 via-transparent to-[var(--accent)]/20 blur-3xl rounded-3xl" />
-            <HeroIllustration />
+          {/* Hero visual — real photo */}
+          <div className="relative fade-in hidden lg:block">
+            <div className="absolute -inset-6 bg-gradient-to-tr from-[var(--primary)]/25 via-transparent to-[var(--accent)]/20 blur-3xl rounded-3xl pointer-events-none" />
+            <div className="relative rounded-3xl overflow-hidden shadow-2xl ring-1 ring-[var(--border)]">
+              <Image
+                src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=900&h=720&fit=crop&q=80"
+                alt="Students learning online with AI"
+                width={900}
+                height={720}
+                className="w-full h-full object-cover"
+                priority
+              />
+              {/* Overlay badge */}
+              <div className="absolute bottom-5 left-5 right-5 bg-white/90 dark:bg-[var(--surface)]/90 backdrop-blur-md rounded-2xl px-4 py-3 flex items-center gap-3 shadow-lg ring-1 ring-[var(--border)]">
+                <div className="h-9 w-9 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shrink-0">
+                  <Icon.Sparkles size={16} className="text-white" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-[var(--foreground)] truncate">AI Tutor • Online</p>
+                  <p className="text-[11px] text-[var(--muted)] truncate">Sure! Think of recursion as a function that calls itself…</p>
+                </div>
+                <span className="ml-auto shrink-0 h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -455,8 +476,9 @@ export default function HomePage() {
 
       {/* Final CTA */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] p-10 lg:p-16 text-white text-center">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(255,255,255,.25),transparent_60%)]" />
+        <div className="relative overflow-hidden rounded-3xl bg-linear-to-br from-green-500 to-green-400 dark:from-green-800 dark:via-green-700 dark:to-emerald-800 p-10 lg:p-16 text-white text-center">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(255,255,255,.20),transparent_60%)]" />
+          <div className="absolute inset-0 dark:bg-[radial-gradient(ellipse_at_bottom_right,rgba(74,222,128,.15),transparent_70%)]" />
           <div className="relative">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight">
               Ready to learn smarter?
@@ -479,7 +501,7 @@ export default function HomePage() {
                 </Link>
               )}
               <Link href="/contact">
-                <Button size="lg" variant="outline" className="border-white/40 text-white hover:bg-white/10">
+                <Button size="lg" variant="outline" className="!border-white/40 text-white hover:bg-white/10">
                   Talk to us
                 </Button>
               </Link>
@@ -491,291 +513,6 @@ export default function HomePage() {
   );
 }
 
-function HeroIllustration() {
-  const float = (s: number, d = 0) =>
-    ({ animation: `float-slow ${s}s ease-in-out infinite ${d}s` } as CSSProperties);
-
-  const containerRef = useRef<HTMLDivElement>(null);
-  const orbRef = useRef<SVGGElement>(null);
-  const playRef = useRef<SVGGElement>(null);
-  const bookRef = useRef<SVGGElement>(null);
-  const ringRef = useRef<SVGGElement>(null);
-  const chipRef = useRef<SVGGElement>(null);
-  const dotRef = useRef<SVGGElement>(null);
-  const squareRef = useRef<SVGGElement>(null);
-  const triRef = useRef<SVGGElement>(null);
-
-  useEffect(() => {
-    // Respect users who prefer reduced motion — skip the parallax effect.
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) return;
-
-    const layers: Array<[React.RefObject<SVGGElement | null>, number]> = [
-      [orbRef, 22],
-      [playRef, 18],
-      [bookRef, 14],
-      [ringRef, 20],
-      [chipRef, 16],
-      [dotRef, 10],
-      [squareRef, 12],
-      [triRef, 8],
-    ];
-
-    let rafId = 0;
-    let nx = 0;
-    let ny = 0;
-
-    const apply = () => {
-      rafId = 0;
-      for (const [ref, depth] of layers) {
-        const node = ref.current;
-        if (!node) continue;
-        node.style.transform = `translate(${(nx * depth).toFixed(2)}px, ${(ny * depth).toFixed(2)}px)`;
-      }
-    };
-
-    const onMove = (e: MouseEvent) => {
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      nx = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
-      ny = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
-      // Clamp so off-screen mouse positions don't push elements too far.
-      nx = Math.max(-1.4, Math.min(1.4, nx));
-      ny = Math.max(-1.4, Math.min(1.4, ny));
-      if (!rafId) rafId = requestAnimationFrame(apply);
-    };
-
-    const onLeave = () => {
-      nx = 0;
-      ny = 0;
-      if (!rafId) rafId = requestAnimationFrame(apply);
-    };
-
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseout", onLeave);
-    return () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseout", onLeave);
-      if (rafId) cancelAnimationFrame(rafId);
-    };
-  }, []);
-
-  const parallax: CSSProperties = {
-    transition: "transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1)",
-    transformBox: "fill-box",
-  };
-
-  return (
-    <div ref={containerRef} className="relative aspect-[4/3] w-full">
-      <svg
-        viewBox="0 0 600 450"
-        xmlns="http://www.w3.org/2000/svg"
-        className="absolute inset-0 h-full w-full drop-shadow-[0_25px_45px_rgba(22,163,74,0.18)]"
-        role="img"
-        aria-label="Illustration of AI-assisted learning"
-      >
-        <defs>
-          <linearGradient id="hero-bg" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#4ade80" stopOpacity="0.18" />
-            <stop offset="100%" stopColor="#86efac" stopOpacity="0.12" />
-          </linearGradient>
-          <linearGradient id="hero-window" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#ffffff" />
-            <stop offset="100%" stopColor="#f8fafc" />
-          </linearGradient>
-          <linearGradient id="hero-brand" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#16a34a" />
-            <stop offset="100%" stopColor="#4ade80" />
-          </linearGradient>
-          <linearGradient id="hero-accent" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#10b981" />
-            <stop offset="100%" stopColor="#34d399" />
-          </linearGradient>
-          <linearGradient id="hero-bar" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#16a34a" />
-            <stop offset="100%" stopColor="#4ade80" />
-          </linearGradient>
-          <radialGradient id="hero-glow" cx="50%" cy="0%" r="80%">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.7" />
-            <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
-          </radialGradient>
-          <pattern id="hero-dots" x="0" y="0" width="22" height="22" patternUnits="userSpaceOnUse">
-            <circle cx="2" cy="2" r="1.2" fill="#16a34a" opacity="0.18" />
-          </pattern>
-          <filter id="hero-shadow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="8" />
-          </filter>
-        </defs>
-
-        {/* Background blob + dot grid */}
-        <rect x="0" y="0" width="600" height="450" rx="36" fill="url(#hero-bg)" />
-        <rect x="0" y="0" width="600" height="450" rx="36" fill="url(#hero-dots)" />
-        <circle cx="100" cy="80" r="80" fill="#22c55e" opacity="0.16" />
-        <circle cx="520" cy="380" r="100" fill="#4ade80" opacity="0.16" />
-
-        {/* App window shadow */}
-        <rect x="92" y="90" width="416" height="270" rx="22" fill="#0f172a" opacity="0.15" filter="url(#hero-shadow)" />
-
-        {/* App window */}
-        <g transform="translate(80 78)">
-          <rect x="0" y="0" width="416" height="270" rx="22" fill="url(#hero-window)" stroke="#e2e8f0" strokeWidth="1" />
-          <rect x="0" y="0" width="416" height="270" rx="22" fill="url(#hero-glow)" />
-
-          {/* Top bar */}
-          <rect x="0" y="0" width="416" height="38" rx="22" fill="#f1f5f9" />
-          <rect x="0" y="20" width="416" height="18" fill="#f1f5f9" />
-          <circle cx="20" cy="19" r="5" fill="#f87171" />
-          <circle cx="38" cy="19" r="5" fill="#fbbf24" />
-          <circle cx="56" cy="19" r="5" fill="#34d399" />
-          <rect x="140" y="11" width="180" height="16" rx="8" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1" />
-          <circle cx="152" cy="19" r="3" fill="#94a3b8" />
-
-          {/* Sidebar */}
-          <rect x="0" y="38" width="92" height="232" fill="#fafbff" />
-          <rect x="0" y="38" width="3" height="232" fill="url(#hero-brand)" />
-          <rect x="14" y="56" width="64" height="10" rx="5" fill="url(#hero-brand)" opacity="0.9" />
-          <rect x="14" y="78" width="48" height="6" rx="3" fill="#cbd5e1" />
-          <rect x="14" y="92" width="56" height="6" rx="3" fill="#cbd5e1" />
-          <rect x="14" y="106" width="44" height="6" rx="3" fill="#cbd5e1" />
-          <rect x="14" y="120" width="52" height="6" rx="3" fill="#cbd5e1" />
-          {/* Active item */}
-          <rect x="10" y="136" width="72" height="22" rx="8" fill="#dcfce7" />
-          <circle cx="20" cy="147" r="3" fill="#16a34a" />
-          <rect x="28" y="144" width="42" height="6" rx="3" fill="#16a34a" />
-
-          {/* Main content area */}
-          <g transform="translate(108 54)">
-            {/* Heading */}
-            <rect x="0" y="0" width="160" height="12" rx="6" fill="#0f172a" />
-            <rect x="0" y="20" width="220" height="6" rx="3" fill="#cbd5e1" />
-
-            {/* AI chat bubble */}
-            <g transform="translate(0 40)">
-              <circle cx="12" cy="12" r="12" fill="url(#hero-brand)" />
-              <path d="M12 6 l1.5 4 L18 12 l-4.5 2 L12 18 l-1.5 -4 L6 12 l4.5 -2 z" fill="#ffffff" />
-              <rect x="32" y="2" width="252" height="22" rx="11" fill="#f1f5f9" />
-              <rect x="42" y="9" width="180" height="4" rx="2" fill="#94a3b8" />
-              <rect x="42" y="16" width="120" height="4" rx="2" fill="#cbd5e1" />
-            </g>
-
-            {/* User reply bubble */}
-            <g transform="translate(0 76)">
-              <rect x="60" y="0" width="224" height="22" rx="11" fill="url(#hero-brand)" />
-              <rect x="74" y="7" width="160" height="4" rx="2" fill="#ffffff" opacity="0.85" />
-              <rect x="74" y="14" width="100" height="4" rx="2" fill="#ffffff" opacity="0.7" />
-            </g>
-
-            {/* Progress card */}
-            <g transform="translate(0 112)">
-              <rect x="0" y="0" width="284" height="60" rx="12" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1" />
-              <rect x="12" y="12" width="78" height="8" rx="4" fill="#0f172a" />
-              <rect x="12" y="26" width="120" height="5" rx="2.5" fill="#cbd5e1" />
-              {/* Progress bar */}
-              <rect x="12" y="42" width="260" height="6" rx="3" fill="#eef2ff" />
-              <rect x="12" y="42" width="170" height="6" rx="3" fill="url(#hero-bar)" />
-              {/* Percent chip */}
-              <rect x="232" y="10" width="40" height="16" rx="8" fill="#dcfce7" />
-              <text x="240" y="22" fontFamily="system-ui, sans-serif" fontSize="9" fontWeight="700" fill="#16a34a">
-                65%
-              </text>
-            </g>
-          </g>
-        </g>
-
-        {/* Floating: sparkle orb (top-right) */}
-        <g transform="translate(508 96)">
-          <g ref={orbRef} style={parallax}>
-            <g style={float(5.5, 0.2)}>
-              <circle cx="0" cy="0" r="30" fill="#ffffff" />
-              <circle cx="0" cy="0" r="30" fill="url(#hero-brand)" opacity="0.12" />
-              <path d="M0 -14 L3.5 -3.5 L14 0 L3.5 3.5 L0 14 L-3.5 3.5 L-14 0 L-3.5 -3.5 Z" fill="url(#hero-brand)" />
-            </g>
-          </g>
-        </g>
-
-        {/* Floating: play button (top-left) */}
-        <g transform="translate(70 130)">
-          <g ref={playRef} style={parallax}>
-            <g style={float(6, 0.8)}>
-              <circle cx="0" cy="0" r="26" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1" />
-              <circle cx="0" cy="0" r="26" fill="url(#hero-accent)" opacity="0.15" />
-              <path d="M-6 -8 L10 0 L-6 8 Z" fill="url(#hero-accent)" />
-            </g>
-          </g>
-        </g>
-
-        {/* Floating: book (bottom-left) */}
-        <g transform="translate(36 296)">
-          <g ref={bookRef} style={parallax}>
-            <g style={float(5, 0.4)}>
-              <rect x="0" y="0" width="92" height="64" rx="8" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1" />
-              <rect x="0" y="0" width="6" height="64" rx="3" fill="url(#hero-brand)" />
-              <rect x="16" y="14" width="58" height="6" rx="3" fill="#0f172a" />
-              <rect x="16" y="26" width="64" height="4" rx="2" fill="#cbd5e1" />
-              <rect x="16" y="36" width="50" height="4" rx="2" fill="#cbd5e1" />
-              <rect x="16" y="46" width="40" height="4" rx="2" fill="#cbd5e1" />
-            </g>
-          </g>
-        </g>
-
-        {/* Floating: progress ring + score (bottom-right) */}
-        <g transform="translate(508 326)">
-          <g ref={ringRef} style={parallax}>
-            <g style={float(6.5, 1)}>
-              <circle cx="0" cy="0" r="34" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1" />
-              <circle cx="0" cy="0" r="22" fill="none" stroke="#eef2ff" strokeWidth="5" />
-              <circle
-                cx="0"
-                cy="0"
-                r="22"
-                fill="none"
-                stroke="url(#hero-brand)"
-                strokeWidth="5"
-                strokeLinecap="round"
-                strokeDasharray="104 140"
-                transform="rotate(-90)"
-              />
-              <text x="0" y="4" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="12" fontWeight="700" fill="#0f172a">
-                A+
-              </text>
-            </g>
-          </g>
-        </g>
-
-        {/* Floating: notification chip (mid-right) */}
-        <g transform="translate(450 218)">
-          <g ref={chipRef} style={parallax}>
-            <g style={float(5.8, 0.6)}>
-              <rect x="0" y="0" width="118" height="40" rx="14" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1" />
-              <circle cx="20" cy="20" r="11" fill="#fef3c7" />
-              <path d="M20 14 v8 M16 22 h8" stroke="#d97706" strokeWidth="2" strokeLinecap="round" />
-              <rect x="38" y="11" width="64" height="6" rx="3" fill="#0f172a" />
-              <rect x="38" y="23" width="44" height="5" rx="2.5" fill="#cbd5e1" />
-              <circle cx="106" cy="10" r="5" fill="#ef4444" />
-            </g>
-          </g>
-        </g>
-
-        {/* Tiny floating accents */}
-        <g ref={dotRef} style={parallax}>
-          <g style={float(7, 0)}>
-            <circle cx="296" cy="42" r="6" fill="#fbbf24" />
-          </g>
-        </g>
-        <g ref={squareRef} style={parallax}>
-          <g style={float(8, 1.2)}>
-            <rect x="44" y="60" width="14" height="14" rx="4" fill="#22c55e" opacity="0.9" transform="rotate(-12 51 67)" />
-          </g>
-        </g>
-        <g ref={triRef} style={parallax}>
-          <g style={float(6.5, 0.5)}>
-            <path d="M560 250 l6 -10 l6 10 z" fill="#f472b6" opacity="0.9" />
-          </g>
-        </g>
-      </svg>
-    </div>
-  );
-}
 
 /* ============================================================
    Shared hooks — IntersectionObserver-driven enter, count-up
@@ -982,110 +719,24 @@ function AIShowcaseSection() {
           </div>
         </div>
 
-        <div className="relative">
-          <AIChatIllustration />
+        <div className="relative fade-in">
+          <div className="absolute -inset-6 bg-linear-to-tr from-(--primary)/15 via-transparent to-(--accent)/20 blur-3xl rounded-3xl pointer-events-none" />
+          <div className="relative rounded-3xl overflow-hidden shadow-2xl ring-1 ring-[var(--border)]">
+            <Image
+              src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=900&h=720&fit=crop&q=80"
+              alt="Student studying online with AI tutor"
+              width={900}
+              height={720}
+              className="w-full object-cover"
+              priority
+            />
+          </div>
         </div>
       </div>
     </section>
   );
 }
 
-function AIChatIllustration() {
-  return (
-    <div className="relative aspect-[5/4] w-full">
-      <div className="absolute -inset-6 bg-gradient-to-tr from-[var(--primary)]/15 via-transparent to-[var(--accent)]/20 blur-3xl rounded-3xl" />
-      <svg
-        viewBox="0 0 500 400"
-        xmlns="http://www.w3.org/2000/svg"
-        className="absolute inset-0 h-full w-full drop-shadow-[0_20px_45px_rgba(15,32,80,0.18)]"
-        role="img"
-        aria-label="Animated AI chat illustration"
-      >
-        <defs>
-          <linearGradient id="ai-bg" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#dcfce7" />
-            <stop offset="100%" stopColor="#d1fae5" />
-          </linearGradient>
-          <linearGradient id="ai-brand" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#16a34a" />
-            <stop offset="100%" stopColor="#4ade80" />
-          </linearGradient>
-          <linearGradient id="ai-user" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#16a34a" />
-            <stop offset="100%" stopColor="#22c55e" />
-          </linearGradient>
-        </defs>
-
-        <rect x="0" y="0" width="500" height="400" rx="28" fill="url(#ai-bg)" />
-
-        <g transform="translate(40 40)">
-          <rect x="0" y="0" width="420" height="320" rx="22" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1" />
-          <rect x="0" y="0" width="420" height="36" rx="22" fill="#f8fafc" />
-          <rect x="0" y="18" width="420" height="18" fill="#f8fafc" />
-          <circle cx="20" cy="18" r="5" fill="#f87171" />
-          <circle cx="38" cy="18" r="5" fill="#fbbf24" />
-          <circle cx="56" cy="18" r="5" fill="#34d399" />
-          <rect x="148" y="11" width="124" height="14" rx="7" fill="#ffffff" stroke="#e2e8f0" />
-          <text x="210" y="22" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="9" fill="#94a3b8">
-            eduportal.app/tutor
-          </text>
-
-          {/* Chat messages */}
-          <g transform="translate(20 56)">
-            <g className="chat-pop" style={{ animationDelay: "100ms" }}>
-              <circle cx="14" cy="14" r="14" fill="url(#ai-brand)" />
-              <path d="M14 8 l2 4 L20 14 l-4 2 L14 20 l-2 -4 L8 14 l4 -2 z" fill="#ffffff" />
-              <rect x="38" y="2" width="270" height="36" rx="14" fill="#f1f5f9" />
-              <rect x="50" y="11" width="180" height="5" rx="2.5" fill="#94a3b8" />
-              <rect x="50" y="22" width="220" height="5" rx="2.5" fill="#cbd5e1" />
-            </g>
-
-            <g className="chat-pop" style={{ animationDelay: "560ms" }} transform="translate(0 56)">
-              <rect x="70" y="0" width="310" height="36" rx="14" fill="url(#ai-user)" />
-              <rect x="84" y="9" width="200" height="5" rx="2.5" fill="#ffffff" opacity="0.9" />
-              <rect x="84" y="20" width="140" height="5" rx="2.5" fill="#ffffff" opacity="0.7" />
-            </g>
-
-            <g className="chat-pop" style={{ animationDelay: "1080ms" }} transform="translate(0 112)">
-              <circle cx="14" cy="14" r="14" fill="url(#ai-brand)" />
-              <path d="M14 8 l2 4 L20 14 l-4 2 L14 20 l-2 -4 L8 14 l4 -2 z" fill="#ffffff" />
-              <rect x="38" y="2" width="290" height="60" rx="14" fill="#f1f5f9" />
-              <rect x="50" y="11" width="240" height="5" rx="2.5" fill="#94a3b8" />
-              <rect x="50" y="22" width="180" height="5" rx="2.5" fill="#cbd5e1" />
-              <rect x="50" y="32" width="220" height="22" rx="6" fill="#0f172a" />
-              <rect x="58" y="40" width="60" height="3" rx="1.5" fill="#4ade80" />
-              <rect x="58" y="46" width="120" height="3" rx="1.5" fill="#fbbf24" />
-            </g>
-
-            <g transform="translate(0 196)">
-              <rect x="38" y="2" width="80" height="22" rx="11" fill="#f1f5f9" />
-              <circle cx="56" cy="13" r="3" fill="#94a3b8" className="typing-dot" style={{ animationDelay: "0ms" }} />
-              <circle cx="68" cy="13" r="3" fill="#94a3b8" className="typing-dot" style={{ animationDelay: "150ms" }} />
-              <circle cx="80" cy="13" r="3" fill="#94a3b8" className="typing-dot" style={{ animationDelay: "300ms" }} />
-            </g>
-          </g>
-
-          <g transform="translate(20 268)">
-            <rect x="0" y="0" width="380" height="36" rx="18" fill="#f8fafc" stroke="#e2e8f0" />
-            <rect x="14" y="14" width="180" height="6" rx="3" fill="#cbd5e1" />
-            <circle cx="362" cy="18" r="12" fill="url(#ai-brand)" />
-            <path d="M357 13 L368 18 L357 23 L360 18 z" fill="#ffffff" />
-          </g>
-        </g>
-
-        <g style={{ animation: "float-slow 6s ease-in-out infinite" }}>
-          <path d="M460 80 l3 -8 l3 8 l8 3 l-8 3 l-3 8 l-3 -8 l-8 -3 z" fill="url(#ai-brand)" opacity="0.85" />
-        </g>
-        <g style={{ animation: "float-slow 7s ease-in-out infinite 0.5s" }}>
-          <circle cx="34" cy="340" r="6" fill="#fbbf24" />
-        </g>
-        <g style={{ animation: "float-slow 5.5s ease-in-out infinite 1s" }}>
-          <rect x="40" y="60" width="14" height="14" rx="4" fill="#22c55e" opacity="0.85" transform="rotate(-12 47 67)" />
-        </g>
-      </svg>
-    </div>
-  );
-}
 
 /* ============================================================
    Course Categories — 6 cards, each with a unique inline SVG

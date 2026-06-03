@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, Checkbox, Input, Label, Select, useToast } from "@/components/ui";
@@ -28,14 +28,6 @@ const strengthMeta = [
   { label: "Excellent", color: "bg-emerald-600", text: "text-emerald-600" },
 ];
 
-const ROLES = [
-  { value: "Student", label: "Student", desc: "Take courses & earn certificates", icon: "🎓" },
-  { value: "Instructor", label: "Instructor", desc: "Create & teach courses", icon: "👨‍🏫" },
-  { value: "Admin", label: "Admin", desc: "Manage the platform", icon: "⚙️" },
-] as const;
-
-type RoleValue = (typeof ROLES)[number]["value"];
-
 const NAME_RE = /^[A-Za-z][A-Za-z\s.'-]*$/;
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/;
 
@@ -46,9 +38,7 @@ export default function RegisterPage() {
 
   useEffect(() => {
     if (!user) return;
-    if (user.role === "Admin") router.replace("/admin");
-    else if (user.role === "Instructor") router.replace("/teacher");
-    else router.replace("/dashboard");
+    router.replace("/dashboard");
   }, [user, router]);
 
   const [name, setName] = useState("");
@@ -56,7 +46,6 @@ export default function RegisterPage() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [role, setRole] = useState<RoleValue>("Student");
   const [education, setEducation] = useState<EducationLevel>("None");
   const [agree, setAgree] = useState(false);
   const [showPw, setShowPw] = useState(false);
@@ -64,7 +53,6 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [gLoading, setGLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const phoneTouched = useRef(false);
 
   const pwScore = useMemo(() => scorePassword(password), [password]);
   const pwMatch = password.length > 0 && password === confirm;
@@ -95,12 +83,24 @@ export default function RegisterPage() {
     return next;
   }
 
+  const FIELD_LABELS: Record<string, string> = {
+    name: "Full name",
+    email: "Email",
+    phone: "Phone number",
+    password: "Password",
+    confirm: "Confirm password",
+    agree: "Terms of Service",
+  };
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     const next = validate();
     setErrors(next);
     if (Object.keys(next).length) {
-      toast.push({ title: "Please fix the errors", description: "Check the highlighted fields.", tone: "danger" });
+      const fieldNames = Object.keys(next)
+        .map((k) => FIELD_LABELS[k] ?? k)
+        .join(", ");
+      toast.push({ title: `Please fill: ${fieldNames}`, tone: "danger" });
       return;
     }
     setLoading(true);
@@ -109,8 +109,8 @@ export default function RegisterPage() {
       email: email.trim(),
       phone: phone.trim(),
       password,
-      role,
-      education: role === "Student" ? education : undefined,
+      role: "Student",
+      education,
     });
     setLoading(false);
     if (!res.ok) {
@@ -118,17 +118,20 @@ export default function RegisterPage() {
       toast.push({ title: "Couldn't sign up", description: res.error, tone: "danger" });
       return;
     }
-    toast.push({ title: "Account created!", description: "Welcome to EduPortal 🎉", tone: "success" });
-    if (role === "Admin") router.replace("/admin");
-    else if (role === "Instructor") router.replace("/teacher");
-    else router.replace("/dashboard");
+    toast.push({ title: "Account created!", description: "Welcome to EduPortal!", tone: "success" });
+    // Redirect handled by the useEffect watching user state.
   }
 
   async function onGoogle() {
     setGLoading(true);
-    await loginWithGoogle();
-    setGLoading(false);
-    // Role-based redirect is handled by the useEffect above.
+    try {
+      await loginWithGoogle();
+      // Redirect handled by the useEffect watching user state.
+    } catch {
+      toast.push({ title: "Google sign-up failed. Please try again.", tone: "danger" });
+    } finally {
+      setGLoading(false);
+    }
   }
 
   const meta = strengthMeta[pwScore];
@@ -159,32 +162,6 @@ export default function RegisterPage() {
       </div>
 
       <form onSubmit={onSubmit} className="space-y-5" noValidate>
-
-        {/* Role selector — card style */}
-        <div>
-          <Label>I&apos;m signing up as</Label>
-          <div className="grid grid-cols-3 gap-2 mt-1.5">
-            {ROLES.map((r) => (
-              <button
-                key={r.value}
-                type="button"
-                onClick={() => setRole(r.value)}
-                className={cn(
-                  "flex flex-col items-center gap-1.5 px-2 py-3.5 rounded-xl border-2 text-center transition-all cursor-pointer select-none",
-                  role === r.value
-                    ? "border-[var(--primary)] bg-[var(--primary-soft)] shadow-sm"
-                    : "border-[var(--border)] bg-[var(--surface)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-2)]"
-                )}
-              >
-                <span className="text-2xl leading-none">{r.icon}</span>
-                <span className={cn("text-xs font-semibold", role === r.value ? "text-[var(--primary)]" : "text-[var(--foreground)]")}>
-                  {r.label}
-                </span>
-                <span className="text-[10px] text-[var(--muted)] leading-tight hidden sm:block">{r.desc}</span>
-              </button>
-            ))}
-          </div>
-        </div>
 
         {/* Name & Email */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -225,31 +202,39 @@ export default function RegisterPage() {
             type="tel"
             placeholder="+92 300 1234567"
             value={phone}
-            onChange={(e) => { phoneTouched.current = false; setPhone(cleanPhoneInput(e.target.value)); }}
-            onBlur={() => { phoneTouched.current = true; if (phone.trim()) setErrors((prev) => ({ ...prev, phone: validatePhone(phone) ?? "" })); }}
-            error={errors.phone || (phoneTouched.current && phone.trim() ? validatePhone(phone) ?? undefined : undefined)}
+            onChange={(e) => setPhone(cleanPhoneInput(e.target.value))}
+            onBlur={() => {
+              if (phone.trim()) {
+                const err = validatePhone(phone);
+                setErrors((prev) => {
+                  const next = { ...prev };
+                  if (err) next.phone = err;
+                  else delete next.phone;
+                  return next;
+                });
+              }
+            }}
+            error={errors.phone}
             inputMode="tel"
             autoComplete="tel"
           />
         </div>
 
-        {/* Education (students only) */}
-        {role === "Student" && (
-          <div className="fade-in">
-            <Label htmlFor="education">Highest qualification</Label>
-            <Select
-              id="education"
-              value={education}
-              onChange={(e) => setEducation(e.target.value as EducationLevel)}
-            >
-              {EDUCATION_LEVELS.map((lvl) => (
-                <option key={lvl} value={lvl}>
-                  {lvl === "None" ? "Below Matriculation" : lvl}
-                </option>
-              ))}
-            </Select>
-          </div>
-        )}
+        {/* Education */}
+        <div>
+          <Label htmlFor="education">Highest qualification</Label>
+          <Select
+            id="education"
+            value={education}
+            onChange={(e) => setEducation(e.target.value as EducationLevel)}
+          >
+            {EDUCATION_LEVELS.map((lvl) => (
+              <option key={lvl} value={lvl}>
+                {lvl === "None" ? "Below Matriculation" : lvl}
+              </option>
+            ))}
+          </Select>
+        </div>
 
         {/* Password section */}
         <div className="space-y-4 rounded-xl border border-[var(--border)] p-4 bg-[var(--surface-2)]/50">
@@ -272,6 +257,8 @@ export default function RegisterPage() {
               <button
                 type="button"
                 onClick={() => setShowPw((s) => !s)}
+                aria-label={showPw ? "Hide password" : "Show password"}
+                aria-pressed={showPw}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--foreground)] transition"
                 tabIndex={-1}
               >
@@ -286,7 +273,9 @@ export default function RegisterPage() {
                       key={i}
                       className={cn(
                         "h-1.5 flex-1 rounded-full transition-all duration-300",
-                        i < pwScore ? meta.color : "bg-[var(--border)]",
+                        // Always show at least 1 bar when the password is non-empty so the meter
+                        // gives immediate colour feedback even at score 0 (too weak).
+                        i < Math.max(pwScore, 1) ? meta.color : "bg-[var(--border)]",
                       )}
                     />
                   ))}
@@ -316,6 +305,8 @@ export default function RegisterPage() {
               <button
                 type="button"
                 onClick={() => setShowConfirm((s) => !s)}
+                aria-label={showConfirm ? "Hide confirm password" : "Show confirm password"}
+                aria-pressed={showConfirm}
                 className={cn(
                 "absolute top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--foreground)] transition",
                 confirm.length > 0 ? "right-9" : "right-3"

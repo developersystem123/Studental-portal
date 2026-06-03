@@ -57,6 +57,7 @@ export default function NotificationsPage() {
   const { notifications, markAllNotificationsRead, markNotificationRead, deleteNotification } = useData();
   const [readFilter, setReadFilter] = useState<"all" | "unread">("all");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
+  const [inboxOpen, setInboxOpen] = useState(true);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -151,10 +152,22 @@ export default function NotificationsPage() {
             <CardTitle>
               {typeFilter !== "all" ? `${TYPE_INFO[typeFilter].label} notifications` : "Inbox"}
             </CardTitle>
-            <span className="text-xs text-[var(--muted)]">{filtered.length} item{filtered.length !== 1 ? "s" : ""}</span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-[var(--muted)]">{filtered.length} item{filtered.length !== 1 ? "s" : ""}</span>
+              <button
+                onClick={() => setInboxOpen((prev) => !prev)}
+                title={inboxOpen ? "Collapse inbox" : "Expand inbox"}
+                className="h-8 w-8 rounded-lg flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)] transition-all"
+              >
+                <Icon.ChevronDown
+                  size={16}
+                  className={cn("transition-transform duration-200", inboxOpen ? "rotate-0" : "-rotate-90")}
+                />
+              </button>
+            </div>
           </div>
         </CardHeader>
-        <CardBody className="p-0">
+        <CardBody className="p-0" style={{ display: inboxOpen ? undefined : "none" }}>
           {filtered.length === 0 ? (
             <EmptyState
               icon={<Icon.Bell size={28} />}
