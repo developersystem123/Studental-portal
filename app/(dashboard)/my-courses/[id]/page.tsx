@@ -52,6 +52,23 @@ export default function CourseDetailPage() {
   const [tab, setTab] = useState<"overview" | "resources" | "qa" | "notes" | "reviews">("overview");
   const hasAutoResumed = useRef(false);
 
+  // Payment verification for paid courses
+  const [paymentVerified, setPaymentVerified] = useState<boolean | null>(
+    !course || course.price === 0 ? true : null,
+  );
+  useEffect(() => {
+    if (!course || course.price === 0) { setPaymentVerified(true); return; }
+    fetch("/api/payments")
+      .then((r) => r.ok ? r.json() : { payments: [] })
+      .then((data: { payments?: { courseId: string | null; status: string }[] }) => {
+        const hasPaid = (data.payments ?? []).some(
+          (p) => p.courseId === course.id && p.status === "completed",
+        );
+        setPaymentVerified(hasPaid);
+      })
+      .catch(() => setPaymentVerified(false));
+  }, [course]);
+
   // Auto-resume: jump to first uncompleted chapter on load
   useEffect(() => {
     if (!enrollment || !course || hasAutoResumed.current) return;
@@ -107,6 +124,37 @@ export default function CourseDetailPage() {
   }
 
   if (!enrollment) {
+    // Paid course — not yet purchased
+    if (course.price > 0) {
+      return (
+        <div className="max-w-lg mx-auto py-16 px-4 text-center space-y-6">
+          <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto">
+            <Icon.Lock size={30} className="text-amber-500" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold">{course.title}</h2>
+            <p className="text-3xl font-bold text-[var(--primary)]">${course.price}</p>
+            <p className="text-sm text-[var(--muted)]">
+              This is a paid course. Purchase it to get lifetime access to all chapters, resources, and a certificate.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2 justify-center">
+            <Link href={`/explore/${course.id}`}>
+              <Button size="lg">
+                <Icon.CreditCard size={16} /> Buy this course
+              </Button>
+            </Link>
+            <button
+              onClick={() => router.back()}
+              className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition px-4 py-2"
+            >
+              ← Go back
+            </button>
+          </div>
+        </div>
+      );
+    }
+    // Free course — not enrolled
     return (
       <div className="max-w-lg mx-auto py-16 px-4 text-center space-y-6">
         <div className="w-16 h-16 rounded-2xl bg-[var(--primary-soft)] flex items-center justify-center mx-auto">
@@ -115,13 +163,13 @@ export default function CourseDetailPage() {
         <div className="space-y-2">
           <h2 className="text-xl font-bold">{course.title}</h2>
           <p className="text-sm text-[var(--muted)]">
-            You are not enrolled in this course. Please enroll from the Explore page to access the content.
+            You are not enrolled in this course yet. Enroll for free to start learning.
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 justify-center">
-          <Link href="/explore">
+          <Link href={`/explore/${course.id}`}>
             <Button>
-              <Icon.Compass size={15} /> Browse courses
+              <Icon.Book size={15} /> Enroll free
             </Button>
           </Link>
           <button
@@ -131,6 +179,42 @@ export default function CourseDetailPage() {
             ← Go back
           </button>
         </div>
+      </div>
+    );
+  }
+
+  // Enrolled but payment not verified for paid course
+  if (course.price > 0 && paymentVerified === false) {
+    return (
+      <div className="max-w-lg mx-auto py-16 px-4 text-center space-y-6">
+        <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mx-auto">
+          <Icon.Lock size={30} className="text-[var(--danger)]" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-xl font-bold">Payment not found</h2>
+          <p className="text-sm text-[var(--muted)]">
+            Access to <span className="font-semibold">{course.title}</span> requires a completed payment. Please purchase the course to continue.
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2 justify-center">
+          <Link href={`/explore/${course.id}`}>
+            <Button size="lg">
+              <Icon.CreditCard size={16} /> Purchase course — ${course.price}
+            </Button>
+          </Link>
+          <Link href="/billing">
+            <Button variant="outline">View billing</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Payment still loading for paid course — show spinner
+  if (course.price > 0 && paymentVerified === null) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Icon.Loader size={24} className="animate-spin text-[var(--primary)]" />
       </div>
     );
   }

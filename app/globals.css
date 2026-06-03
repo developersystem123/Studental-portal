@@ -27,6 +27,8 @@
    even when .dark is on <html>. Used on auth pages (login/register). */
 .force-light {
   color-scheme: light;
+  color: #374151;
+  background-color: #f0fdf4;
   --background: #f0fdf4;
   --surface: #ffffff;
   --surface-2: #dcfce7;
@@ -126,34 +128,31 @@ body {
   background-attachment: fixed;
 }
 
-/* Scrollbar — Firefox */
+/* ─── Scrollbar — Firefox ───────────────────────────────────────────────── */
 * {
   scrollbar-width: thin;
-  scrollbar-color: color-mix(in oklab, var(--muted) 28%, transparent) transparent;
+  scrollbar-color: color-mix(in oklab, var(--muted) 22%, transparent) transparent;
 }
 
-/* Scrollbar — WebKit / Chromium */
+/* ─── Scrollbar — WebKit / Chromium ──────────────────────────────────────── */
 *::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 4px;
+  height: 4px;
 }
 *::-webkit-scrollbar-track {
   background: transparent;
+  border: none;
+  box-shadow: none;
 }
 *::-webkit-scrollbar-thumb {
   background: color-mix(in oklab, var(--muted) 22%, transparent);
   border-radius: 999px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
-  transition: background-color 0.2s ease;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in oklab, var(--primary) 55%, transparent);
-  background-clip: padding-box;
+  background: color-mix(in oklab, var(--primary) 50%, transparent);
 }
 *::-webkit-scrollbar-thumb:active {
-  background: color-mix(in oklab, var(--primary) 75%, transparent);
-  background-clip: padding-box;
+  background: color-mix(in oklab, var(--primary) 70%, transparent);
 }
 *::-webkit-scrollbar-corner {
   background: transparent;
@@ -164,21 +163,26 @@ body {
   scrollbar-width: thin;
 }
 .scrollbar-thin::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  border: 1px solid transparent;
+  width: 3px;
+  height: 3px;
 }
 
-/* Auto-hide: thumb only appears on hover / scroll */
+/* Auto-hide: thumb invisible by default, fades in on hover / focus-within */
+.scrollbar-fade {
+  scrollbar-color: transparent transparent;
+}
 .scrollbar-fade::-webkit-scrollbar-thumb {
   background: transparent;
 }
-.scrollbar-fade:hover::-webkit-scrollbar-thumb,
+.scrollbar-fade:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--muted) 28%, transparent);
+}
 .scrollbar-fade:focus-within::-webkit-scrollbar-thumb {
-  background: color-mix(in oklab, var(--muted) 30%, transparent);
-  background-clip: padding-box;
+  background: color-mix(in oklab, var(--muted) 28%, transparent);
+}
+.scrollbar-fade:hover::-webkit-scrollbar-thumb:hover,
+.scrollbar-fade:focus-within::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklab, var(--primary) 50%, transparent);
 }
 
 /* Animations */

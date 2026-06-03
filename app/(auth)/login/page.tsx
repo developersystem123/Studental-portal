@@ -2,16 +2,36 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button, Checkbox, Input, Label, useToast } from "@/components/ui";
 import Icon from "@/components/icons";
 import { useAuth } from "@/lib/store";
 import { validateEmail } from "@/lib/validation";
 
+const GOOGLE_ERROR_MESSAGES: Record<string, string> = {
+  google_denied: "Google sign-in was cancelled.",
+  google_state_mismatch: "Sign-in session expired. Please try again.",
+  google_token_failed: "Couldn't exchange Google code. Please try again.",
+  google_profile_failed: "Couldn't fetch your Google profile. Please try again.",
+  google_db_error: "Account error. Please try again or use email sign-in.",
+  google_unavailable: "Google sign-in is not available in this environment.",
+  google_invalid: "Invalid Google response. Please try again.",
+};
+
 export default function LoginPage() {
   const router = useRouter();
   const { user, login, loginWithGoogle } = useAuth();
   const toast = useToast();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const err = searchParams.get("error");
+    if (err) {
+      const msg = GOOGLE_ERROR_MESSAGES[err] ?? "Google sign-in failed. Please try again.";
+      toast.push({ title: "Google sign-in failed", description: msg, tone: "danger" });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -140,9 +160,9 @@ export default function LoginPage() {
         </div>
 
         {errors.form && (
-          <div className="flex items-center gap-2.5 text-sm text-[var(--danger)] bg-red-500/8 border border-red-500/20 px-3.5 py-2.5 rounded-xl">
-            <Icon.X size={15} className="shrink-0" />
-            {errors.form}
+          <div className="flex items-start gap-2.5 text-sm text-[var(--danger)] bg-red-500/8 border border-red-500/20 px-3.5 py-2.5 rounded-xl overflow-hidden">
+            <Icon.X size={15} className="shrink-0 mt-0.5" />
+            <span className="break-words min-w-0">{errors.form}</span>
           </div>
         )}
 

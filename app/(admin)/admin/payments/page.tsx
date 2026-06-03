@@ -15,7 +15,7 @@ import {
   useToast,
 } from "@/components/ui";
 import Icon from "@/components/icons";
-import { relativeTime } from "@/lib/utils";
+import { formatDate, relativeTime } from "@/lib/utils";
 
 type PaymentStatus = "pending" | "completed" | "failed" | "refunded";
 
@@ -45,6 +45,8 @@ type Summary = {
 };
 
 type Filter = "all" | PaymentStatus;
+type SortKey = "newest" | "oldest" | "amount-desc" | "amount-asc";
+type DateRange = "all" | "today" | "week" | "month";
 
 const STATUS_LABEL: Record<PaymentStatus, string> = {
   pending: "Pending",
@@ -60,9 +62,88 @@ const STATUS_BADGE: Record<PaymentStatus, "success" | "warning" | "danger" | "in
   refunded: "info",
 };
 
+const STATUS_AMOUNT_CLS: Record<PaymentStatus, string> = {
+  completed: "text-emerald-600 dark:text-emerald-400",
+  pending: "text-amber-600 dark:text-amber-400",
+  failed: "text-rose-500 dark:text-rose-400 line-through opacity-70",
+  refunded: "text-sky-500 dark:text-sky-400",
+};
+
+const STATUS_BORDER: Record<PaymentStatus, string> = {
+  completed: "border-l-emerald-400",
+  pending: "border-l-amber-400",
+  failed: "border-l-rose-400",
+  refunded: "border-l-sky-400",
+};
+
+const PAGE_SIZE = 10;
+
 function money(cents: number, currency = "USD") {
   return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(cents / 100);
 }
+
+function avatarColor(name: string) {
+  const colors = [
+    "from-violet-500 to-purple-400",
+    "from-blue-500 to-sky-400",
+    "from-emerald-500 to-green-400",
+    "from-amber-500 to-orange-400",
+    "from-rose-500 to-pink-400",
+    "from-teal-500 to-cyan-400",
+  ];
+  return colors[name.charCodeAt(0) % colors.length];
+}
+
+function isInRange(iso: string, range: DateRange): boolean {
+  if (range === "all") return true;
+  const d = new Date(iso);
+  const now = new Date();
+  if (range === "today") {
+    return d.toDateString() === now.toDateString();
+  }
+  if (range === "week") {
+    const diff = now.getTime() - d.getTime();
+    return diff <= 7 * 24 * 60 * 60 * 1000;
+  }
+  if (range === "month") {
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }
+  return true;
+}
+
+function exportCSV(payments: Payment[]) {
+  const header = [
+    "User", "Email", "Description", "Course", "Method",
+    "Amount", "Currency", "Status", "TXN ID", "Date",
+  ];
+  const rows = payments.map((p) => [
+    `"${p.userName.replace(/"/g, '""')}"`,
+    p.userEmail,
+    `"${p.description.replace(/"/g, '""')}"`,
+    `"${(p.courseTitle ?? "").replace(/"/g, '""')}"`,
+    p.method,
+    (p.amount / 100).toFixed(2),
+    p.currency,
+    p.status,
+    p.txnId ?? "",
+    new Date(p.createdAt).toLocaleDateString(),
+  ]);
+  const csv = [header, ...rows].map((r) => r.join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "payments.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+const DATE_RANGE_LABELS: Record<DateRange, string> = {
+  all: "All time",
+  today: "Today",
+  week: "This week",
+  month: "This month",
+};
 
 export default function AdminPaymentsPage() {
   const toast = useToast();
@@ -71,9 +152,12 @@ export default function AdminPaymentsPage() {
   const [loading, setLoading] = React.useState(true);
   const [filter, setFilter] = React.useState<Filter>("all");
   const [query, setQuery] = React.useState("");
+  const [sortKey, setSortKey] = React.useState<SortKey>("newest");
+  const [dateRange, setDateRange] = React.useState<DateRange>("all");
   const [managing, setManaging] = React.useState<Payment | null>(null);
   const [nextStatus, setNextStatus] = React.useState<PaymentStatus>("completed");
   const [saving, setSaving] = React.useState(false);
+  const [page, setPage] = React.useState(1);
 
   const load = React.useCallback(async () => {
     try {
@@ -92,9 +176,8 @@ export default function AdminPaymentsPage() {
     }
   }, [toast]);
 
-  React.useEffect(() => {
-    load();
-  }, [load]);
+  React.useEffect(() => { load(); }, [load]);
+  React.useEffect(() => { setPage(1); }, [filter, query, sortKey, dateRange]);
 
   const counts = React.useMemo(
     () => ({
@@ -107,20 +190,48 @@ export default function AdminPaymentsPage() {
     [payments],
   );
 
+  // Method breakdown
+  const methodBreakdown = React.useMemo(() => {
+    const map: Record<string, { count: number; amount: number }> = {};
+    for (const p of payments.filter((p) => p.status === "completed")) {
+      const m = p.method || "Other";
+      if (!map[m]) map[m] = { count: 0, amount: 0 };
+      map[m].count++;
+      map[m].amount += p.amount;
+    }
+    return Object.entries(map).sort((a, b) => b[1].amount - a[1].amount);
+  }, [payments]);
+
+  const currency = summary?.currency ?? "USD";
+  const netRevenue = (summary?.grossRevenue ?? 0) - (summary?.refunded ?? 0);
+
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
-    return payments.filter((p) => {
-      if (filter !== "all" && p.status !== filter) return false;
-      if (!q) return true;
-      return (
-        p.userName.toLowerCase().includes(q) ||
-        p.userEmail.toLowerCase().includes(q) ||
-        p.description.toLowerCase().includes(q) ||
-        (p.courseTitle ?? "").toLowerCase().includes(q) ||
-        (p.txnId ?? "").toLowerCase().includes(q)
-      );
-    });
-  }, [payments, filter, query]);
+    return payments
+      .filter((p) => {
+        if (filter !== "all" && p.status !== filter) return false;
+        if (!isInRange(p.createdAt, dateRange)) return false;
+        if (!q) return true;
+        return (
+          p.userName.toLowerCase().includes(q) ||
+          p.userEmail.toLowerCase().includes(q) ||
+          p.description.toLowerCase().includes(q) ||
+          (p.courseTitle ?? "").toLowerCase().includes(q) ||
+          (p.txnId ?? "").toLowerCase().includes(q)
+        );
+      })
+      .sort((a, b) => {
+        if (sortKey === "oldest")
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        if (sortKey === "amount-desc") return b.amount - a.amount;
+        if (sortKey === "amount-asc") return a.amount - b.amount;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+  }, [payments, filter, query, sortKey, dateRange]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   function openManage(p: Payment) {
     setManaging(p);
@@ -150,7 +261,6 @@ export default function AdminPaymentsPage() {
         tone: "success",
       });
       setManaging(null);
-      // Refresh summary figures.
       load();
     } catch {
       toast.push({ title: "Update failed.", tone: "danger" });
@@ -159,19 +269,35 @@ export default function AdminPaymentsPage() {
     }
   }
 
-  const currency = summary?.currency ?? "USD";
+  function copyTxn(txnId: string) {
+    navigator.clipboard.writeText(txnId).then(() => {
+      toast.push({ title: "Transaction ID copied", tone: "success" });
+    }).catch(() => {
+      toast.push({ title: "Copy failed", tone: "danger" });
+    });
+  }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold">Payments &amp; revenue</h1>
-        <p className="text-sm text-[var(--muted)] mt-1">
-          Every transaction on the platform — track revenue, settle pending charges, and issue refunds.
-        </p>
+    <div className="space-y-6 fade-in">
+      {/* ── Header ── */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">
+            Manage
+          </p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight">Payments &amp; revenue</h1>
+          <p className="mt-1 text-[var(--muted)]">
+            Every transaction on the platform — track revenue, settle pending charges, and issue
+            refunds.
+          </p>
+        </div>
+        <Button variant="outline" onClick={() => exportCSV(filtered)}>
+          <Icon.Download size={15} /> Export CSV
+        </Button>
       </div>
 
-      {/* Summary */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* ── StatCards ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard
           label="Gross revenue"
           value={money(summary?.grossRevenue ?? 0, currency)}
@@ -180,16 +306,16 @@ export default function AdminPaymentsPage() {
           delta={`${summary?.transactions ?? 0} paid`}
         />
         <StatCard
-          label="Refunded"
-          value={money(summary?.refunded ?? 0, currency)}
-          icon={<Icon.ArrowLeft size={18} />}
-          tone="warning"
+          label="Net revenue"
+          value={money(netRevenue, currency)}
+          icon={<Icon.TrendingUp size={18} />}
+          tone="primary"
         />
         <StatCard
           label="Pending"
           value={summary?.pending ?? 0}
           icon={<Icon.Clock size={18} />}
-          tone="accent"
+          tone="warning"
         />
         <StatCard
           label="Failed"
@@ -199,33 +325,107 @@ export default function AdminPaymentsPage() {
         />
       </div>
 
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <Tabs
-          value={filter}
-          onChange={(v) => setFilter(v as Filter)}
-          options={[
-            { value: "all", label: "All", count: counts.all },
-            { value: "completed", label: "Completed", count: counts.completed },
-            { value: "pending", label: "Pending", count: counts.pending },
-            { value: "failed", label: "Failed", count: counts.failed },
-            { value: "refunded", label: "Refunded", count: counts.refunded },
-          ]}
-        />
-        <div className="md:w-80">
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by user, course, description, txn…"
-            icon={<Icon.Search size={16} />}
+      {/* ── Revenue method breakdown ── */}
+      {methodBreakdown.length > 0 && (
+        <Card>
+          <CardBody className="py-4">
+            <p className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider mb-3">
+              Revenue by payment method
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {methodBreakdown.map(([method, { count, amount }]) => {
+                const pct =
+                  summary?.grossRevenue
+                    ? Math.round((amount / summary.grossRevenue) * 100)
+                    : 0;
+                return (
+                  <div
+                    key={method}
+                    className="flex-1 min-w-[140px] rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold capitalize text-[var(--foreground)]">
+                        {method}
+                      </span>
+                      <span className="text-[11px] text-[var(--muted)]">{count} txn{count !== 1 ? "s" : ""}</span>
+                    </div>
+                    <p className="text-lg font-bold tabular-nums">{money(amount, currency)}</p>
+                    <div className="mt-2 h-1.5 rounded-full bg-[var(--border)] overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-[var(--primary)] transition-all duration-500"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <p className="text-[10px] text-[var(--muted)] mt-1">{pct}% of gross</p>
+                  </div>
+                );
+              })}
+            </div>
+          </CardBody>
+        </Card>
+      )}
+
+      {/* ── Controls ── */}
+      <div className="space-y-3">
+        {/* Tabs + search + sort in one area */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <Tabs
+            value={filter}
+            onChange={(v) => setFilter(v as Filter)}
+            options={[
+              { value: "all", label: "All", count: counts.all },
+              { value: "completed", label: "Completed", count: counts.completed },
+              { value: "pending", label: "Pending", count: counts.pending },
+              { value: "failed", label: "Failed", count: counts.failed },
+              { value: "refunded", label: "Refunded", count: counts.refunded },
+            ]}
           />
+          <div className="flex items-center gap-2 shrink-0">
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search payments…"
+              icon={<Icon.Search size={16} />}
+              className="w-52"
+            />
+            <Select
+              value={sortKey}
+              onChange={(e) => setSortKey(e.target.value as SortKey)}
+              className="h-9 text-xs !py-0 w-[148px]"
+            >
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+              <option value="amount-desc">Highest amount</option>
+              <option value="amount-asc">Lowest amount</option>
+            </Select>
+          </div>
+        </div>
+
+        {/* Date range chips */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-[var(--muted)] shrink-0">Period:</span>
+          {(["all", "today", "week", "month"] as DateRange[]).map((r) => (
+            <button
+              key={r}
+              onClick={() => setDateRange(r)}
+              className={`h-7 px-3 rounded-full text-xs font-medium transition ${
+                dateRange === r
+                  ? "bg-[var(--primary)] text-white"
+                  : "bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)]"
+              }`}
+            >
+              {DATE_RANGE_LABELS[r]}
+            </button>
+          ))}
         </div>
       </div>
 
+      {/* ── Table ── */}
       {loading ? (
         <Card>
           <CardBody>
             <div className="flex items-center justify-center gap-2 py-12 text-[var(--muted)]">
-              <Icon.Loader size={18} /> Loading payments…
+              <Icon.Loader size={18} className="animate-spin" /> Loading payments…
             </div>
           </CardBody>
         </Card>
@@ -244,78 +444,186 @@ export default function AdminPaymentsPage() {
           </CardBody>
         </Card>
       ) : (
-        <Card>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-[var(--surface-2)] text-[var(--muted)] text-xs uppercase tracking-wider">
-                <tr>
-                  <Th>User</Th>
-                  <Th>Description</Th>
-                  <Th>Method</Th>
-                  <Th className="text-right">Amount</Th>
-                  <Th>Status</Th>
-                  <Th>Date</Th>
-                  <Th className="text-right">Actions</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((p) => (
-                  <tr key={p.id} className="border-t border-[var(--border)] hover:bg-[var(--surface-2)]/50">
-                    <Td>
-                      <div className="font-medium">{p.userName}</div>
-                      <div className="text-xs text-[var(--muted)]">{p.userEmail}</div>
-                    </Td>
-                    <Td>
-                      <div className="font-medium truncate max-w-[24ch]">{p.description}</div>
-                      {p.courseTitle && (
-                        <div className="text-xs text-[var(--muted)] truncate max-w-[24ch]">
-                          {p.courseTitle}
-                        </div>
-                      )}
-                    </Td>
-                    <Td>
-                      <span className="capitalize text-xs">{p.method}</span>
-                    </Td>
-                    <Td className="text-right font-semibold tabular-nums">
-                      {money(p.amount, p.currency)}
-                    </Td>
-                    <Td>
-                      <Badge variant={STATUS_BADGE[p.status]}>{STATUS_LABEL[p.status]}</Badge>
-                    </Td>
-                    <Td className="text-xs text-[var(--muted)]">{relativeTime(p.createdAt)}</Td>
-                    <Td className="text-right">
-                      <Button size="sm" variant="soft" onClick={() => openManage(p)}>
-                        <Icon.Edit size={14} /> Manage
-                      </Button>
-                    </Td>
+        <>
+          <Card>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-[var(--surface-2)] text-[var(--muted)] text-xs uppercase tracking-wider">
+                  <tr>
+                    <Th>User</Th>
+                    <Th className="hidden md:table-cell">Description</Th>
+                    <Th className="hidden sm:table-cell">Method</Th>
+                    <Th className="text-right">Amount</Th>
+                    <Th>Status</Th>
+                    <Th className="hidden lg:table-cell">Date</Th>
+                    <Th className="text-right">Actions</Th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+                </thead>
+                <tbody>
+                  {paginated.map((p) => (
+                    <tr
+                      key={p.id}
+                      onClick={() => openManage(p)}
+                      className={`border-t border-[var(--border)] border-l-2 ${STATUS_BORDER[p.status]} hover:bg-[var(--surface-2)]/50 transition cursor-pointer group`}
+                    >
+                      {/* User */}
+                      <Td>
+                        <div className="flex items-center gap-2.5">
+                          <div
+                            className={`h-8 w-8 rounded-full bg-gradient-to-br ${avatarColor(p.userName)} text-white font-bold text-xs flex items-center justify-center shrink-0`}
+                          >
+                            {p.userName.slice(0, 1).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-semibold truncate max-w-[14ch]">{p.userName}</div>
+                            <div className="text-xs text-[var(--muted)] truncate max-w-[16ch]">
+                              {p.userEmail}
+                            </div>
+                          </div>
+                        </div>
+                      </Td>
+
+                      {/* Description */}
+                      <Td className="hidden md:table-cell">
+                        <div className="font-medium truncate max-w-[22ch]">{p.description}</div>
+                        {p.courseTitle && (
+                          <div className="text-xs text-[var(--muted)] truncate max-w-[22ch]">
+                            {p.courseTitle}
+                          </div>
+                        )}
+                        {p.txnId && (
+                          <div className="text-[10px] text-[var(--muted)] font-mono mt-0.5 truncate max-w-[18ch]">
+                            #{p.txnId}
+                          </div>
+                        )}
+                      </Td>
+
+                      {/* Method */}
+                      <Td className="hidden sm:table-cell">
+                        <span className="text-xs capitalize px-2 py-0.5 rounded-full bg-[var(--surface-2)] text-[var(--muted)] font-medium">
+                          {p.method}
+                        </span>
+                      </Td>
+
+                      {/* Amount */}
+                      <Td className="text-right">
+                        <span className={`font-bold tabular-nums ${STATUS_AMOUNT_CLS[p.status]}`}>
+                          {p.status === "refunded" && (
+                            <Icon.ArrowLeft size={11} className="inline mr-0.5 -mt-0.5" />
+                          )}
+                          {money(p.amount, p.currency)}
+                        </span>
+                      </Td>
+
+                      {/* Status */}
+                      <Td>
+                        <Badge variant={STATUS_BADGE[p.status]}>
+                          {STATUS_LABEL[p.status]}
+                        </Badge>
+                      </Td>
+
+                      {/* Date */}
+                      <Td className="hidden lg:table-cell text-xs text-[var(--muted)]">
+                        {formatDate(p.createdAt)}
+                      </Td>
+
+                      {/* Actions */}
+                      <Td
+                        className="text-right"
+                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                      >
+                        <button
+                          onClick={() => openManage(p)}
+                          title="Manage payment"
+                          className="h-8 px-3 rounded-lg text-xs font-medium bg-[var(--primary)]/10 text-[var(--primary)] hover:bg-[var(--primary)]/20 transition opacity-70 group-hover:opacity-100"
+                        >
+                          Manage
+                        </button>
+                      </Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Table footer */}
+            <div className="px-4 py-3 border-t border-[var(--border)]">
+              <PaymentPagination
+                page={safePage}
+                totalPages={totalPages}
+                total={filtered.length}
+                onChange={setPage}
+              />
+            </div>
+          </Card>
+        </>
       )}
 
-      {/* Manage modal */}
+      {/* ── Manage modal ── */}
       <Modal
         open={!!managing}
         onClose={() => setManaging(null)}
         size="md"
-        title="Manage payment"
+        title="Payment details"
       >
         {managing && (
-          <div className="p-5 space-y-4">
-            <div className="rounded-xl border border-[var(--border)] p-4 space-y-1.5 text-sm">
-              <Row label="User" value={`${managing.userName} · ${managing.userEmail}`} />
-              <Row label="Description" value={managing.description} />
-              {managing.courseTitle && <Row label="Course" value={managing.courseTitle} />}
-              <Row label="Amount" value={money(managing.amount, managing.currency)} />
-              <Row label="Method" value={managing.method} />
-              {managing.txnId && <Row label="Transaction" value={managing.txnId} />}
-              <Row label="Created" value={relativeTime(managing.createdAt)} />
+          <div className="p-5 space-y-5">
+            {/* Amount hero */}
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-4 flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
+                  Amount
+                </p>
+                <p className={`text-3xl font-bold tabular-nums ${STATUS_AMOUNT_CLS[managing.status]}`}>
+                  {money(managing.amount, managing.currency)}
+                </p>
+              </div>
+              <Badge variant={STATUS_BADGE[managing.status]} className="text-sm !px-3 !py-1">
+                {STATUS_LABEL[managing.status]}
+              </Badge>
             </div>
-            <div>
-              <p className="text-sm font-medium mb-1.5">Payment status</p>
+
+            {/* Details grid */}
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              {[
+                { label: "User", value: managing.userName },
+                { label: "Email", value: managing.userEmail },
+                { label: "Description", value: managing.description },
+                { label: "Course", value: managing.courseTitle ?? "—" },
+                { label: "Method", value: managing.method },
+                { label: "Date", value: formatDate(managing.createdAt) },
+                { label: "Created", value: relativeTime(managing.createdAt) },
+                { label: "Currency", value: managing.currency },
+              ].map((row) => (
+                <div key={row.label} className="rounded-lg bg-[var(--surface-2)] px-3 py-2">
+                  <p className="text-[10px] text-[var(--muted)] font-semibold uppercase tracking-wide mb-0.5">
+                    {row.label}
+                  </p>
+                  <p className="text-sm font-medium truncate">{row.value}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* TXN ID with copy */}
+            {managing.txnId && (
+              <div className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2.5">
+                <Icon.CreditCard size={14} className="text-[var(--muted)] shrink-0" />
+                <span className="text-xs font-mono text-[var(--muted)] flex-1 truncate">
+                  {managing.txnId}
+                </span>
+                <button
+                  onClick={() => copyTxn(managing.txnId!)}
+                  className="shrink-0 h-7 w-7 rounded-lg flex items-center justify-center hover:bg-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)] transition"
+                  title="Copy transaction ID"
+                >
+                  <Icon.Copy size={13} />
+                </button>
+              </div>
+            )}
+
+            {/* Status change */}
+            <div className="rounded-xl border border-[var(--border)] p-4 space-y-3">
+              <p className="text-sm font-semibold">Update status</p>
               <Select
                 value={nextStatus}
                 onChange={(e) => setNextStatus(e.target.value as PaymentStatus)}
@@ -326,16 +634,34 @@ export default function AdminPaymentsPage() {
                 <option value="refunded">Refunded</option>
               </Select>
               {nextStatus === "refunded" && managing.status !== "refunded" && (
-                <p className="text-xs text-amber-500 dark:text-amber-400 mt-1.5">
-                  Marking this payment as refunded removes its amount from gross revenue.
-                </p>
+                <div className="flex items-start gap-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 rounded-lg px-3 py-2">
+                  <Icon.AlertCircle size={13} className="shrink-0 mt-0.5" />
+                  <span>
+                    Marking as refunded removes this amount from gross revenue and cannot be undone.
+                  </span>
+                </div>
               )}
             </div>
+
+            {/* Quick refund shortcut */}
+            {managing.status === "completed" && nextStatus !== "refunded" && (
+              <button
+                onClick={() => setNextStatus("refunded")}
+                className="w-full text-xs text-rose-500 hover:text-rose-600 flex items-center justify-center gap-1.5 py-1 hover:underline transition"
+              >
+                <Icon.ArrowLeft size={12} /> Issue refund for {money(managing.amount, managing.currency)}
+              </button>
+            )}
+
             <div className="flex justify-end gap-2 pt-2 border-t border-[var(--border)]">
               <Button variant="outline" onClick={() => setManaging(null)}>
                 Cancel
               </Button>
-              <Button onClick={saveStatus} loading={saving} disabled={nextStatus === managing.status}>
+              <Button
+                onClick={saveStatus}
+                loading={saving}
+                disabled={nextStatus === managing.status}
+              >
                 <Icon.Save size={16} /> Save changes
               </Button>
             </div>
@@ -346,19 +672,117 @@ export default function AdminPaymentsPage() {
   );
 }
 
-function Th({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <th className={`text-left font-semibold px-4 py-3 ${className ?? ""}`}>{children}</th>;
-}
+/* ──────────────────────────────────────────────────────────────────────── */
+/*  Pagination                                                               */
+/* ──────────────────────────────────────────────────────────────────────── */
 
-function Td({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-4 py-3 align-top ${className ?? ""}`}>{children}</td>;
-}
+function PaymentPagination({
+  page,
+  totalPages,
+  total,
+  onChange,
+}: {
+  page: number;
+  totalPages: number;
+  total: number;
+  onChange: (p: number) => void;
+}) {
+  if (totalPages <= 1) {
+    return (
+      <p className="text-xs text-[var(--muted)]">
+        {total} transaction{total !== 1 ? "s" : ""}
+      </p>
+    );
+  }
 
-function Row({ label, value }: { label: string; value: string }) {
+  function getPages(): (number | "...")[] {
+    const pages: (number | "...")[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (page > 3) pages.push("...");
+      const start = Math.max(2, page - 1);
+      const end = Math.min(totalPages - 1, page + 1);
+      for (let i = start; i <= end; i++) pages.push(i);
+      if (page < totalPages - 2) pages.push("...");
+      pages.push(totalPages);
+    }
+    return pages;
+  }
+
+  const start = (page - 1) * PAGE_SIZE + 1;
+  const end = Math.min(page * PAGE_SIZE, total);
+
   return (
-    <div className="flex justify-between gap-4">
-      <span className="text-[var(--muted)] shrink-0">{label}</span>
-      <span className="text-right break-words font-medium">{value}</span>
+    <div className="flex items-center justify-between">
+      <p className="text-xs text-[var(--muted)]">
+        {start}–{end} of {total} transactions
+      </p>
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => onChange(page - 1)}
+          disabled={page === 1}
+          className="h-7 w-7 flex items-center justify-center rounded-lg text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)] disabled:opacity-40 disabled:pointer-events-none transition"
+        >
+          <Icon.ChevronLeft size={15} />
+        </button>
+        {getPages().map((p, i) =>
+          p === "..." ? (
+            <span
+              key={`e${i}`}
+              className="h-7 w-7 flex items-center justify-center text-xs text-[var(--muted)]"
+            >
+              …
+            </span>
+          ) : (
+            <button
+              key={p}
+              onClick={() => onChange(p as number)}
+              className={`h-7 w-7 flex items-center justify-center rounded-lg text-xs font-medium transition ${
+                page === p
+                  ? "bg-[var(--primary)] text-white shadow-sm"
+                  : "text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]"
+              }`}
+            >
+              {p}
+            </button>
+          ),
+        )}
+        <button
+          onClick={() => onChange(page + 1)}
+          disabled={page === totalPages}
+          className="h-7 w-7 flex items-center justify-center rounded-lg text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)] disabled:opacity-40 disabled:pointer-events-none transition"
+        >
+          <Icon.ChevronRight size={15} />
+        </button>
+      </div>
     </div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────────── */
+/*  Table helpers                                                            */
+/* ──────────────────────────────────────────────────────────────────────── */
+
+function Th({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <th className={`text-left font-semibold px-4 py-3 ${className ?? ""}`}>{children}</th>
+  );
+}
+
+function Td({
+  children,
+  className,
+  onClick,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  onClick?: (e: React.MouseEvent) => void;
+}) {
+  return (
+    <td className={`px-4 py-3 align-middle ${className ?? ""}`} onClick={onClick}>
+      {children}
+    </td>
   );
 }

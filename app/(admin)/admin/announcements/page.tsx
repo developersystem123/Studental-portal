@@ -1,9 +1,23 @@
 "use client";
 
 import * as React from "react";
-import { Badge, Button, Card, CardBody, Input, Select, Textarea, useToast } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  CardBody,
+  EmptyState,
+  Input,
+  Label,
+  Modal,
+  Select,
+  StatCard,
+  Tabs,
+  Textarea,
+  useToast,
+} from "@/components/ui";
 import Icon from "@/components/icons";
-import { cn, relativeTime, uid } from "@/lib/utils";
+import { cn, formatDate, relativeTime, uid } from "@/lib/utils";
 
 type Audience = "all" | "students" | "teachers" | "pro";
 type Channel = "in_app" | "email" | "both";
@@ -30,16 +44,25 @@ const MOCK_ANNS: Ann[] = [
 ];
 
 const AUDIENCE_LABELS: Record<Audience, string> = {
-  all: "All users",
-  students: "Students only",
-  teachers: "Teachers only",
-  pro: "Pro subscribers",
+  all: "All users", students: "Students only", teachers: "Teachers only", pro: "Pro subscribers",
+};
+const AUDIENCE_REACH: Record<Audience, number> = {
+  all: 12400, students: 8600, teachers: 340, pro: 1240,
+};
+const AUDIENCE_CLS: Record<Audience, string> = {
+  all: "bg-[var(--primary)]/10 text-[var(--primary)]",
+  students: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
+  teachers: "bg-sky-500/10 text-sky-600 dark:text-sky-400",
+  pro: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
 };
 
 const CHANNEL_LABELS: Record<Channel, string> = {
-  in_app: "In-app only",
-  email: "Email only",
-  both: "In-app + Email",
+  in_app: "In-app only", email: "Email only", both: "In-app + Email",
+};
+const CHANNEL_ICON: Record<Channel, React.ReactNode> = {
+  in_app: <Icon.Bell size={11} />,
+  email: <Icon.Mail size={11} />,
+  both: <Icon.Send size={11} />,
 };
 
 const STATUS_META: Record<AnnStatus, { label: string; variant: "success" | "info" | "default" }> = {
@@ -48,215 +71,586 @@ const STATUS_META: Record<AnnStatus, { label: string; variant: "success" | "info
   draft: { label: "Draft", variant: "default" },
 };
 
+const STATUS_BORDER: Record<AnnStatus, string> = {
+  sent: "border-l-emerald-400",
+  scheduled: "border-l-sky-400",
+  draft: "border-l-[var(--border)]",
+};
+
+type FormState = {
+  title: string; body: string; audience: Audience;
+  channel: Channel; scheduleMode: boolean; scheduledAt: string;
+};
+
+const emptyForm: FormState = {
+  title: "", body: "", audience: "all",
+  channel: "in_app", scheduleMode: false, scheduledAt: "",
+};
+
+function exportCSV(anns: Ann[]) {
+  const header = ["Title", "Audience", "Channel", "Status", "Reach", "Sent At", "Scheduled At", "Created"];
+  const rows = anns.map((a) => [
+    `"${a.title.replace(/"/g, '""')}"`,
+    a.audience, a.channel, a.status, a.reach,
+    a.sentAt ? new Date(a.sentAt).toLocaleString() : "",
+    a.scheduledAt ? new Date(a.scheduledAt).toLocaleString() : "",
+    new Date(a.createdAt).toLocaleDateString(),
+  ]);
+  const csv = [header, ...rows].map((r) => r.join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "announcements.csv"; a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function AdminAnnouncementsPage() {
   const toast = useToast();
   const [anns, setAnns] = React.useState<Ann[]>(MOCK_ANNS);
-  const [composing, setComposing] = React.useState(false);
+  const [filter, setFilter] = React.useState<AnnStatus | "all">("all");
+  const [audienceFilter, setAudienceFilter] = React.useState<Audience | "all">("all");
+  const [query, setQuery] = React.useState("");
+
+  // Compose modal
+  const [composeOpen, setComposeOpen] = React.useState(false);
+  const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [form, setForm] = React.useState<FormState>(emptyForm);
   const [sending, setSending] = React.useState(false);
 
-  const [title, setTitle] = React.useState("");
-  const [body, setBody] = React.useState("");
-  const [audience, setAudience] = React.useState<Audience>("all");
-  const [channel, setChannel] = React.useState<Channel>("in_app");
-  const [scheduleMode, setScheduleMode] = React.useState(false);
-  const [scheduledAt, setScheduledAt] = React.useState("");
+  // Detail view modal
+  const [viewing, setViewing] = React.useState<Ann | null>(null);
 
-  function resetForm() {
-    setTitle(""); setBody(""); setAudience("all"); setChannel("in_app");
-    setScheduleMode(false); setScheduledAt(""); setComposing(false);
+  // Delete confirm
+  const [deletingId, setDeletingId] = React.useState<string | null>(null);
+
+  function openCompose(ann?: Ann) {
+    if (ann) {
+      setEditingId(ann.id);
+      setForm({
+        title: ann.title, body: ann.body, audience: ann.audience,
+        channel: ann.channel,
+        scheduleMode: !!ann.scheduledAt,
+        scheduledAt: ann.scheduledAt ? ann.scheduledAt.slice(0, 16) : "",
+      });
+    } else {
+      setEditingId(null);
+      setForm(emptyForm);
+    }
+    setComposeOpen(true);
   }
 
-  const AUDIENCE_REACH: Record<Audience, number> = { all: 12400, students: 8600, teachers: 340, pro: 1240 };
+  function duplicateAnn(ann: Ann) {
+    const now = new Date().toISOString();
+    const dup: Ann = {
+      ...ann, id: uid(),
+      title: `Copy of ${ann.title}`,
+      status: "draft", sentAt: null, scheduledAt: null,
+      createdAt: now, reach: 0,
+    };
+    setAnns((p) => [dup, ...p]);
+    toast.push({ title: "Announcement duplicated as draft", tone: "success" });
+  }
 
-  async function handleSend() {
-    if (!title.trim() || !body.trim()) {
+  async function handleSend(asDraft = false) {
+    if (!form.title.trim() || !form.body.trim()) {
       toast.push({ title: "Title and message are required.", tone: "danger" }); return;
     }
-    if (scheduleMode && !scheduledAt) {
+    if (form.scheduleMode && !form.scheduledAt && !asDraft) {
       toast.push({ title: "Pick a schedule date/time.", tone: "danger" }); return;
     }
     setSending(true);
-    await new Promise((r) => setTimeout(r, 800));
+    await new Promise((r) => setTimeout(r, 700));
     const now = new Date().toISOString();
-    const newAnn: Ann = {
-      id: uid(), title: title.trim(), body: body.trim(), audience, channel,
-      status: scheduleMode ? "scheduled" : "sent",
-      sentAt: scheduleMode ? null : now,
-      scheduledAt: scheduleMode ? new Date(scheduledAt).toISOString() : null,
-      createdAt: now,
-      reach: scheduleMode ? 0 : AUDIENCE_REACH[audience],
-    };
-    setAnns((p) => [newAnn, ...p]);
+    const status: AnnStatus = asDraft ? "draft" : form.scheduleMode ? "scheduled" : "sent";
+
+    if (editingId) {
+      setAnns((p) => p.map((a) => a.id === editingId ? {
+        ...a, title: form.title.trim(), body: form.body.trim(),
+        audience: form.audience, channel: form.channel, status,
+        sentAt: status === "sent" ? now : a.sentAt,
+        scheduledAt: status === "scheduled" ? new Date(form.scheduledAt).toISOString() : null,
+        reach: status === "sent" ? AUDIENCE_REACH[form.audience] : a.reach,
+      } : a));
+      toast.push({ title: "Announcement updated", tone: "success" });
+    } else {
+      const newAnn: Ann = {
+        id: uid(), title: form.title.trim(), body: form.body.trim(),
+        audience: form.audience, channel: form.channel, status,
+        sentAt: status === "sent" ? now : null,
+        scheduledAt: status === "scheduled" ? new Date(form.scheduledAt).toISOString() : null,
+        createdAt: now, reach: status === "sent" ? AUDIENCE_REACH[form.audience] : 0,
+      };
+      setAnns((p) => [newAnn, ...p]);
+      toast.push({
+        title: asDraft ? "Saved as draft" : form.scheduleMode ? "Announcement scheduled!" : "Announcement sent!",
+        tone: "success",
+      });
+    }
     setSending(false);
-    resetForm();
-    toast.push({
-      title: scheduleMode ? "Announcement scheduled!" : "Announcement sent!",
-      tone: "success",
-    });
+    setComposeOpen(false);
   }
 
-  function deleteAnn(id: string) {
-    setAnns((p) => p.filter((a) => a.id !== id));
+  function confirmDelete() {
+    if (!deletingId) return;
+    setAnns((p) => p.filter((a) => a.id !== deletingId));
+    setDeletingId(null);
+    if (viewing?.id === deletingId) setViewing(null);
     toast.push({ title: "Announcement deleted", tone: "info" });
   }
 
+  const stats = React.useMemo(() => ({
+    totalSent: anns.filter((a) => a.status === "sent").length,
+    totalReached: anns.filter((a) => a.status === "sent").reduce((s, a) => s + a.reach, 0),
+    scheduled: anns.filter((a) => a.status === "scheduled").length,
+    drafts: anns.filter((a) => a.status === "draft").length,
+  }), [anns]);
+
+  const counts = React.useMemo(() => ({
+    all: anns.length,
+    sent: anns.filter((a) => a.status === "sent").length,
+    scheduled: anns.filter((a) => a.status === "scheduled").length,
+    draft: anns.filter((a) => a.status === "draft").length,
+  }), [anns]);
+
+  const filtered = React.useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return anns.filter((a) => {
+      if (filter !== "all" && a.status !== filter) return false;
+      if (audienceFilter !== "all" && a.audience !== audienceFilter) return false;
+      if (!q) return true;
+      return a.title.toLowerCase().includes(q) || a.body.toLowerCase().includes(q);
+    });
+  }, [anns, filter, audienceFilter, query]);
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+    <div className="space-y-6 fade-in">
+      {/* ── Header ── */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Announcements</h1>
-          <p className="text-sm text-[var(--muted)] mt-1">
+          <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Manage</p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight">Announcements</h1>
+          <p className="mt-1 text-[var(--muted)]">
             Broadcast messages to all users or specific groups via in-app notifications or email.
           </p>
         </div>
-        {!composing && (
-          <Button onClick={() => setComposing(true)}>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => exportCSV(filtered)}>
+            <Icon.Download size={15} /> Export CSV
+          </Button>
+          <Button onClick={() => openCompose()}>
             <Icon.Megaphone size={16} /> New announcement
           </Button>
-        )}
+        </div>
       </div>
 
-      {/* Compose form */}
-      {composing && (
-        <Card className="border-[var(--primary)] border-2">
-          <CardBody className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="font-semibold">Compose announcement</h2>
-              <button onClick={resetForm} className="text-[var(--muted)] hover:text-[var(--foreground)] transition">
-                <Icon.X size={18} />
-              </button>
-            </div>
+      {/* ── Stats ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard label="Total sent" value={stats.totalSent} icon={<Icon.Send size={18} />} tone="success" />
+        <StatCard
+          label="Total reached"
+          value={stats.totalReached.toLocaleString()}
+          icon={<Icon.Users size={18} />}
+          tone="primary"
+        />
+        <StatCard label="Scheduled" value={stats.scheduled} icon={<Icon.Calendar size={18} />} tone="accent" />
+        <StatCard label="Drafts" value={stats.drafts} icon={<Icon.Save size={18} />} tone="warning" />
+      </div>
 
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Title</label>
-              <Input placeholder="e.g. Platform maintenance notice" value={title} onChange={(e) => setTitle(e.target.value)} />
-            </div>
+      {/* ── Controls ── */}
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <Tabs
+            value={filter}
+            onChange={(v) => setFilter(v as AnnStatus | "all")}
+            options={[
+              { value: "all", label: "All", count: counts.all },
+              { value: "sent", label: "Sent", count: counts.sent },
+              { value: "scheduled", label: "Scheduled", count: counts.scheduled },
+              { value: "draft", label: "Drafts", count: counts.draft },
+            ]}
+          />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search announcements…"
+            icon={<Icon.Search size={16} />}
+            className="w-64 shrink-0"
+          />
+        </div>
 
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Message</label>
-              <Textarea
-                placeholder="Write your announcement here…"
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                className="min-h-[100px]"
-              />
-            </div>
+        {/* Audience filter chips */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-xs text-[var(--muted)] shrink-0">Audience:</span>
+          {(["all", "students", "teachers", "pro"] as const).map((a) => (
+            <button
+              key={a}
+              onClick={() => setAudienceFilter(a)}
+              className={`h-7 px-3 rounded-full text-xs font-medium transition capitalize ${
+                audienceFilter === a
+                  ? "bg-[var(--primary)] text-white"
+                  : "bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)]"
+              }`}
+            >
+              {a === "all" ? "All audiences" : AUDIENCE_LABELS[a as Audience]}
+            </button>
+          ))}
+        </div>
+      </div>
 
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium mb-1.5 block">Audience</label>
-                <Select value={audience} onChange={(e) => setAudience(e.target.value as Audience)}>
-                  <option value="all">All users (~12,400)</option>
-                  <option value="students">Students only (~8,600)</option>
-                  <option value="teachers">Teachers only (~340)</option>
-                  <option value="pro">Pro subscribers (~1,240)</option>
-                </Select>
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1.5 block">Channel</label>
-                <Select value={channel} onChange={(e) => setChannel(e.target.value as Channel)}>
-                  <option value="in_app">In-app notification only</option>
-                  <option value="email">Email only</option>
-                  <option value="both">In-app + Email</option>
-                </Select>
-              </div>
-            </div>
-
-            {/* Schedule toggle */}
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setScheduleMode((v) => !v)}
-                className={cn(
-                  "relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors",
-                  scheduleMode ? "bg-[var(--primary)]" : "bg-[var(--surface-2)]",
-                )}
-              >
-                <span className={cn("inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform", scheduleMode ? "translate-x-4" : "translate-x-0")} />
-              </button>
-              <span className="text-sm font-medium">Schedule for later</span>
-            </div>
-
-            {scheduleMode && (
-              <div className="fade-in">
-                <label className="text-sm font-medium mb-1.5 block">Schedule date & time</label>
-                <Input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
-              </div>
-            )}
-
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-[var(--surface-2)] text-xs text-[var(--muted)]">
-              <Icon.Users size={13} className="shrink-0" />
-              This will reach approximately <span className="font-semibold text-[var(--foreground)] mx-1">{AUDIENCE_REACH[audience].toLocaleString()} users</span>
-              via <span className="font-semibold text-[var(--foreground)] mx-1">{CHANNEL_LABELS[channel].toLowerCase()}</span>.
-            </div>
-
-            <div className="flex gap-2">
-              <Button variant="ghost" className="flex-1" onClick={resetForm} disabled={sending}>Cancel</Button>
-              <Button className="flex-1" loading={sending} onClick={handleSend}>
-                {scheduleMode ? <><Icon.Calendar size={15} /> Schedule</> : <><Icon.Send size={15} /> Send now</>}
-              </Button>
-            </div>
+      {/* ── History ── */}
+      {filtered.length === 0 ? (
+        <Card>
+          <CardBody>
+            <EmptyState
+              icon={<Icon.Megaphone size={28} />}
+              title={anns.length === 0 ? "No announcements yet" : "No announcements match."}
+              description={anns.length === 0 ? "Send your first broadcast to get started." : "Try a different filter or search."}
+              action={
+                anns.length === 0 && (
+                  <Button onClick={() => openCompose()}>
+                    <Icon.Megaphone size={16} /> New announcement
+                  </Button>
+                )
+              }
+            />
           </CardBody>
         </Card>
-      )}
-
-      {/* History */}
-      <div className="space-y-3">
-        <h2 className="text-sm font-semibold text-[var(--muted)] uppercase tracking-wider">History</h2>
-        {anns.length === 0 ? (
-          <Card>
-            <CardBody>
-              <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-                <div className="h-12 w-12 rounded-full bg-[var(--surface-2)] text-[var(--muted)] flex items-center justify-center">
-                  <Icon.Megaphone size={22} />
-                </div>
-                <p className="font-semibold">No announcements yet</p>
-                <p className="text-sm text-[var(--muted)]">Send your first broadcast to get started.</p>
-              </div>
-            </CardBody>
-          </Card>
-        ) : (
-          anns.map((ann) => {
+      ) : (
+        <div className="space-y-3">
+          {filtered.map((ann) => {
             const sm = STATUS_META[ann.status];
             return (
-              <Card key={ann.id}>
+              <Card
+                key={ann.id}
+                className={`border-l-2 ${STATUS_BORDER[ann.status]} hover:shadow-sm transition-shadow group`}
+              >
                 <CardBody>
-                  <div className="flex items-start gap-3 flex-wrap">
-                    <div className="h-9 w-9 rounded-xl bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center shrink-0">
-                      <Icon.Megaphone size={16} />
+                  <div className="flex items-start gap-4">
+                    {/* Icon */}
+                    <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${
+                      ann.status === "sent" ? "bg-emerald-500/10 text-emerald-500"
+                      : ann.status === "scheduled" ? "bg-sky-500/10 text-sky-500"
+                      : "bg-[var(--surface-2)] text-[var(--muted)]"
+                    }`}>
+                      <Icon.Megaphone size={18} />
                     </div>
-                    <div className="flex-1 min-w-0 space-y-1">
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0 space-y-1.5">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-semibold text-sm">{ann.title}</p>
+                        <p
+                          className="font-semibold text-sm cursor-pointer hover:text-[var(--primary)] transition"
+                          onClick={() => setViewing(ann)}
+                        >
+                          {ann.title}
+                        </p>
                         <Badge variant={sm.variant}>{sm.label}</Badge>
                       </div>
-                      <p className="text-sm text-[var(--muted)] line-clamp-2">{ann.body}</p>
-                      <div className="flex items-center gap-3 text-xs text-[var(--muted-2)] flex-wrap">
-                        <span className="flex items-center gap-1"><Icon.Users size={11} /> {AUDIENCE_LABELS[ann.audience]}</span>
-                        <span className="flex items-center gap-1"><Icon.Send size={11} /> {CHANNEL_LABELS[ann.channel]}</span>
+
+                      <p className="text-sm text-[var(--muted)] line-clamp-2 leading-relaxed">{ann.body}</p>
+
+                      {/* Meta chips */}
+                      <div className="flex items-center gap-2 flex-wrap pt-0.5">
+                        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${AUDIENCE_CLS[ann.audience]}`}>
+                          <Icon.Users size={10} /> {AUDIENCE_LABELS[ann.audience]}
+                        </span>
+                        <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[var(--surface-2)] text-[var(--muted)] flex items-center gap-1">
+                          {CHANNEL_ICON[ann.channel]} {CHANNEL_LABELS[ann.channel]}
+                        </span>
                         {ann.status === "sent" && ann.reach > 0 && (
-                          <span className="flex items-center gap-1"><Icon.CheckCircle size={11} className="text-emerald-500" /> {ann.reach.toLocaleString()} reached</span>
+                          <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                            <Icon.CheckCircle size={11} /> {ann.reach.toLocaleString()} reached
+                          </span>
                         )}
                         {ann.status === "scheduled" && ann.scheduledAt && (
-                          <span className="flex items-center gap-1"><Icon.Calendar size={11} /> {new Date(ann.scheduledAt).toLocaleString()}</span>
+                          <span className="text-[11px] text-sky-600 dark:text-sky-400 flex items-center gap-1">
+                            <Icon.Calendar size={11} /> {formatDate(ann.scheduledAt)}
+                          </span>
                         )}
-                        {ann.sentAt && <span>{relativeTime(ann.sentAt)}</span>}
+                        {ann.sentAt && (
+                          <span className="text-[11px] text-[var(--muted)] flex items-center gap-1">
+                            <Icon.Clock size={11} /> {relativeTime(ann.sentAt)}
+                          </span>
+                        )}
                       </div>
                     </div>
-                    <button
-                      onClick={() => deleteAnn(ann.id)}
-                      className="shrink-0 h-8 w-8 flex items-center justify-center rounded-lg text-[var(--muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition"
-                      title="Delete"
-                    >
-                      <Icon.Trash size={15} />
-                    </button>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => setViewing(ann)}
+                        title="Preview"
+                        className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)] transition"
+                      >
+                        <Icon.Eye size={14} />
+                      </button>
+                      <button
+                        onClick={() => openCompose(ann)}
+                        title="Edit"
+                        className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)] transition"
+                      >
+                        <Icon.Edit size={14} />
+                      </button>
+                      <button
+                        onClick={() => duplicateAnn(ann)}
+                        title="Duplicate"
+                        className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)] transition"
+                      >
+                        <Icon.Copy size={14} />
+                      </button>
+                      <button
+                        onClick={() => setDeletingId(ann.id)}
+                        title="Delete"
+                        className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-red-500/10 text-[var(--muted)] hover:text-[var(--danger)] transition"
+                      >
+                        <Icon.Trash size={14} />
+                      </button>
+                    </div>
                   </div>
                 </CardBody>
               </Card>
             );
-          })
-        )}
-      </div>
+          })}
+          <p className="text-xs text-[var(--muted)] px-1">Showing {filtered.length} of {anns.length} announcements</p>
+        </div>
+      )}
+
+      {/* ── Compose / Edit Modal ── */}
+      <Modal
+        open={composeOpen}
+        onClose={() => setComposeOpen(false)}
+        size="lg"
+        title={editingId ? "Edit announcement" : "New announcement"}
+      >
+        <div className="p-5 space-y-4">
+          {/* Title */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <Label htmlFor="ann-title">Title</Label>
+              <span className="text-[11px] text-[var(--muted)]">{form.title.length}/80</span>
+            </div>
+            <Input
+              id="ann-title"
+              placeholder="e.g. Platform maintenance notice"
+              value={form.title}
+              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value.slice(0, 80) }))}
+              maxLength={80}
+            />
+          </div>
+
+          {/* Body */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <Label htmlFor="ann-body">Message</Label>
+              <span className="text-[11px] text-[var(--muted)]">{form.body.length}/600</span>
+            </div>
+            <Textarea
+              id="ann-body"
+              placeholder="Write your announcement here…"
+              value={form.body}
+              onChange={(e) => setForm((f) => ({ ...f, body: e.target.value.slice(0, 600) }))}
+              rows={4}
+            />
+          </div>
+
+          {/* Audience + Channel */}
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="ann-audience">Audience</Label>
+              <Select
+                id="ann-audience"
+                value={form.audience}
+                onChange={(e) => setForm((f) => ({ ...f, audience: e.target.value as Audience }))}
+              >
+                <option value="all">All users (~12,400)</option>
+                <option value="students">Students only (~8,600)</option>
+                <option value="teachers">Teachers only (~340)</option>
+                <option value="pro">Pro subscribers (~1,240)</option>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="ann-channel">Channel</Label>
+              <Select
+                id="ann-channel"
+                value={form.channel}
+                onChange={(e) => setForm((f) => ({ ...f, channel: e.target.value as Channel }))}
+              >
+                <option value="in_app">In-app notification only</option>
+                <option value="email">Email only</option>
+                <option value="both">In-app + Email</option>
+              </Select>
+            </div>
+          </div>
+
+          {/* Schedule toggle */}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setForm((f) => ({ ...f, scheduleMode: !f.scheduleMode }))}
+              className={cn(
+                "relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors",
+                form.scheduleMode ? "bg-[var(--primary)]" : "bg-[var(--surface-2)]",
+              )}
+            >
+              <span className={cn(
+                "inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform",
+                form.scheduleMode ? "translate-x-4" : "translate-x-0",
+              )} />
+            </button>
+            <span className="text-sm font-medium">Schedule for later</span>
+          </div>
+
+          {form.scheduleMode && (
+            <div className="fade-in">
+              <Label htmlFor="ann-schedule">Schedule date &amp; time</Label>
+              <Input
+                id="ann-schedule"
+                type="datetime-local"
+                value={form.scheduledAt}
+                onChange={(e) => setForm((f) => ({ ...f, scheduledAt: e.target.value }))}
+              />
+            </div>
+          )}
+
+          {/* Reach preview */}
+          <div className="flex items-start gap-3 p-3.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+            <Icon.Users size={14} className="shrink-0 text-[var(--muted)] mt-0.5" />
+            <div className="text-xs text-[var(--muted)] leading-relaxed">
+              This will reach approximately{" "}
+              <span className="font-bold text-[var(--foreground)]">
+                {AUDIENCE_REACH[form.audience].toLocaleString()} users
+              </span>{" "}
+              via{" "}
+              <span className="font-bold text-[var(--foreground)]">
+                {CHANNEL_LABELS[form.channel].toLowerCase()}
+              </span>.
+              {form.channel === "both" && (
+                <span className="text-amber-600 dark:text-amber-400"> Email delivery may take a few minutes.</span>
+              )}
+            </div>
+          </div>
+
+          {/* Preview */}
+          {(form.title || form.body) && (
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
+              <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] font-semibold mb-2 flex items-center gap-1.5">
+                <Icon.Eye size={11} /> Preview
+              </p>
+              {form.title && <p className="font-semibold text-sm">{form.title}</p>}
+              {form.body && (
+                <p className="text-sm text-[var(--muted)] mt-1 whitespace-pre-wrap leading-relaxed">
+                  {form.body}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex gap-2 pt-2 border-t border-[var(--border)]">
+            <Button variant="ghost" onClick={() => setComposeOpen(false)} disabled={sending}>
+              Cancel
+            </Button>
+            <Button variant="outline" onClick={() => handleSend(true)} loading={sending} className="flex-1">
+              <Icon.Save size={14} /> Save as draft
+            </Button>
+            <Button className="flex-1" loading={sending} onClick={() => handleSend(false)}>
+              {form.scheduleMode
+                ? <><Icon.Calendar size={14} /> Schedule</>
+                : <><Icon.Send size={14} /> Send now</>}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── Detail / Preview Modal ── */}
+      {viewing && (
+        <Modal open onClose={() => setViewing(null)} size="md" title="Announcement preview">
+          <div className="p-5 space-y-4">
+            {/* Header */}
+            <div className="flex items-start gap-3 justify-between">
+              <div className="min-w-0">
+                <h2 className="text-lg font-bold leading-snug">{viewing.title}</h2>
+                <div className="flex items-center gap-2 flex-wrap mt-1.5">
+                  <Badge variant={STATUS_META[viewing.status].variant}>{STATUS_META[viewing.status].label}</Badge>
+                  <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${AUDIENCE_CLS[viewing.audience]}`}>
+                    <Icon.Users size={10} /> {AUDIENCE_LABELS[viewing.audience]}
+                  </span>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--surface-2)] text-[var(--muted)] flex items-center gap-1">
+                    {CHANNEL_ICON[viewing.channel]} {CHANNEL_LABELS[viewing.channel]}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { label: "Reach", value: viewing.reach > 0 ? viewing.reach.toLocaleString() : "—", icon: <Icon.Users size={13} />, cls: "text-emerald-500 bg-emerald-500/10" },
+                {
+                  label: viewing.status === "scheduled" ? "Scheduled for" : "Sent",
+                  value: viewing.sentAt ? formatDate(viewing.sentAt) : viewing.scheduledAt ? formatDate(viewing.scheduledAt) : "—",
+                  icon: <Icon.Calendar size={13} />, cls: "text-sky-500 bg-sky-500/10",
+                },
+              ].map((s) => (
+                <div key={s.label} className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+                  <div className={`inline-flex items-center gap-1 text-[11px] font-medium rounded-full px-2 py-0.5 mb-1.5 ${s.cls}`}>
+                    {s.icon} {s.label}
+                  </div>
+                  <p className="text-sm font-semibold">{s.value}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Body */}
+            <div>
+              <p className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider mb-2">Message</p>
+              <p className="text-sm text-[var(--foreground)] leading-relaxed whitespace-pre-wrap">{viewing.body}</p>
+            </div>
+
+            {/* Footer */}
+            <div className="flex gap-2 pt-2 border-t border-[var(--border)]">
+              <Button variant="outline" onClick={() => setViewing(null)} className="flex-1">
+                Close
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => duplicateAnn(viewing)}
+                title="Duplicate"
+              >
+                <Icon.Copy size={14} /> Duplicate
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => { setViewing(null); setTimeout(() => openCompose(viewing), 60); }}
+              >
+                <Icon.Edit size={14} /> Edit
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setDeletingId(viewing.id)}
+                className="!text-[var(--danger)] !border-[var(--danger)]/30 hover:!bg-red-500/5"
+              >
+                <Icon.Trash size={14} />
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── Delete confirm ── */}
+      <Modal open={!!deletingId} onClose={() => setDeletingId(null)} size="sm" title="Delete announcement?">
+        <div className="p-5 space-y-4">
+          <p className="text-sm text-[var(--muted)]">
+            This announcement will be permanently removed. This action can&apos;t be undone.
+          </p>
+          <div className="flex justify-end gap-2 pt-2 border-t border-[var(--border)]">
+            <Button variant="outline" onClick={() => setDeletingId(null)}>Cancel</Button>
+            <Button variant="danger" onClick={confirmDelete}>
+              <Icon.Trash size={16} /> Delete
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -485,6 +485,19 @@ export const Icon = {
       <line x1="17" y1="9" x2="23" y2="15" />
     </Base>
   ),
+  Shield: (p: IconProps) => (
+    <Base {...p}>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </Base>
+  ),
+  BellRing: (p: IconProps) => (
+    <Base {...p}>
+      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+      <path d="M4 2C2.8 3.7 2 5.7 2 8" />
+      <path d="M22 8c0-2.3-.8-4.3-2-6" />
+    </Base>
+  ),
 };
 
 export default Icon;

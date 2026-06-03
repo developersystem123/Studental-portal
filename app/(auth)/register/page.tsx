@@ -140,12 +140,22 @@ export default function RegisterPage() {
     <div className="space-y-6 fade-in">
       {/* Header */}
       <div className="space-y-2">
-        <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-[var(--primary-soft)] text-[var(--primary)] font-medium">
-          <Icon.Sparkles size={12} /> Free forever · No credit card needed
-        </span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-[var(--primary-soft)] text-[var(--primary)] font-medium">
+            <Icon.Sparkles size={12} /> Free forever · No credit card needed
+          </span>
+          <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium border border-blue-500/20">
+            <Icon.User size={11} /> Student registration
+          </span>
+        </div>
         <h2 className="text-3xl font-bold leading-tight">
           Create your <span className="gradient-text">EduPortal</span> account
         </h2>
+        <p className="text-xs text-[var(--muted)] flex items-start gap-1.5 mt-1 p-2.5 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]">
+          <Icon.AlertCircle size={13} className="text-primary shrink-0 mt-0.5" />
+          This form is for <strong>students only</strong>. Teacher &amp; Admin accounts are created by the EduPortal team — contact us at{" "}
+          <a href="mailto:support@eduportal.app" className="text-[var(--primary)] hover:underline font-medium">support@eduportal.app</a>.
+        </p>
       </div>
 
       {/* Google */}

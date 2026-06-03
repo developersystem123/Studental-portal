@@ -11,6 +11,7 @@ import {
   Label,
   Modal,
   Select,
+  StatCard,
   Tabs,
   Textarea,
   useToast,
@@ -43,8 +44,16 @@ const STATUS_BADGE: Record<LiveStatus, "info" | "success" | "default" | "danger"
   cancelled: "danger",
 };
 
+const STATUS_BORDER: Record<LiveStatus, string> = {
+  upcoming: "border-l-sky-400",
+  live: "border-l-rose-500",
+  ended: "border-l-[var(--border)]",
+  cancelled: "border-l-orange-300",
+};
+
 const STATUSES: LiveStatus[] = ["upcoming", "live", "ended", "cancelled"];
 type Filter = "all" | LiveStatus;
+type SortKey = "date-desc" | "date-asc" | "attendees";
 
 type FormState = {
   courseId: string;
@@ -68,6 +77,41 @@ const emptyForm: FormState = {
   maxAttendees: "",
 };
 
+function daysUntil(iso: string): string | null {
+  const diff = new Date(iso).getTime() - Date.now();
+  const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+  if (days < 0) return null;
+  if (days === 0) return "Today";
+  if (days === 1) return "Tomorrow";
+  return `In ${days}d`;
+}
+
+function exportCSV(classes: LiveClass[]) {
+  const header = [
+    "Title", "Course", "Instructor", "Scheduled At",
+    "Duration (min)", "Status", "Attendees", "Max Attendees", "Meeting URL",
+  ];
+  const rows = classes.map((c) => [
+    `"${c.title.replace(/"/g, '""')}"`,
+    `"${c.courseTitle.replace(/"/g, '""')}"`,
+    `"${c.instructor}"`,
+    new Date(c.scheduledAt).toLocaleString(),
+    c.durationMinutes,
+    c.status,
+    c.attendees,
+    c.maxAttendees ?? "",
+    `"${c.meetingUrl}"`,
+  ]);
+  const csv = [header, ...rows].map((r) => r.join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "live-classes.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function AdminLiveClassesPage() {
   const { courses } = useData();
   const toast = useToast();
@@ -75,12 +119,16 @@ export default function AdminLiveClassesPage() {
   const [classes, setClasses] = React.useState<LiveClass[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [filter, setFilter] = React.useState<Filter>("all");
+  const [query, setQuery] = React.useState("");
+  const [sortKey, setSortKey] = React.useState<SortKey>("date-desc");
 
   const [formOpen, setFormOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<LiveClass | null>(null);
   const [form, setForm] = React.useState<FormState>(emptyForm);
   const [saving, setSaving] = React.useState(false);
   const [deleting, setDeleting] = React.useState<LiveClass | null>(null);
+  const [viewing, setViewing] = React.useState<LiveClass | null>(null);
+  const [quickStatusId, setQuickStatusId] = React.useState<string | null>(null);
 
   const load = React.useCallback(async () => {
     try {
@@ -94,9 +142,7 @@ export default function AdminLiveClassesPage() {
     }
   }, [toast]);
 
-  React.useEffect(() => {
-    load();
-  }, [load]);
+  React.useEffect(() => { load(); }, [load]);
 
   const counts = React.useMemo(
     () => ({
@@ -109,7 +155,31 @@ export default function AdminLiveClassesPage() {
     [classes],
   );
 
-  const filtered = filter === "all" ? classes : classes.filter((c) => c.status === filter);
+  const liveStats = React.useMemo(() => ({
+    total: classes.length,
+    liveNow: classes.filter((c) => c.status === "live").length,
+    upcoming: classes.filter((c) => c.status === "upcoming").length,
+    totalAttendees: classes.reduce((s, c) => s + c.attendees, 0),
+  }), [classes]);
+
+  const filtered = React.useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return classes
+      .filter((c) => filter === "all" || c.status === filter)
+      .filter(
+        (c) =>
+          !q ||
+          c.title.toLowerCase().includes(q) ||
+          c.courseTitle.toLowerCase().includes(q) ||
+          c.instructor.toLowerCase().includes(q),
+      )
+      .sort((a, b) => {
+        if (sortKey === "date-asc")
+          return new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime();
+        if (sortKey === "attendees") return b.attendees - a.attendees;
+        return new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime();
+      });
+  }, [classes, filter, query, sortKey]);
 
   function openCreate() {
     setEditing(null);
@@ -176,6 +246,31 @@ export default function AdminLiveClassesPage() {
     load();
   }
 
+  async function quickStatus(c: LiveClass, status: LiveStatus) {
+    setQuickStatusId(c.id);
+    const r = await fetch(`/api/admin/live-classes/${c.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    setQuickStatusId(null);
+    if (r.ok) {
+      setClasses((prev) => prev.map((x) => (x.id === c.id ? { ...x, status } : x)));
+      setViewing((v) => (v?.id === c.id ? { ...v, status } : v));
+      toast.push({ title: `Marked as ${status}`, tone: "success" });
+    } else {
+      toast.push({ title: "Couldn't update status", tone: "danger" });
+    }
+  }
+
+  function copyUrl(url: string) {
+    navigator.clipboard.writeText(url).then(() => {
+      toast.push({ title: "Meeting URL copied", tone: "success" });
+    }).catch(() => {
+      toast.push({ title: "Copy failed", tone: "danger" });
+    });
+  }
+
   const formValid =
     form.courseId &&
     form.title.trim().length >= 3 &&
@@ -183,64 +278,99 @@ export default function AdminLiveClassesPage() {
     form.scheduledAt &&
     Number(form.durationMinutes) >= 5;
 
-  const liveStats = React.useMemo(() => {
-    const liveNow = classes.filter((c) => c.status === "live").length;
-    const upcoming = classes.filter((c) => c.status === "upcoming").length;
-    const totalAttendees = classes.reduce((s, c) => s + c.attendees, 0);
-    return { liveNow, upcoming, totalAttendees };
-  }, [classes]);
-
   return (
     <div className="space-y-6 fade-in">
+      {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Manage</p>
+          <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">
+            Manage
+          </p>
           <h1 className="mt-1 text-3xl font-bold tracking-tight">Live Classes</h1>
           <p className="mt-1 text-[var(--muted)]">
             Schedule and manage live online sessions across all courses.
           </p>
         </div>
-        <Button onClick={openCreate}>
-          <Icon.Plus size={16} /> Schedule class
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => exportCSV(filtered)}>
+            <Icon.Download size={15} /> Export CSV
+          </Button>
+          <Button onClick={openCreate}>
+            <Icon.Plus size={16} /> Schedule class
+          </Button>
+        </div>
       </div>
 
-      {classes.length > 0 && (
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { label: "Live now", value: liveStats.liveNow, icon: <Icon.Video size={16} />, tint: liveStats.liveNow > 0 ? "bg-rose-500/15 text-rose-500" : "bg-[var(--surface-2)] text-[var(--muted)]" },
-            { label: "Upcoming", value: liveStats.upcoming, icon: <Icon.Calendar size={16} />, tint: "bg-[var(--primary-soft)] text-[var(--primary)]" },
-            { label: "Total attendees", value: liveStats.totalAttendees, icon: <Icon.Users size={16} />, tint: "bg-sky-500/10 text-sky-600 dark:text-sky-400" },
-          ].map((s) => (
-            <Card key={s.label}>
-              <CardBody className="flex items-center gap-3 !py-3">
-                <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${s.tint}`}>{s.icon}</div>
-                <div className="min-w-0">
-                  <p className="text-[11px] text-[var(--muted)]">{s.label}</p>
-                  <p className="text-xl font-bold tracking-tight">{s.value}</p>
-                </div>
-              </CardBody>
-            </Card>
-          ))}
+      {/* ── Stats ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard
+          label="Total classes"
+          value={liveStats.total}
+          icon={<Icon.Video size={18} />}
+          tone="primary"
+        />
+        <StatCard
+          label="Live now"
+          value={liveStats.liveNow}
+          icon={<Icon.PlayCircle size={18} />}
+          tone={liveStats.liveNow > 0 ? "warning" : "primary"}
+        />
+        <StatCard
+          label="Upcoming"
+          value={liveStats.upcoming}
+          icon={<Icon.Calendar size={18} />}
+          tone="accent"
+        />
+        <StatCard
+          label="Total attendees"
+          value={liveStats.totalAttendees}
+          icon={<Icon.Users size={18} />}
+          tone="success"
+        />
+      </div>
+
+      {/* ── Tabs + search/sort toolbar ── */}
+      <div className="space-y-3">
+        <Tabs
+          value={filter}
+          onChange={(v) => setFilter(v as Filter)}
+          options={[
+            { value: "all", label: "All", count: counts.all },
+            { value: "upcoming", label: "Upcoming", count: counts.upcoming },
+            { value: "live", label: "Live", count: counts.live },
+            { value: "ended", label: "Ended", count: counts.ended },
+            { value: "cancelled", label: "Cancelled", count: counts.cancelled },
+          ]}
+        />
+
+        {/* Search + sort in one row */}
+        <div className="flex items-center gap-2">
+          <Input
+            icon={<Icon.Search size={16} />}
+            placeholder="Search by title, course, instructor…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="flex-1 min-w-0 max-w-sm"
+          />
+          <Select
+            value={sortKey}
+            onChange={(e) => setSortKey(e.target.value as SortKey)}
+            className="h-9 text-xs !py-0 w-[155px] shrink-0"
+          >
+            <option value="date-desc">Newest first</option>
+            <option value="date-asc">Oldest first</option>
+            <option value="attendees">Most attendees</option>
+          </Select>
         </div>
-      )}
+      </div>
 
-      <Tabs
-        value={filter}
-        onChange={(v) => setFilter(v as Filter)}
-        options={[
-          { value: "all", label: "All", count: counts.all },
-          { value: "upcoming", label: "Upcoming", count: counts.upcoming },
-          { value: "live", label: "Live", count: counts.live },
-          { value: "ended", label: "Ended", count: counts.ended },
-          { value: "cancelled", label: "Cancelled", count: counts.cancelled },
-        ]}
-      />
-
+      {/* ── Table ── */}
       {loading ? (
         <Card>
           <CardBody>
-            <p className="text-sm text-[var(--muted)]">Loading…</p>
+            <p className="text-sm text-[var(--muted)] py-6 flex items-center justify-center gap-2">
+              <Icon.Loader size={15} className="animate-spin" /> Loading…
+            </p>
           </CardBody>
         </Card>
       ) : filtered.length === 0 ? (
@@ -248,11 +378,11 @@ export default function AdminLiveClassesPage() {
           <CardBody>
             <EmptyState
               icon={<Icon.Video size={28} />}
-              title={classes.length === 0 ? "No live classes yet" : "No matching classes"}
+              title={classes.length === 0 ? "No live classes yet" : "No matching sessions"}
               description={
                 classes.length === 0
-                  ? "Schedule your first live session."
-                  : "Try a different filter."
+                  ? "Schedule your first live session to get started."
+                  : "Try a different filter or search query."
               }
               action={
                 classes.length === 0 ? (
@@ -271,70 +401,186 @@ export default function AdminLiveClassesPage() {
               <thead className="bg-[var(--surface-2)] text-[var(--muted)] text-xs uppercase tracking-wider">
                 <tr>
                   <Th>Session</Th>
-                  <Th>Course</Th>
+                  <Th className="hidden md:table-cell">Course</Th>
                   <Th>When</Th>
-                  <Th>Attendees</Th>
+                  <Th className="hidden sm:table-cell">Attendees</Th>
                   <Th>Status</Th>
                   <Th className="text-right">Actions</Th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((c) => (
-                  <tr
-                    key={c.id}
-                    className="border-t border-[var(--border)] hover:bg-[var(--surface-2)]/50"
-                  >
-                    <Td>
-                      <div className="font-medium">{c.title}</div>
-                      <div className="text-xs text-[var(--muted)]">{c.instructor}</div>
-                    </Td>
-                    <Td>
-                      <div className="truncate max-w-[20ch]">{c.courseTitle}</div>
-                    </Td>
-                    <Td>
-                      <div>{formatDate(c.scheduledAt)}</div>
-                      <div className="text-xs text-[var(--muted)]">
-                        {formatTime(c.scheduledAt)} · {c.durationMinutes} min
-                      </div>
-                    </Td>
-                    <Td className="text-xs">
-                      {c.attendees}
-                      {c.maxAttendees ? ` / ${c.maxAttendees}` : ""}
-                    </Td>
-                    <Td>
-                      <Badge variant={STATUS_BADGE[c.status]} className="capitalize">
-                        {c.status}
-                      </Badge>
-                    </Td>
-                    <Td className="text-right">
-                      <div className="inline-flex items-center gap-1">
-                        <a href={c.meetingUrl} target="_blank" rel="noopener noreferrer">
-                          <Button size="sm" variant="ghost" title="Open meeting link">
+                {filtered.map((c) => {
+                  const capacityPct =
+                    c.maxAttendees && c.maxAttendees > 0
+                      ? Math.min(100, Math.round((c.attendees / c.maxAttendees) * 100))
+                      : null;
+                  const countdown = c.status === "upcoming" ? daysUntil(c.scheduledAt) : null;
+
+                  return (
+                    <tr
+                      key={c.id}
+                      className={`border-t border-[var(--border)] hover:bg-[var(--surface-2)]/50 transition border-l-2 ${STATUS_BORDER[c.status]} group cursor-pointer`}
+                      onClick={() => setViewing(c)}
+                    >
+                      {/* Session */}
+                      <Td>
+                        <div className="flex items-start gap-2">
+                          {c.status === "live" && (
+                            <span className="mt-1 shrink-0 h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+                          )}
+                          <div className="min-w-0">
+                            <div className="font-semibold leading-snug truncate max-w-[22ch]">
+                              {c.title}
+                            </div>
+                            <div className="text-xs text-[var(--muted)]">{c.instructor}</div>
+                          </div>
+                        </div>
+                      </Td>
+
+                      {/* Course */}
+                      <Td className="hidden md:table-cell">
+                        <div className="truncate max-w-[18ch] text-[var(--muted)]">
+                          {c.courseTitle}
+                        </div>
+                      </Td>
+
+                      {/* When */}
+                      <Td>
+                        <div className="font-medium">{formatDate(c.scheduledAt)}</div>
+                        <div className="text-xs text-[var(--muted)]">
+                          {formatTime(c.scheduledAt)} · {c.durationMinutes} min
+                        </div>
+                        {countdown && (
+                          <span className="mt-0.5 inline-block text-[10px] font-semibold text-sky-600 dark:text-sky-400 bg-sky-500/10 px-1.5 py-0.5 rounded-full">
+                            {countdown}
+                          </span>
+                        )}
+                      </Td>
+
+                      {/* Attendees */}
+                      <Td className="hidden sm:table-cell">
+                        <div className="text-sm font-medium">
+                          {c.attendees}
+                          {c.maxAttendees ? (
+                            <span className="text-[var(--muted)]"> / {c.maxAttendees}</span>
+                          ) : null}
+                        </div>
+                        {capacityPct !== null && (
+                          <div className="mt-1 h-1 w-20 rounded-full bg-[var(--surface-2)] overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${
+                                capacityPct >= 90
+                                  ? "bg-rose-500"
+                                  : capacityPct >= 60
+                                  ? "bg-amber-500"
+                                  : "bg-[var(--primary)]"
+                              }`}
+                              style={{ width: `${capacityPct}%` }}
+                            />
+                          </div>
+                        )}
+                      </Td>
+
+                      {/* Status */}
+                      <Td>
+                        <Badge variant={STATUS_BADGE[c.status]} className="capitalize">
+                          {c.status === "live" && (
+                            <span className="h-1.5 w-1.5 rounded-full bg-current animate-pulse inline-block mr-1" />
+                          )}
+                          {c.status}
+                        </Badge>
+                      </Td>
+
+                      {/* Actions */}
+                      <Td
+                        className="text-right"
+                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                      >
+                        <div className="inline-flex items-center gap-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
+                          {/* Quick status shortcuts */}
+                          {c.status === "upcoming" && (
+                            <button
+                              onClick={() => quickStatus(c, "live")}
+                              disabled={quickStatusId === c.id}
+                              title="Mark as live"
+                              className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-rose-500/10 text-[var(--muted)] hover:text-rose-500 transition"
+                            >
+                              <Icon.PlayCircle size={14} />
+                            </button>
+                          )}
+                          {c.status === "live" && (
+                            <button
+                              onClick={() => quickStatus(c, "ended")}
+                              disabled={quickStatusId === c.id}
+                              title="Mark as ended"
+                              className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)] transition"
+                            >
+                              <Icon.Circle size={14} />
+                            </button>
+                          )}
+                          {/* Copy URL */}
+                          <button
+                            onClick={() => copyUrl(c.meetingUrl)}
+                            title="Copy meeting URL"
+                            className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)] transition"
+                          >
+                            <Icon.Copy size={14} />
+                          </button>
+                          {/* Join link */}
+                          <a
+                            href={c.meetingUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            title="Open meeting"
+                            className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)] transition"
+                          >
                             <Icon.Video size={14} />
-                          </Button>
-                        </a>
-                        <Button size="sm" variant="ghost" onClick={() => openEdit(c)} title="Edit">
-                          <Icon.Edit size={14} />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setDeleting(c)}
-                          title="Delete"
-                        >
-                          <Icon.Trash size={14} />
-                        </Button>
-                      </div>
-                    </Td>
-                  </tr>
-                ))}
+                          </a>
+                          <button
+                            onClick={() => openEdit(c)}
+                            title="Edit"
+                            className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)] transition"
+                          >
+                            <Icon.Edit size={14} />
+                          </button>
+                          <button
+                            onClick={() => setDeleting(c)}
+                            title="Delete"
+                            className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-red-500/10 text-[var(--muted)] hover:text-[var(--danger)] transition"
+                          >
+                            <Icon.Trash size={14} />
+                          </button>
+                        </div>
+                      </Td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
+          </div>
+          <div className="px-4 py-2.5 border-t border-[var(--border)]">
+            <p className="text-xs text-[var(--muted)]">
+              Showing {filtered.length} of {classes.length} session{classes.length !== 1 ? "s" : ""}
+            </p>
           </div>
         </Card>
       )}
 
-      {/* Create / edit modal */}
+      {/* ── Session detail modal ── */}
+      {viewing && (
+        <SessionDetailModal
+          cls={viewing}
+          quickStatusId={quickStatusId}
+          onClose={() => setViewing(null)}
+          onEdit={(c) => { setViewing(null); setTimeout(() => openEdit(c), 60); }}
+          onDelete={(c) => { setViewing(null); setTimeout(() => setDeleting(c), 60); }}
+          onQuickStatus={quickStatus}
+          onCopyUrl={copyUrl}
+        />
+      )}
+
+      {/* ── Create / Edit modal ── */}
       <Modal
         open={formOpen}
         onClose={() => setFormOpen(false)}
@@ -372,6 +618,7 @@ export default function AdminLiveClassesPage() {
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
                 placeholder="What this session covers…"
+                rows={3}
               />
             </div>
             <div className="sm:col-span-2">
@@ -380,6 +627,7 @@ export default function AdminLiveClassesPage() {
                 value={form.meetingUrl}
                 onChange={(e) => setForm({ ...form, meetingUrl: e.target.value })}
                 placeholder="https://meet.example.com/abc"
+                icon={<Icon.Video size={15} />}
               />
             </div>
             <div>
@@ -435,12 +683,18 @@ export default function AdminLiveClassesPage() {
         </div>
       </Modal>
 
-      {/* Delete confirm */}
-      <Modal open={!!deleting} onClose={() => setDeleting(null)} size="sm" title="Delete live class?">
+      {/* ── Delete confirm ── */}
+      <Modal
+        open={!!deleting}
+        onClose={() => setDeleting(null)}
+        size="sm"
+        title="Delete live class?"
+      >
         {deleting && (
           <div className="p-5 space-y-4">
             <p className="text-sm text-[var(--muted)]">
-              Delete <strong className="text-[var(--foreground)]">{deleting.title}</strong>? This
+              Delete{" "}
+              <strong className="text-[var(--foreground)]">{deleting.title}</strong>? This
               can&apos;t be undone.
             </p>
             <div className="flex justify-end gap-2">
@@ -458,10 +712,239 @@ export default function AdminLiveClassesPage() {
   );
 }
 
-function Th({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <th className={`text-left font-semibold px-4 py-3 ${className ?? ""}`}>{children}</th>;
+/* ──────────────────────────────────────────────────────────────────────── */
+/*  Session detail modal                                                     */
+/* ──────────────────────────────────────────────────────────────────────── */
+
+function SessionDetailModal({
+  cls,
+  quickStatusId,
+  onClose,
+  onEdit,
+  onDelete,
+  onQuickStatus,
+  onCopyUrl,
+}: {
+  cls: LiveClass;
+  quickStatusId: string | null;
+  onClose: () => void;
+  onEdit: (c: LiveClass) => void;
+  onDelete: (c: LiveClass) => void;
+  onQuickStatus: (c: LiveClass, s: LiveStatus) => void;
+  onCopyUrl: (url: string) => void;
+}) {
+  const capacityPct =
+    cls.maxAttendees && cls.maxAttendees > 0
+      ? Math.min(100, Math.round((cls.attendees / cls.maxAttendees) * 100))
+      : null;
+
+  const STATUS_BADGE_MAP: Record<LiveStatus, "info" | "success" | "default" | "danger"> = {
+    upcoming: "info",
+    live: "success",
+    ended: "default",
+    cancelled: "danger",
+  };
+
+  return (
+    <Modal open onClose={onClose} title="Session details" size="md">
+      <div className="p-5 space-y-5">
+        {/* Title + status */}
+        <div className="flex items-start gap-3 justify-between">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              {cls.status === "live" && (
+                <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse shrink-0" />
+              )}
+              <h2 className="text-xl font-bold leading-snug">{cls.title}</h2>
+            </div>
+            <p className="text-sm text-[var(--muted)] mt-0.5">{cls.instructor}</p>
+          </div>
+          <Badge variant={STATUS_BADGE_MAP[cls.status]} className="capitalize shrink-0">
+            {cls.status}
+          </Badge>
+        </div>
+
+        {/* Meta grid */}
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            {
+              icon: <Icon.Book size={13} />,
+              label: "Course",
+              value: cls.courseTitle,
+              cls: "text-violet-500 bg-violet-500/10",
+            },
+            {
+              icon: <Icon.Calendar size={13} />,
+              label: "Scheduled",
+              value: `${formatDate(cls.scheduledAt)} · ${formatTime(cls.scheduledAt)}`,
+              cls: "text-sky-500 bg-sky-500/10",
+            },
+            {
+              icon: <Icon.Clock size={13} />,
+              label: "Duration",
+              value: `${cls.durationMinutes} minutes`,
+              cls: "text-emerald-500 bg-emerald-500/10",
+            },
+            {
+              icon: <Icon.Users size={13} />,
+              label: "Attendees",
+              value: cls.maxAttendees ? `${cls.attendees} / ${cls.maxAttendees}` : String(cls.attendees),
+              cls: "text-amber-500 bg-amber-500/10",
+            },
+          ].map((m) => (
+            <div
+              key={m.label}
+              className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3"
+            >
+              <div className={`inline-flex items-center gap-1 text-[11px] font-medium rounded-full px-2 py-0.5 mb-1 ${m.cls}`}>
+                {m.icon} {m.label}
+              </div>
+              <p className="text-sm font-semibold truncate">{m.value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Capacity bar */}
+        {capacityPct !== null && (
+          <div>
+            <div className="flex justify-between text-xs text-[var(--muted)] mb-1">
+              <span>Capacity</span>
+              <span>{capacityPct}%</span>
+            </div>
+            <div className="h-2 w-full rounded-full bg-[var(--surface-2)] overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${
+                  capacityPct >= 90
+                    ? "bg-rose-500"
+                    : capacityPct >= 60
+                    ? "bg-amber-500"
+                    : "bg-[var(--primary)]"
+                }`}
+                style={{ width: `${capacityPct}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Description */}
+        {cls.description && (
+          <div>
+            <p className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider mb-1.5">
+              Description
+            </p>
+            <p className="text-sm text-[var(--foreground)] leading-relaxed">{cls.description}</p>
+          </div>
+        )}
+
+        {/* Meeting URL */}
+        <div>
+          <p className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider mb-1.5">
+            Meeting link
+          </p>
+          <div className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2">
+            <Icon.Video size={14} className="text-[var(--muted)] shrink-0" />
+            <span className="text-xs text-[var(--muted)] truncate flex-1">{cls.meetingUrl}</span>
+            <button
+              onClick={() => onCopyUrl(cls.meetingUrl)}
+              title="Copy"
+              className="shrink-0 h-7 w-7 rounded-lg flex items-center justify-center hover:bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)] transition"
+            >
+              <Icon.Copy size={13} />
+            </button>
+            <a
+              href={cls.meetingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 h-7 px-2.5 rounded-lg flex items-center gap-1 text-xs font-medium bg-[var(--primary)] text-white hover:opacity-90 transition"
+            >
+              Join <Icon.ArrowLeft size={11} className="rotate-180" />
+            </a>
+          </div>
+        </div>
+
+        {/* Quick status change */}
+        {(cls.status === "upcoming" || cls.status === "live") && (
+          <div className="flex gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+            <Icon.Sparkles size={14} className="text-[var(--muted)] shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-[var(--muted)] mb-2">Quick status update</p>
+              <div className="flex gap-2">
+                {cls.status === "upcoming" && (
+                  <Button
+                    size="sm"
+                    onClick={() => onQuickStatus(cls, "live")}
+                    loading={quickStatusId === cls.id}
+                    className="!bg-rose-500 !border-rose-500 text-white"
+                  >
+                    <Icon.PlayCircle size={13} /> Start now
+                  </Button>
+                )}
+                {cls.status === "live" && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onQuickStatus(cls, "ended")}
+                    loading={quickStatusId === cls.id}
+                  >
+                    <Icon.Circle size={13} /> End session
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onQuickStatus(cls, "cancelled")}
+                  loading={quickStatusId === cls.id}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Footer actions */}
+        <div className="flex gap-2 pt-1 border-t border-[var(--border)]">
+          <Button variant="outline" onClick={onClose} className="flex-1">
+            Close
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => onDelete(cls)}
+            className="!text-[var(--danger)] !border-[var(--danger)]/30 hover:!bg-red-500/5"
+          >
+            <Icon.Trash size={14} />
+          </Button>
+          <Button onClick={() => onEdit(cls)}>
+            <Icon.Edit size={14} /> Edit
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
 }
 
-function Td({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-4 py-3 align-top ${className ?? ""}`}>{children}</td>;
+/* ──────────────────────────────────────────────────────────────────────── */
+/*  Table helpers                                                            */
+/* ──────────────────────────────────────────────────────────────────────── */
+
+function Th({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <th className={`text-left font-semibold px-4 py-3 ${className ?? ""}`}>{children}</th>
+  );
+}
+
+function Td({
+  children,
+  className,
+  onClick,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  onClick?: (e: React.MouseEvent) => void;
+}) {
+  return (
+    <td className={`px-4 py-3 align-top ${className ?? ""}`} onClick={onClick}>
+      {children}
+    </td>
+  );
 }

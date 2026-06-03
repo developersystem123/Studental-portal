@@ -176,8 +176,8 @@ type Teacher = {
   stats: () => { courses: number; students: number; completions: number };
 };
 
-type Theme = "light" | "dark";
-type ThemeCtx = { theme: Theme; toggle: () => void; setTheme: (t: Theme) => void };
+type Theme = "light" | "dark" | "system";
+type ThemeCtx = { theme: Theme; toggle: () => void; setTheme: (t: Theme) => void; resolvedTheme: "light" | "dark" };
 
 const AuthContext = React.createContext<Auth | null>(null);
 const DataContext = React.createContext<Data | null>(null);
@@ -236,31 +236,38 @@ async function tryApi<T = unknown>(path: string, init?: RequestInit): Promise<Ap
 
 export function Providers({ children }: { children: React.ReactNode }) {
   // ---------- Theme ----------
-  const [theme, setTheme] = React.useState<Theme>("light");
+  const [theme, setThemeState] = React.useState<Theme>("light");
+  const [sysDark, setSysDark] = React.useState(false);
+
   React.useEffect(() => {
     try {
+      const mq = window.matchMedia("(prefers-color-scheme: dark)");
+      setSysDark(mq.matches);
+      const handler = (e: MediaQueryListEvent) => setSysDark(e.matches);
+      mq.addEventListener("change", handler);
       const stored = localStorage.getItem(LS_THEME) as Theme | null;
-      const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
-      setTheme(stored ?? (prefersDark ? "dark" : "light"));
-    } catch {
-      // ignore
-    }
+      setThemeState(stored ?? "light");
+      return () => mq.removeEventListener("change", handler);
+    } catch { /* ignore */ }
   }, []);
+
+  const resolvedTheme: "light" | "dark" = theme === "system" ? (sysDark ? "dark" : "light") : theme;
+
   React.useEffect(() => {
-    document.documentElement.classList.toggle("dark", theme === "dark");
-    try {
-      localStorage.setItem(LS_THEME, theme);
-    } catch {
-      // ignore
-    }
-  }, [theme]);
+    document.documentElement.classList.toggle("dark", resolvedTheme === "dark");
+    try { localStorage.setItem(LS_THEME, theme); } catch { /* ignore */ }
+  }, [theme, resolvedTheme]);
+
+  const setTheme = React.useCallback((t: Theme) => setThemeState(t), []);
+
   const themeCtx: ThemeCtx = React.useMemo(
     () => ({
       theme,
-      toggle: () => setTheme((t) => (t === "dark" ? "light" : "dark")),
+      resolvedTheme,
+      toggle: () => setTheme(resolvedTheme === "dark" ? "light" : "dark"),
       setTheme,
     }),
-    [theme],
+    [theme, resolvedTheme, setTheme],
   );
 
   // ---------- Auth ----------
@@ -303,10 +310,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
         return { ok: true };
       },
       loginWithGoogle: async () => {
-        const res = await tryApi<{ user: User }>("/api/auth/google", { method: "POST" });
-        if (!res.ok) throw new Error(res.error);
-        writeCachedUser(res.data.user);
-        setUser(res.data.user);
+        // Redirect the browser to the OAuth initiation endpoint.
+        // The server handles the Google consent screen, token exchange,
+        // and session creation, then redirects back to the app.
+        window.location.href = "/api/auth/google";
       },
       register: async (input) => {
         const res = await tryApi<{ user: User }>("/api/auth/register", {

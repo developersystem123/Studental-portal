@@ -41,6 +41,19 @@ export async function POST(request: Request) {
     });
     if (existing) return Response.json({ enrollment: toClient(existing) });
 
+    // Paid courses require a completed payment before enrollment is granted.
+    if (course.price > 0) {
+      const payment = await prisma.payment.findFirst({
+        where: { userId: me.id, courseId, status: "completed" },
+      });
+      if (!payment) {
+        return Response.json(
+          { error: "Payment required. Please purchase this course before enrolling.", code: "PAYMENT_REQUIRED" },
+          { status: 402 },
+        );
+      }
+    }
+
     const created = await prisma.enrollment.create({
       data: {
         userId: me.id,

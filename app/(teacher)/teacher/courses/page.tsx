@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import Icon from "@/components/icons";
 import {
   Badge,
@@ -168,9 +169,16 @@ export default function TeacherCoursesPage() {
                       <span>{c.chapters.length} chapters</span>
                       <span>{Math.round(c.durationMinutes / 60 * 10) / 10}h total</span>
                     </div>
-                    <Button size="sm" variant="outline" className="w-full" onClick={() => setEditing(c)}>
-                      <Icon.FilePen size={14} /> Edit content
-                    </Button>
+                    <div className="flex gap-2">
+                      <Link href={`/teacher/courses/${c.id}`} className="flex-1">
+                        <Button size="sm" className="w-full">
+                          <Icon.BookOpen size={14} /> Edit Content
+                        </Button>
+                      </Link>
+                      <Button size="sm" variant="outline" onClick={() => setEditing(c)} title="Edit course info">
+                        <Icon.FilePen size={14} />
+                      </Button>
+                    </div>
                   </MediaCard>
                 );
               })}

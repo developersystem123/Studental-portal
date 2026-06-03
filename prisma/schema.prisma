@@ -192,6 +192,9 @@ model User {
   phone            String?
   education        EducationLevel?
   googleConnected  Boolean         @default(false)
+  googleId         String?         @unique
+  totpSecret       String?
+  totpEnabled      Boolean         @default(false)
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 
@@ -934,6 +937,17 @@ model LessonNote {
   course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@index([userId, courseId])
+}
+
+// -------- Platform-wide key-value settings --------
+// Stores admin-configurable platform settings as JSON blobs keyed by a
+// short slug (e.g. "ai_features", "ai_rate_limits"). Each setting is a
+// single row so reads/writes stay O(1).
+
+model PlatformSetting {
+  key       String   @id // e.g. "ai_features"
+  value     Json     // arbitrary JSON payload
+  updatedAt DateTime @updatedAt
 }
 
 // -------- Gamification: streaks --------

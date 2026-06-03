@@ -9,24 +9,84 @@ import { useAuth, useTeacher } from "@/lib/store";
 import {
   ChangePasswordCard,
   PersonalInfoCard,
+  ProfileCompletionCard,
   ProfileHero,
   SectionHeader,
 } from "@/components/profile/sections";
+import { cn } from "@/lib/utils";
 
 export default function TeacherProfilePage() {
-  const { user, deleteAccount } = useAuth();
+  const { user, deleteAccount, updateUser } = useAuth();
   const teacher = useTeacher();
   const router = useRouter();
   const toast = useToast();
   const [confirmDelete, setConfirmDelete] = React.useState(false);
+  const [googleModal, setGoogleModal] = React.useState<"connect" | "disconnect" | null>(null);
+  const [googleLoading, setGoogleLoading] = React.useState(false);
+
+  async function handleGoogleConnect() {
+    setGoogleLoading(true);
+    try {
+      await new Promise((r) => setTimeout(r, 1200));
+      await updateUser({ googleConnected: true });
+      toast.push({ title: "Google account connected", description: "You can now sign in with Google.", tone: "success" });
+      setGoogleModal(null);
+    } catch {
+      toast.push({ title: "Couldn't connect Google", description: "Please try again.", tone: "danger" });
+    } finally {
+      setGoogleLoading(false);
+    }
+  }
+
+  async function handleGoogleDisconnect() {
+    setGoogleLoading(true);
+    try {
+      await new Promise((r) => setTimeout(r, 800));
+      await updateUser({ googleConnected: false });
+      toast.push({ title: "Google account disconnected", tone: "info" });
+      setGoogleModal(null);
+    } catch {
+      toast.push({ title: "Couldn't disconnect Google", tone: "danger" });
+    } finally {
+      setGoogleLoading(false);
+    }
+  }
 
   if (!user) return null;
 
   const stats = teacher.stats();
   const myCourses = teacher.myCourses();
 
+  const STAT_CARDS = [
+    {
+      label: "Courses",
+      value: stats.courses,
+      icon: <Icon.Book size={18} />,
+      color: "text-[var(--primary)]",
+      bg: "bg-[var(--primary-soft)]",
+      border: "border-[var(--primary)]/15",
+    },
+    {
+      label: "Students",
+      value: stats.students,
+      icon: <Icon.Users size={18} />,
+      color: "text-sky-500",
+      bg: "bg-sky-500/10",
+      border: "border-sky-500/15",
+    },
+    {
+      label: "Completions",
+      value: stats.completions,
+      icon: <Icon.Award size={18} />,
+      color: "text-emerald-500",
+      bg: "bg-emerald-500/10",
+      border: "border-emerald-500/15",
+    },
+  ] as const;
+
   return (
     <div className="space-y-6 fade-in">
+      {/* ── Hero ── */}
       <ProfileHero
         extra={
           <div className="flex items-center gap-2 flex-wrap">
@@ -38,6 +98,29 @@ export default function TeacherProfilePage() {
         }
       />
 
+      {/* ── Teaching stats ── */}
+      <div className="grid grid-cols-3 gap-3">
+        {STAT_CARDS.map(({ label, value, icon, color, bg, border }) => (
+          <div
+            key={label}
+            className={cn(
+              "rounded-2xl border p-4 card-shadow hover:-translate-y-0.5 transition-all",
+              bg,
+              border,
+            )}
+          >
+            <div className={cn("h-9 w-9 rounded-xl flex items-center justify-center", bg, color)}>
+              {icon}
+            </div>
+            <p className="mt-3 text-xs font-medium text-[var(--muted)]">{label}</p>
+            <p className="mt-0.5 text-2xl font-bold tabular-nums">{value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Profile completion ── */}
+      <ProfileCompletionCard />
+
       <PersonalInfoCard
         description="Your bio is shown to students alongside the courses you teach — write something engaging."
         bioPlaceholder="e.g. Senior engineer turned educator. Loves teaching React, TypeScript, and clean code."
@@ -45,7 +128,7 @@ export default function TeacherProfilePage() {
 
       <ChangePasswordCard />
 
-      {/* Public profile preview — how students see you */}
+      {/* ── Public profile preview ── */}
       <Card>
         <CardBody className="space-y-5">
           <SectionHeader
@@ -53,72 +136,97 @@ export default function TeacherProfilePage() {
             title="Public profile preview"
             description="This is how students see your instructor card on course pages."
           />
-          <div className="rounded-2xl bg-gradient-to-br from-[var(--primary-soft)] to-[var(--surface-2)] p-5 border border-[var(--border)]">
+          <div className="rounded-2xl border border-[var(--border)] bg-gradient-to-br from-[var(--primary-soft)] to-[var(--surface-2)] p-5">
             <div className="flex items-start gap-4">
               <Avatar name={user.name} src={user.avatar ?? null} size={64} />
               <div className="min-w-0 flex-1">
                 <p className="font-semibold">{user.name}</p>
                 <p className="text-xs text-[var(--muted)]">Instructor · {stats.courses} courses</p>
                 {user.bio ? (
-                  <p className="text-sm mt-2 text-[var(--foreground)]/85">{user.bio}</p>
+                  <p className="mt-2 text-sm text-[var(--foreground)]/85">{user.bio}</p>
                 ) : (
-                  <p className="text-sm mt-2 text-[var(--muted-2)] italic">
+                  <p className="mt-2 text-sm italic text-[var(--muted-2)]">
                     No bio yet — add one above to introduce yourself to students.
                   </p>
                 )}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <span className="flex items-center gap-1 rounded-full bg-[var(--surface)] border border-[var(--border)] px-2.5 py-1 text-xs text-[var(--muted)]">
+                    <Icon.Users size={11} /> {stats.students} students
+                  </span>
+                  <span className="flex items-center gap-1 rounded-full bg-[var(--surface)] border border-[var(--border)] px-2.5 py-1 text-xs text-[var(--muted)]">
+                    <Icon.Award size={11} /> {stats.completions} completions
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         </CardBody>
       </Card>
 
-      {/* Teaching at a glance */}
-      <Card>
-        <CardBody className="space-y-5">
-          <SectionHeader
-            icon={<Icon.Book size={18} />}
-            title="Teaching at a glance"
-            description="Quick summary of your impact."
-          />
-          <div className="grid grid-cols-3 gap-3">
-            <StatMini label="Courses" value={stats.courses} />
-            <StatMini label="Students" value={stats.students} />
-            <StatMini label="Completions" value={stats.completions} />
-          </div>
-
-          {myCourses.length > 0 && (
-            <div>
-              <p className="text-xs uppercase tracking-wider text-[var(--muted-2)] font-semibold mb-3">
-                Your courses
-              </p>
-              <ul className="space-y-2">
-                {myCourses.slice(0, 4).map((c) => (
-                  <li key={c.id} className="flex items-center gap-3 p-3 rounded-xl border border-[var(--border)]">
-                    <div className="h-10 w-14 rounded-lg overflow-hidden border border-[var(--border)] shrink-0">
+      {/* ── My courses ── */}
+      {myCourses.length > 0 && (
+        <Card>
+          <CardBody className="space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <SectionHeader
+                icon={<Icon.Book size={18} />}
+                title="My courses"
+                description="Courses you currently teach on the platform."
+              />
+              <Link
+                href="/teacher/courses"
+                className="text-xs text-[var(--primary)] hover:underline underline-offset-2 shrink-0"
+              >
+                Manage all
+              </Link>
+            </div>
+            <ul className="space-y-2">
+              {myCourses.slice(0, 5).map((c) => (
+                <li key={c.id}>
+                  <Link
+                    href={`/teacher/courses`}
+                    className="group flex items-center gap-3 rounded-xl border border-[var(--border)] p-3 transition hover:border-[var(--primary)]/30 hover:bg-[var(--primary-soft)]/20"
+                  >
+                    <div className="h-12 w-16 shrink-0 overflow-hidden rounded-lg border border-[var(--border)]">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={c.thumbnail} alt={c.title} className="w-full h-full object-cover" />
+                      <img src={c.thumbnail} alt={c.title} className="h-full w-full object-cover" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{c.title}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{c.title}</p>
                       <p className="text-xs text-[var(--muted)]">
                         {c.category} · {c.chapters.length} chapters
                       </p>
                     </div>
-                    <Badge variant="default">{c.level}</Badge>
-                  </li>
-                ))}
-              </ul>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Badge variant="default">{c.level}</Badge>
+                      <Icon.ChevronRight
+                        size={15}
+                        className="text-[var(--muted-2)] transition group-hover:translate-x-0.5 group-hover:text-[var(--primary)]"
+                      />
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <QuickLink
+                href="/teacher/courses"
+                icon={<Icon.Book size={16} />}
+                title="Manage courses"
+                description="Edit content & chapters"
+              />
+              <QuickLink
+                href="/teacher/students"
+                icon={<Icon.Users size={16} />}
+                title="My students"
+                description="Track progress & completions"
+              />
             </div>
-          )}
+          </CardBody>
+        </Card>
+      )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-            <QuickLink href="/teacher/courses" icon={<Icon.Book size={16} />} title="My courses" description="Edit content & chapters" />
-            <QuickLink href="/teacher/students" icon={<Icon.User size={16} />} title="My students" description="Track progress & completions" />
-          </div>
-        </CardBody>
-      </Card>
-
-      {/* Connected accounts */}
+      {/* ── Connected accounts ── */}
       <Card>
         <CardBody className="space-y-5">
           <SectionHeader
@@ -126,26 +234,35 @@ export default function TeacherProfilePage() {
             title="Connected accounts"
             description="Link external accounts for faster sign-in."
           />
-          <div className="flex items-center justify-between p-4 rounded-xl border border-[var(--border)] bg-[var(--surface-2)]/40">
+          <div className="flex items-center justify-between gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface-2)]/40 p-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)]">
                 <Icon.Google size={20} />
               </div>
               <div>
                 <p className="text-sm font-medium">Google</p>
                 <p className="text-xs text-[var(--muted)]">
-                  {user.googleConnected ? "Connected" : "Not connected"}
+                  {user.googleConnected ? `Connected · ${user.email}` : "Not connected"}
                 </p>
               </div>
+              {user.googleConnected && (
+                <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                  Active
+                </span>
+              )}
             </div>
-            <Button variant="outline" size="sm">
+            <Button
+              variant={user.googleConnected ? "ghost" : "outline"}
+              size="sm"
+              onClick={() => setGoogleModal(user.googleConnected ? "disconnect" : "connect")}
+            >
               {user.googleConnected ? "Disconnect" : "Connect"}
             </Button>
           </div>
         </CardBody>
       </Card>
 
-      {/* Danger zone */}
+      {/* ── Danger zone ── */}
       <Card className="border-[var(--danger)]/30">
         <CardBody className="space-y-5">
           <SectionHeader
@@ -154,10 +271,10 @@ export default function TeacherProfilePage() {
             description="Permanent actions. Cannot be undone."
             tone="danger"
           />
-          <div className="flex items-center justify-between gap-4 flex-wrap border border-[var(--danger)]/20 rounded-xl p-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[var(--danger)]/20 p-4">
             <div className="min-w-0">
               <p className="text-sm font-medium">Delete account</p>
-              <p className="text-xs text-[var(--muted)] mt-0.5">
+              <p className="mt-0.5 text-xs text-[var(--muted)]">
                 This removes your instructor account. Your courses stay in the catalog but lose their instructor link.
               </p>
             </div>
@@ -168,14 +285,70 @@ export default function TeacherProfilePage() {
         </CardBody>
       </Card>
 
-      <Modal open={confirmDelete} onClose={() => setConfirmDelete(false)} title="Delete teacher account?">
-        <div className="p-5 space-y-4">
+      {/* ── Google connect modal ── */}
+      <Modal
+        open={googleModal === "connect"}
+        onClose={() => !googleLoading && setGoogleModal(null)}
+        title="Connect Google account"
+      >
+        <div className="space-y-4 p-5">
+          <div className="flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white">
+              <Icon.Google size={22} />
+            </div>
+            <div>
+              <p className="text-sm font-medium">Sign in with Google</p>
+              <p className="text-xs text-[var(--muted)]">{user.email}</p>
+            </div>
+          </div>
           <p className="text-sm text-[var(--muted)]">
-            Are you sure? Your account is permanently removed. The courses you teach remain in the catalog, but will
-            need to be reassigned by an admin.
+            Linking your Google account lets you sign in faster without a password. Your account email will remain{" "}
+            <span className="font-medium text-[var(--foreground)]">{user.email}</span>.
+          </p>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="outline" onClick={() => setGoogleModal(null)} disabled={googleLoading}>
+              Cancel
+            </Button>
+            <Button loading={googleLoading} onClick={handleGoogleConnect}>
+              <Icon.Google size={15} /> Connect Google
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── Google disconnect modal ── */}
+      <Modal
+        open={googleModal === "disconnect"}
+        onClose={() => !googleLoading && setGoogleModal(null)}
+        title="Disconnect Google account?"
+      >
+        <div className="space-y-4 p-5">
+          <p className="text-sm text-[var(--muted)]">
+            You&apos;ll no longer be able to sign in with Google. Make sure you have a password set so
+            you can still access your account.
           </p>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setConfirmDelete(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setGoogleModal(null)} disabled={googleLoading}>
+              Cancel
+            </Button>
+            <Button variant="danger" loading={googleLoading} onClick={handleGoogleDisconnect}>
+              Disconnect
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── Delete account modal ── */}
+      <Modal open={confirmDelete} onClose={() => setConfirmDelete(false)} title="Delete teacher account?">
+        <div className="space-y-4 p-5">
+          <p className="text-sm text-[var(--muted)]">
+            Are you sure? Your account is permanently removed. The courses you teach remain in the catalog,
+            but will need to be reassigned by an admin.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setConfirmDelete(false)}>
+              Cancel
+            </Button>
             <Button
               variant="danger"
               onClick={() => {
@@ -189,15 +362,6 @@ export default function TeacherProfilePage() {
           </div>
         </div>
       </Modal>
-    </div>
-  );
-}
-
-function StatMini({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)]/50 p-3">
-      <p className="text-2xl font-bold">{value}</p>
-      <p className="text-[11px] text-[var(--muted)]">{label}</p>
     </div>
   );
 }
@@ -216,16 +380,19 @@ function QuickLink({
   return (
     <Link
       href={href}
-      className="flex items-center gap-3 p-3 rounded-xl border border-[var(--border)] hover:border-[var(--primary)]/30 hover:bg-[var(--primary-soft)]/30 transition group"
+      className="group flex items-center gap-3 rounded-xl border border-[var(--border)] p-3 transition hover:border-[var(--primary)]/30 hover:bg-[var(--primary-soft)]/30"
     >
-      <div className="h-9 w-9 rounded-lg bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center shrink-0">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--primary-soft)] text-[var(--primary)]">
         {icon}
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium">{title}</p>
         <p className="text-xs text-[var(--muted)]">{description}</p>
       </div>
-      <Icon.ChevronRight size={16} className="text-[var(--muted-2)] group-hover:text-[var(--primary)] group-hover:translate-x-0.5 transition" />
+      <Icon.ChevronRight
+        size={16}
+        className="text-[var(--muted-2)] transition group-hover:translate-x-0.5 group-hover:text-[var(--primary)]"
+      />
     </Link>
   );
 }

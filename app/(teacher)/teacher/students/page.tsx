@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import Icon from "@/components/icons";
 import { Badge, Button, Card, CardBody, EmptyState, Input, Select, Tabs, useToast } from "@/components/ui";
 import { useTeacher } from "@/lib/store";
@@ -213,15 +214,16 @@ export default function TeacherStudentsPage() {
                   {filtered.map((r) => (
                     <tr key={`${r.userId}-${r.courseId}`} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)]/50 transition">
                       <td className="py-3 px-3">
-                        <div className="flex items-center gap-3">
+                        <Link href={`/teacher/students/${r.userId}`} className="flex items-center gap-3 group/student">
                           <div className="h-9 w-9 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white font-semibold inline-flex items-center justify-center text-sm shrink-0">
                             {r.userName.slice(0, 1).toUpperCase()}
                           </div>
                           <div className="min-w-0">
-                            <p className="font-medium truncate">{r.userName}</p>
+                            <p className="font-medium truncate group-hover/student:text-[var(--primary)] transition">{r.userName}</p>
                             <p className="text-xs text-[var(--muted)] truncate">{r.userEmail}</p>
                           </div>
-                        </div>
+                          <Icon.ChevronRight size={12} className="shrink-0 text-[var(--muted-2)] opacity-0 group-hover/student:opacity-100 transition" />
+                        </Link>
                       </td>
                       <td className="py-3 px-3 max-w-xs">
                         <p className="font-medium truncate">{r.courseTitle}</p>

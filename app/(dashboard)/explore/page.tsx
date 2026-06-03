@@ -111,8 +111,13 @@ function ExploreContent() {
     setter(next);
   }
 
-  function handleEnroll(id: string, title: string) {
+  function handleEnroll(id: string, title: string, price: number) {
     if (!user) { router.push("/login"); return; }
+    // Paid courses must go through the payment flow on the detail page
+    if (price > 0) {
+      router.push(`/explore/${id}`);
+      return;
+    }
     enroll(id);
     addNotification({
       type: "achievement",
@@ -301,10 +306,14 @@ function ExploreContent() {
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          handleEnroll(c.id, c.title);
+                          handleEnroll(c.id, c.title, c.price);
                         }}
                       >
-                        Enroll
+                        {c.price > 0 ? (
+                          <><Icon.CreditCard size={12} /> Buy ${c.price}</>
+                        ) : (
+                          <>Enroll Free</>
+                        )}
                       </Button>
                     )}
                     <Button

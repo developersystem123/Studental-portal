@@ -16,13 +16,13 @@ import {
 import Icon from "@/components/icons";
 import { useAuth } from "@/lib/store";
 import { EDUCATION_LEVELS, type EducationLevel } from "@/lib/mockData";
-import { relativeTime } from "@/lib/utils";
+import { cn, relativeTime } from "@/lib/utils";
 import { cleanPhoneInput, validateEmail, validateName, validatePhone } from "@/lib/validation";
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024; // 2 MB
 const MAX_BANNER_BYTES = 4 * 1024 * 1024; // 4 MB
 
-/* ---------------- Section header ---------------- */
+/* ─────────────────────────────── Section header ──────────────────────────── */
 export function SectionHeader({
   icon,
   title,
@@ -51,14 +51,12 @@ export function SectionHeader({
   );
 }
 
-/* ---------------- Profile hero ---------------- */
+/* ─────────────────────────────── Profile hero ────────────────────────────── */
 export function ProfileHero({
   subtitle,
   extra,
 }: {
-  /** Override the default "joined X ago" line. */
   subtitle?: React.ReactNode;
-  /** Extra content shown beneath the name area (e.g. stats chips). */
   extra?: React.ReactNode;
 }) {
   const { user, updateUser } = useAuth();
@@ -77,11 +75,7 @@ export function ProfileHero({
       return;
     }
     if (file.size > MAX_AVATAR_BYTES) {
-      toast.push({
-        title: "Image too large",
-        description: "Max 2 MB. Try compressing it first.",
-        tone: "danger",
-      });
+      toast.push({ title: "Image too large", description: "Max 2 MB. Try compressing it first.", tone: "danger" });
       return;
     }
     setUploading(true);
@@ -117,11 +111,7 @@ export function ProfileHero({
       return;
     }
     if (file.size > MAX_BANNER_BYTES) {
-      toast.push({
-        title: "Image too large",
-        description: "Max 4 MB. Try compressing it first.",
-        tone: "danger",
-      });
+      toast.push({ title: "Image too large", description: "Max 4 MB. Try compressing it first.", tone: "danger" });
       return;
     }
     setBannerUploading(true);
@@ -152,31 +142,38 @@ export function ProfileHero({
 
   return (
     <Card className="overflow-hidden">
-      <div className="relative h-32 sm:h-40 bg-gradient-to-br from-[var(--primary)] to-[var(--accent)]">
+      {/* ── Banner ── */}
+      <div className="relative h-44 sm:h-56 bg-gradient-to-br from-[var(--primary)] via-[var(--accent)] to-sky-500">
         {user.banner ? (
           <>
             <img
               src={user.banner}
               alt="Profile cover"
-              className="absolute inset-0 w-full h-full object-cover"
+              className="absolute inset-0 h-full w-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/35 to-transparent pointer-events-none" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
           </>
         ) : (
-          <div className="absolute inset-0 opacity-25 mix-blend-overlay pointer-events-none">
-            <svg viewBox="0 0 400 200" className="w-full h-full">
-              <defs>
-                <pattern id="profile-hero-dots" width="22" height="22" patternUnits="userSpaceOnUse">
-                  <circle cx="2" cy="2" r="1.4" fill="white" />
-                </pattern>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#profile-hero-dots)" />
-            </svg>
-          </div>
+          <>
+            {/* Dot pattern overlay */}
+            <div className="pointer-events-none absolute inset-0 opacity-20">
+              <svg viewBox="0 0 400 200" className="h-full w-full" preserveAspectRatio="xMidYMid slice">
+                <defs>
+                  <pattern id="hero-dots" width="24" height="24" patternUnits="userSpaceOnUse">
+                    <circle cx="3" cy="3" r="1.8" fill="white" />
+                  </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#hero-dots)" />
+              </svg>
+            </div>
+            {/* Decorative blobs */}
+            <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/10" />
+            <div className="pointer-events-none absolute right-24 bottom-0 h-24 w-24 rounded-full bg-white/8" />
+          </>
         )}
 
-        {/* Cover photo controls */}
-        <div className="absolute top-3 right-3 flex items-center gap-2">
+        {/* Cover controls */}
+        <div className="absolute right-3 top-3 flex items-center gap-2">
           <button
             type="button"
             onClick={() => bannerRef.current?.click()}
@@ -192,12 +189,12 @@ export function ProfileHero({
               onClick={removeBanner}
               className="flex h-7 w-7 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-sm transition hover:bg-[var(--danger)]"
               title="Remove cover photo"
-              aria-label="Remove cover photo"
             >
               <Icon.Trash size={13} />
             </button>
           )}
         </div>
+
         <input
           ref={bannerRef}
           type="file"
@@ -206,24 +203,27 @@ export function ProfileHero({
           onChange={(e) => onBannerUpload(e.target.files?.[0])}
         />
 
-        {/* Upload loader overlay */}
+        {/* Upload overlay */}
         {bannerUploading && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/45 backdrop-blur-sm fade-in">
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/50 backdrop-blur-sm fade-in">
             <div className="flex items-center gap-2.5 rounded-full bg-black/55 px-4 py-2 text-white shadow-lg ring-1 ring-white/15">
               <Icon.Loader size={18} />
-              <span className="text-sm font-medium">Uploading cover photo…</span>
+              <span className="text-sm font-medium">Uploading cover…</span>
             </div>
           </div>
         )}
       </div>
+
+      {/* ── Avatar + name row ── */}
       <CardBody className="pt-0">
         <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-          <div className="relative shrink-0 -mt-14">
-            <div className="rounded-full ring-4 ring-[var(--surface)] bg-[var(--surface)]">
-              <Avatar name={user.name} src={user.avatar ?? null} size={108} />
+          {/* Avatar */}
+          <div className="relative -mt-16 shrink-0">
+            <div className="rounded-full ring-4 ring-[var(--surface)] shadow-xl bg-[var(--surface)]">
+              <Avatar name={user.name} src={user.avatar ?? null} size={112} />
             </div>
             {uploading && (
-              <div className="absolute inset-1 flex items-center justify-center rounded-full bg-black/50 backdrop-blur-[1px] fade-in">
+              <div className="absolute inset-1 flex items-center justify-center rounded-full bg-black/50 backdrop-blur-[2px] fade-in">
                 <Icon.Loader size={24} className="text-white" />
               </div>
             )}
@@ -231,9 +231,8 @@ export function ProfileHero({
               type="button"
               onClick={() => fileRef.current?.click()}
               disabled={uploading}
-              className="absolute bottom-1 right-1 h-9 w-9 rounded-full btn-primary flex items-center justify-center shadow-md hover:shadow-lg transition disabled:opacity-60"
+              className="absolute bottom-1 right-1 flex h-9 w-9 items-center justify-center rounded-full btn-primary shadow-md hover:shadow-lg transition disabled:opacity-60"
               title="Change avatar"
-              aria-label="Change avatar"
             >
               {uploading ? <Icon.Loader size={16} /> : <Icon.Camera size={16} />}
             </button>
@@ -245,21 +244,27 @@ export function ProfileHero({
               onChange={(e) => onAvatarUpload(e.target.files?.[0])}
             />
           </div>
-          <div className="flex-1 min-w-0 pt-3 sm:pt-4">
+
+          {/* Name / role / email */}
+          <div className="min-w-0 flex-1 pt-3 sm:pt-5">
             <h1 className="text-2xl sm:text-3xl font-bold truncate">{user.name}</h1>
-            <div className="flex items-center gap-2 flex-wrap mt-1">
+            <div className="mt-1 flex flex-wrap items-center gap-2">
               <Badge variant="primary">{user.role}</Badge>
               <span className="text-sm text-[var(--muted)] truncate">{user.email}</span>
             </div>
             {subtitle ? (
               <div className="mt-1">{subtitle}</div>
             ) : user.createdAt ? (
-              <p className="text-xs text-[var(--muted-2)] mt-1">Joined {relativeTime(user.createdAt)}</p>
+              <p className="mt-1 text-xs text-[var(--muted-2)]">
+                Joined {relativeTime(user.createdAt)}
+              </p>
             ) : null}
             {extra && <div className="mt-3">{extra}</div>}
           </div>
+
+          {/* Remove photo */}
           {user.avatar && (
-            <div className="pt-1 sm:pt-4">
+            <div className="pt-1 sm:pt-5">
               <Button variant="ghost" size="sm" onClick={removeAvatar} title="Remove photo">
                 <Icon.Trash size={14} /> Remove photo
               </Button>
@@ -271,7 +276,92 @@ export function ProfileHero({
   );
 }
 
-/* ---------------- Personal info card ---------------- */
+/* ─────────────────────────── Profile completion ──────────────────────────── */
+export function ProfileCompletionCard() {
+  const { user } = useAuth();
+  if (!user) return null;
+
+  const checks = [
+    { label: "Profile photo", done: !!user.avatar },
+    { label: "Cover photo", done: !!user.banner },
+    { label: "Bio written", done: (user.bio?.trim().length ?? 0) > 10 },
+    { label: "Phone number", done: !!(user.phone?.trim()) },
+    ...(user.role === "Student"
+      ? [{ label: "Education level", done: !!user.education && user.education !== "None" }]
+      : []),
+  ];
+
+  const done = checks.filter((c) => c.done).length;
+  const pct = Math.round((done / checks.length) * 100);
+  const complete = pct === 100;
+
+  return (
+    <Card>
+      <CardBody className="space-y-4">
+        <div className="flex items-start justify-between gap-4">
+          <SectionHeader
+            icon={complete ? <Icon.CheckCircle size={18} /> : <Icon.User size={18} />}
+            title="Profile completion"
+            description={
+              complete
+                ? "Your profile is complete — looking great!"
+                : `${checks.length - done} item${checks.length - done !== 1 ? "s" : ""} remaining — fill them in to complete your profile.`
+            }
+          />
+          <div className="shrink-0 text-right">
+            <p className="text-2xl font-bold tabular-nums">{pct}%</p>
+            <p className="text-xs text-[var(--muted)]">{done}/{checks.length} done</p>
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-2)]">
+          <div
+            style={{ width: `${pct}%` }}
+            className={cn(
+              "h-full rounded-full transition-all duration-700",
+              complete
+                ? "bg-emerald-500"
+                : pct >= 60
+                ? "bg-[var(--primary)]"
+                : "bg-amber-500",
+            )}
+          />
+        </div>
+
+        {/* Checklist */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {checks.map(({ label, done: itemDone }) => (
+            <div
+              key={label}
+              className={cn(
+                "flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-sm transition-all",
+                itemDone
+                  ? "border-emerald-500/25 bg-emerald-500/8 text-emerald-700 dark:text-emerald-400"
+                  : "border-[var(--border)] bg-[var(--surface-2)]/40 text-[var(--muted)]",
+              )}
+            >
+              <span
+                className={cn(
+                  "flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
+                  itemDone
+                    ? "bg-emerald-500 text-white"
+                    : "border border-[var(--border-strong)] bg-[var(--surface)]",
+                )}
+              >
+                {itemDone && <Icon.Check size={10} />}
+              </span>
+              <span className="flex-1">{label}</span>
+              {itemDone && <Icon.Check size={13} className="text-emerald-500" />}
+            </div>
+          ))}
+        </div>
+      </CardBody>
+    </Card>
+  );
+}
+
+/* ──────────────────────────── Personal info card ─────────────────────────── */
 export function PersonalInfoCard({
   description = "This is how others will see you in the platform.",
   bioPlaceholder = "Tell others a bit about yourself.",
@@ -345,12 +435,21 @@ export function PersonalInfoCard({
   return (
     <Card>
       <CardBody className="space-y-5">
-        <SectionHeader icon={<Icon.User size={18} />} title="Personal information" description={description} />
+        <SectionHeader
+          icon={<Icon.User size={18} />}
+          title="Personal information"
+          description={description}
+        />
         <form onSubmit={save} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="pi-name">Full name</Label>
-              <Input id="pi-name" value={name} onChange={(e) => setName(e.target.value)} icon={<Icon.User size={16} />} />
+              <Input
+                id="pi-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                icon={<Icon.User size={16} />}
+              />
             </div>
             <div>
               <Label htmlFor="pi-email">Email</Label>
@@ -402,6 +501,7 @@ export function PersonalInfoCard({
               placeholder={bioPlaceholder}
               rows={3}
             />
+            <p className="mt-1 text-xs text-[var(--muted)]">{bio.length}/300 characters</p>
           </div>
           <div className="flex justify-end gap-2 pt-1">
             <Button type="button" variant="outline" onClick={reset} disabled={!dirty || saving}>
@@ -417,7 +517,7 @@ export function PersonalInfoCard({
   );
 }
 
-/* ---------------- Change password card ---------------- */
+/* ──────────────────────────── Change password card ───────────────────────── */
 export function ChangePasswordCard() {
   const { changePassword } = useAuth();
   const toast = useToast();
@@ -448,7 +548,8 @@ export function ChangePasswordCard() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!current) return toast.push({ title: "Enter your current password", tone: "danger" });
-    if (next.length < 8) return toast.push({ title: "New password must be at least 8 characters", tone: "danger" });
+    if (next.length < 8)
+      return toast.push({ title: "New password must be at least 8 characters", tone: "danger" });
     if (next !== confirm) return toast.push({ title: "Passwords don't match", tone: "danger" });
     setSaving(true);
     const res = await changePassword(current, next);
@@ -471,7 +572,7 @@ export function ChangePasswordCard() {
   return (
     <Card>
       <CardBody className="space-y-5">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <SectionHeader
             icon={<Icon.Lock size={18} />}
             title="Change password"
@@ -520,14 +621,16 @@ export function ChangePasswordCard() {
                   {[0, 1, 2, 3].map((i) => (
                     <div
                       key={i}
-                      className={`h-1 flex-1 rounded-full transition-all ${
-                        i < strength.score ? strength.color : "bg-[var(--surface-2)]"
-                      }`}
+                      className={cn(
+                        "h-1 flex-1 rounded-full transition-all",
+                        i < strength.score ? strength.color : "bg-[var(--surface-2)]",
+                      )}
                     />
                   ))}
                 </div>
                 <p className="text-xs text-[var(--muted)]">
-                  Strength: <span className={`font-medium ${strength.textColor}`}>{strength.label}</span>
+                  Strength:{" "}
+                  <span className={cn("font-medium", strength.textColor)}>{strength.label}</span>
                   {strength.score < 3 && " — add length, a number, or a symbol."}
                 </p>
               </div>
@@ -537,7 +640,11 @@ export function ChangePasswordCard() {
               <Button type="button" variant="outline" onClick={closeForm} disabled={saving}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={!current || !next || next !== confirm} loading={saving}>
+              <Button
+                type="submit"
+                disabled={!current || !next || next !== confirm}
+                loading={saving}
+              >
                 <Icon.Lock size={16} /> Update password
               </Button>
             </div>
@@ -548,7 +655,7 @@ export function ChangePasswordCard() {
   );
 }
 
-/* ---------------- Password field helper ---------------- */
+/* ────────────────────────── Password field helper ────────────────────────── */
 function PasswordField({
   id,
   label,
