@@ -48,14 +48,14 @@
 
 .dark {
   color-scheme: dark;
-  --background: #071a0f;
-  --surface: #0e2a19;
-  --surface-2: #163823;
-  --border: #1e4d30;
-  --border-strong: #276641;
-  --foreground: #e8f5ee;
-  --muted: #86b89a;
-  --muted-2: #5f8971;
+  --background: #07180d;
+  --surface: #0f2d1b;
+  --surface-2: #193d27;
+  --border: #22503a;
+  --border-strong: #2e6848;
+  --foreground: #ecf7f2;
+  --muted: #90bfa7;
+  --muted-2: #66967a;
   --primary: #4ade80;
   --primary-foreground: #071a0f;
   --primary-soft: #14532d;
@@ -64,7 +64,7 @@
   --warning: #fbbf24;
   --danger: #f87171;
   --ring: #4ade80;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.40), 0 8px 24px rgba(0, 0, 0, 0.50);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.50), 0 8px 28px rgba(0, 0, 0, 0.55);
 }
 
 /* Admin and Teacher portals share the same white + blue palette as the main
@@ -115,6 +115,14 @@ body {
   background-image:
     radial-gradient(800px 600px at 100% -10%, color-mix(in oklab, var(--primary) 14%, transparent), transparent),
     radial-gradient(700px 500px at -10% 100%, color-mix(in oklab, var(--accent) 12%, transparent), transparent);
+  background-attachment: fixed;
+}
+
+.dark body {
+  background-image:
+    radial-gradient(900px 700px at 100% -5%, color-mix(in oklab, var(--primary) 24%, transparent), transparent),
+    radial-gradient(750px 550px at -5% 90%, color-mix(in oklab, var(--accent) 18%, transparent), transparent),
+    radial-gradient(500px 400px at 50% 60%, color-mix(in oklab, var(--primary) 7%, transparent), transparent);
   background-attachment: fixed;
 }
 

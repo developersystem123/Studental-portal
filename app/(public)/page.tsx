@@ -476,9 +476,10 @@ export default function HomePage() {
 
       {/* Final CTA */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
-        <div className="relative overflow-hidden rounded-3xl bg-linear-to-br from-green-500 to-green-400 dark:from-green-800 dark:via-green-700 dark:to-emerald-800 p-10 lg:p-16 text-white text-center">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(255,255,255,.20),transparent_60%)]" />
-          <div className="absolute inset-0 dark:bg-[radial-gradient(ellipse_at_bottom_right,rgba(74,222,128,.15),transparent_70%)]" />
+        <div className="relative overflow-hidden rounded-3xl bg-linear-to-br from-green-500 to-emerald-400 dark:from-green-700 dark:via-emerald-700 dark:to-green-900 p-10 lg:p-16 text-white text-center">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(255,255,255,.18),transparent_60%)]" />
+          <div className="absolute inset-0 dark:bg-[radial-gradient(ellipse_at_bottom_right,rgba(74,222,128,.25),transparent_65%)]" />
+          <div className="absolute inset-0 dark:bg-[radial-gradient(ellipse_at_top_right,rgba(134,239,172,.12),transparent_55%)]" />
           <div className="relative">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight">
               Ready to learn smarter?
