@@ -59,7 +59,7 @@ export async function POST(
         title,
         videoUrl: (body.videoUrl ?? "").trim(),
         duration: Math.max(0, Math.round(Number(body.duration) || 0)),
-        resources: body.resources ?? null,
+        resources: body.resources ?? undefined,
         order: (last?.order ?? -1) + 1,
       },
     });
