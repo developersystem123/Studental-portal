@@ -172,7 +172,7 @@ export default function TeacherCoursesPage() {
                     <div className="flex gap-2">
                       <Link href={`/teacher/courses/${c.id}`} className="flex-1">
                         <Button size="sm" className="w-full">
-                          <Icon.BookOpen size={14} /> Edit Content
+                          <Icon.Book size={14} /> Edit Content
                         </Button>
                       </Link>
                       <Button size="sm" variant="outline" onClick={() => setEditing(c)} title="Edit course info">
