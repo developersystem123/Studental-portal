@@ -130,6 +130,23 @@ export async function POST(request: Request) {
       });
     }
 
+    // Notify every admin so the application appears in their notification feed.
+    const admins = await prisma.user.findMany({
+      where: { role: "Admin" },
+      select: { id: true },
+    });
+    if (admins.length > 0) {
+      await prisma.notification.createMany({
+        data: admins.map((admin) => ({
+          id: uid(),
+          userId: admin.id,
+          type: "announcement" as const,
+          title: "New in-person application",
+          message: `${body.fullName} has applied for in-person classes. Review it in the Applications panel.`,
+        })),
+      });
+    }
+
     return Response.json({ application: toClient(created) });
   } catch (err) {
     return errorResponse(err);

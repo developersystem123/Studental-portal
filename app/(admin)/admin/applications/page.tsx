@@ -60,7 +60,6 @@ export default function AdminApplicationsPage() {
   const admin = useAdmin();
   const toast = useToast();
 
-  const [tick,          setTick]          = React.useState(0);
   const [filter,        setFilter]        = React.useState<Filter>("all");
   const [query,         setQuery]         = React.useState("");
   const [courseFilter,  setCourseFilter]  = React.useState("all");
@@ -76,15 +75,22 @@ export default function AdminApplicationsPage() {
   const [submitting,    setSubmitting]    = React.useState(false);
 
   const [physicalClasses, setPhysicalClasses] = React.useState<PhysicalClass[]>([]);
-  React.useEffect(() => {
+
+  const fetchPhysicalClasses = React.useCallback(() => {
     fetch("/api/admin/physical-classes")
       .then((r) => (r.ok ? r.json() : { classes: [] }))
       .then((data) => setPhysicalClasses(data.classes ?? []))
       .catch(() => setPhysicalClasses([]));
-  }, [tick]);
+  }, []);
 
-  const refresh = () => { setTick((t) => t + 1); setSelected(new Set()); };
-  const rows    = React.useMemo(() => admin.listApplications(), [admin, tick]);
+  React.useEffect(() => { fetchPhysicalClasses(); }, [fetchPhysicalClasses]);
+
+  const refresh = React.useCallback(async () => {
+    await Promise.all([admin.refresh(), fetchPhysicalClasses()]);
+    setSelected(new Set());
+  }, [admin, fetchPhysicalClasses]);
+
+  const rows = React.useMemo(() => admin.listApplications(), [admin]);
 
   const courseOptions = React.useMemo(() => {
     const map = new Map<string, string>();
