@@ -61,20 +61,31 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-        <div>
-          <p className="text-sm text-[var(--muted)]">Hello, {user?.name?.split(" ")[0]} 👋</p>
-          <h1 className="text-2xl sm:text-3xl font-bold mt-1">Your learning dashboard</h1>
-          <p className="text-xs text-[var(--muted-2)] mt-1">
-            You&apos;re on a {STUDY_STREAK.current}-day streak — best yet was {STUDY_STREAK.longest}.
-          </p>
+      {/* Hero banner (student, styled like teacher portal) */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white p-6 sm:p-8 card-shadow">
+        <TeacherHeroDecor />
+        <div className="relative flex items-start justify-between gap-6 flex-wrap">
+          <div>
+            <span className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full bg-white/15 backdrop-blur border border-white/20 uppercase tracking-wider font-semibold">
+              <Icon.Sparkles size={11} /> Student portal
+            </span>
+            <h1 className="mt-3 text-3xl sm:text-4xl font-bold tracking-tight">Your learning dashboard</h1>
+            <p className="mt-2 text-white/85 max-w-xl">
+              You&apos;re on a {STUDY_STREAK.current}-day streak — best yet was {STUDY_STREAK.longest}.
+            </p>
+          </div>
+          <div className="hidden sm:flex items-center gap-2 shrink-0">
+            <Link
+              href="/my-courses"
+              className="inline-flex h-10 items-center gap-2 px-4 rounded-xl bg-white/15 hover:bg-white/25 backdrop-blur text-sm font-semibold transition"
+            >
+              <Icon.Book size={16} /> My courses
+            </Link>
+            <Link href="/explore" className="inline-flex h-10 items-center gap-2 px-4 rounded-xl bg-white text-[var(--primary)] hover:brightness-95 text-sm font-semibold transition">
+              <Icon.Plus size={16} /> Browse
+            </Link>
+          </div>
         </div>
-        <Link href="/explore">
-          <Button>
-            <Icon.Plus size={16} /> Browse new courses
-          </Button>
-        </Link>
       </div>
 
       {/* Live platform pulse */}
@@ -508,5 +519,39 @@ function LivePulse() {
       </span>
       Live
     </span>
+  );
+}
+
+function TeacherHeroDecor() {
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      <svg viewBox="0 0 800 220" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <pattern id="teacher-dots" width="22" height="22" patternUnits="userSpaceOnUse">
+            <circle cx="2" cy="2" r="1.4" fill="white" />
+          </pattern>
+          <linearGradient id="teacher-wave" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="white" stopOpacity="0.15" />
+            <stop offset="100%" stopColor="white" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#teacher-dots)" opacity="0.25" />
+        <path d="M0 170 Q 220 100 440 150 T 800 120 L 800 220 L 0 220 Z" fill="url(#teacher-wave)" />
+        <g opacity="0.18">
+          <rect x="560" y="80" width="14" height="36" rx="3" fill="white" />
+          <rect x="582" y="60" width="14" height="56" rx="3" fill="white" />
+          <rect x="604" y="40" width="14" height="76" rx="3" fill="white" />
+          <rect x="626" y="70" width="14" height="46" rx="3" fill="white" />
+        </g>
+        <g opacity="0.15" transform="translate(680 130)">
+          <rect x="0" y="0" width="60" height="42" rx="6" fill="white" />
+          <rect x="8" y="10" width="28" height="4" rx="2" fill="rgba(0,0,0,0.25)" />
+          <rect x="8" y="20" width="40" height="3" rx="1.5" fill="rgba(0,0,0,0.25)" />
+          <rect x="8" y="28" width="34" height="3" rx="1.5" fill="rgba(0,0,0,0.25)" />
+        </g>
+        <circle cx="120" cy="40" r="44" fill="white" opacity="0.07" />
+        <circle cx="80" cy="60" r="18" fill="white" opacity="0.10" />
+      </svg>
+    </div>
   );
 }

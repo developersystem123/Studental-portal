@@ -114,25 +114,27 @@ export function Sidebar({
         <NavGroup title="Main" items={nav} pathname={pathname} onClose={onClose} collapsed={collapsed} />
         <NavGroup title="Learning" items={learnNav} pathname={pathname} onClose={onClose} collapsed={collapsed} />
         <NavGroup title="Community" items={communityNav} pathname={pathname} onClose={onClose} collapsed={collapsed} />
-        <NavGroup
-          title="AI Suite"
-          items={aiNav}
-          pathname={pathname}
-          onClose={onClose}
-          collapsed={collapsed}
-          locked={!isPro}
-          badge={
-            isPro ? (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gradient-to-r from-[var(--primary-soft)] to-[color-mix(in_oklab,var(--accent)_15%,var(--surface-2))] text-[var(--primary)] font-bold border border-[var(--primary)]/15">
-                NEW
-              </span>
-            ) : (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold border border-amber-500/20">
-                PRO
-              </span>
-            )
-          }
-        />
+        {!(user?.role === "Student" && !isPro) && (
+          <NavGroup
+            title="AI Suite"
+            items={aiNav}
+            pathname={pathname}
+            onClose={onClose}
+            collapsed={collapsed}
+            locked={!isPro}
+            badge={
+              isPro ? (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gradient-to-r from-[var(--primary-soft)] to-[color-mix(in_oklab,var(--accent)_15%,var(--surface-2))] text-[var(--primary)] font-bold border border-[var(--primary)]/15">
+                  NEW
+                </span>
+              ) : (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold border border-amber-500/20">
+                  PRO
+                </span>
+              )
+            }
+          />
+        )}
         <NavGroup title="Account" items={otherNav} pathname={pathname} onClose={onClose} collapsed={collapsed} />
       </nav>
 
@@ -225,7 +227,14 @@ function NavGroup({
       <ul className="space-y-0.5">
         {items.map((item) => {
           const Icn = item.icon;
-          const active = !locked && (pathname === item.href || pathname.startsWith(item.href + "/"));
+          const normalize = (p: string) => (p || "").split("?")[0].replace(/\/+$|^$/g, (m) => (m === "" ? "/" : ""));
+          const active = !locked && (() => {
+            const np = normalize(pathname);
+            const nh = normalize(item.href);
+            if (!np || !nh) return false;
+            if (np === nh) return true;
+            return np.startsWith(nh + "/");
+          })();
           const href = locked ? "/subscription" : item.href;
           const label = locked ? `${item.label} (Pro only)` : item.label;
           return (
@@ -241,18 +250,13 @@ function NavGroup({
                   locked
                     ? "text-[var(--muted-2)] hover:bg-[var(--surface-2)] opacity-70"
                     : active
-                    ? [
-                        "text-[var(--primary)]",
-                        collapsed
-                          ? "bg-[var(--primary-soft)]"
-                          : "bg-gradient-to-r from-[var(--primary-soft)] to-[color-mix(in_oklab,var(--primary-soft)_40%,transparent)]",
-                      ]
+                    ? "text-[var(--foreground)] font-semibold bg-[var(--surface-2)] hover:bg-[var(--surface-2)] shadow-sm ring-1 ring-[var(--primary)]/10"
                     : "text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)]",
                 )}
               >
                 {/* Active left-bar indicator */}
                 {active && !collapsed && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-[var(--primary)]" />
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[4px] h-6 rounded-r-md bg-[var(--primary)] shadow-sm" />
                 )}
                 <NavLinkIcon icon={Icn} size={17} />
                 {!collapsed && (

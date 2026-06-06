@@ -218,24 +218,49 @@ export function ProfileHero({
       <CardBody className="pt-0">
         <div className="flex flex-col sm:flex-row sm:items-start gap-4">
           {/* Avatar */}
-          <div className="relative -mt-16 shrink-0">
-            <div className="rounded-full ring-4 ring-[var(--surface)] shadow-xl bg-[var(--surface)]">
-              <Avatar name={user.name} src={user.avatar ?? null} size={112} />
-            </div>
-            {uploading && (
-              <div className="absolute inset-1 flex items-center justify-center rounded-full bg-black/50 backdrop-blur-[2px] fade-in">
-                <Icon.Loader size={24} className="text-white" />
+          {/* Avatar: render large on sm+ and a smaller variant on mobile */}
+          <div className="shrink-0">
+            {/* Desktop / tablet */}
+            <div className="relative -mt-16 hidden sm:block">
+              <div className="rounded-full ring-4 ring-[var(--surface)] shadow-xl bg-[var(--surface)]">
+                <Avatar name={user.name} src={user.avatar ?? null} size={112} />
               </div>
-            )}
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              disabled={uploading}
-              className="absolute bottom-1 right-1 flex h-9 w-9 items-center justify-center rounded-full btn-primary shadow-md hover:shadow-lg transition disabled:opacity-60"
-              title="Change avatar"
-            >
-              {uploading ? <Icon.Loader size={16} /> : <Icon.Camera size={16} />}
-            </button>
+              {uploading && (
+                <div className="absolute inset-1 flex items-center justify-center rounded-full bg-black/50 backdrop-blur-[2px] fade-in">
+                  <Icon.Loader size={24} className="text-white" />
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading}
+                className="absolute bottom-1 right-1 flex h-9 w-9 items-center justify-center rounded-full btn-primary shadow-md hover:shadow-lg transition disabled:opacity-60"
+                title="Change avatar"
+              >
+                {uploading ? <Icon.Loader size={16} /> : <Icon.Camera size={16} />}
+              </button>
+            </div>
+
+            {/* Mobile */}
+            <div className="relative -mt-12 block sm:hidden">
+              <div className="rounded-full ring-2 ring-[var(--surface)] shadow-md bg-[var(--surface)]">
+                <Avatar name={user.name} src={user.avatar ?? null} size={64} />
+              </div>
+              {uploading && (
+                <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 backdrop-blur-[2px] fade-in">
+                  <Icon.Loader size={18} className="text-white" />
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading}
+                className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full btn-primary shadow hover:shadow-md transition disabled:opacity-60"
+                title="Change avatar"
+              >
+                {uploading ? <Icon.Loader size={14} /> : <Icon.Camera size={14} />}
+              </button>
+            </div>
             <input
               ref={fileRef}
               type="file"
