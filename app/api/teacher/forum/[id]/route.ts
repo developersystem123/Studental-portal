@@ -22,9 +22,15 @@ export async function PATCH(
     const me = await requireTeacher();
     const { id } = await params;
     await ownedPost(id, me.name);
-    const { pinned } = (await request.json()) as { pinned?: boolean };
-    if (typeof pinned !== "boolean") throw new HttpError(400, "A boolean `pinned` is required.");
-    await prisma.forumPost.update({ where: { id }, data: { pinned } });
+    const body = (await request.json()) as { pinned?: boolean; category?: string };
+
+    const VALID_CATEGORIES = ["general", "question", "announcement", "discussion"];
+    const data: Record<string, unknown> = {};
+    if (typeof body.pinned === "boolean") data.pinned = body.pinned;
+    if (body.category && VALID_CATEGORIES.includes(body.category)) data.category = body.category;
+    if (Object.keys(data).length === 0) throw new HttpError(400, "No valid fields to update.");
+
+    await prisma.forumPost.update({ where: { id }, data });
     return Response.json({ ok: true });
   } catch (err) {
     return errorResponse(err);

@@ -3,10 +3,12 @@
 import * as React from "react";
 import Icon from "@/components/icons";
 import { Badge, Card, CardBody, EmptyState } from "@/components/ui";
-import { BarChart, Donut, LineChart, ProgressBar, Sparkline } from "@/components/charts";
+import { BarChart, Donut, LineChart, ProgressBar, RadialBars, Sparkline } from "@/components/charts";
 import { useTeacher } from "@/lib/store";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const RANGES = [3, 6, 12] as const;
+type SortCol = "total" | "avg" | "rate" | "certs";
 
 function monthBuckets(dates: string[], months = 6) {
   const now = new Date();
@@ -30,6 +32,9 @@ export default function TeacherAnalyticsPage() {
   const teacher = useTeacher();
   const courses = teacher.myCourses();
   const students = teacher.myStudents();
+  const [range, setRange] = React.useState<number>(6);
+  const [sortCol, setSortCol] = React.useState<SortCol>("total");
+  const [sortAsc, setSortAsc] = React.useState(false);
 
   const isEmpty = students.length === 0 && courses.length === 0;
 
@@ -37,20 +42,27 @@ export default function TeacherAnalyticsPage() {
   const completed = students.filter((s) => s.completed).length;
   const certified = students.filter((s) => s.certificateId).length;
   const inProgress = students.filter((s) => !s.completed && s.progress > 0).length;
+  const neverStarted = students.filter((s) => s.progress === 0).length;
+  const avgProgress = enrolled === 0 ? 0 : Math.round(students.reduce((sum, s) => sum + s.progress, 0) / enrolled);
   const completionRate = enrolled === 0 ? 0 : Math.round((completed / enrolled) * 100);
 
-  const enrollTrend = monthBuckets(students.map((s) => s.enrolledAt), 6);
-  const completionTrend = monthBuckets(students.filter((s) => s.completed).map((s) => s.enrolledAt), 6);
+  const enrollTrend = monthBuckets(students.map((s) => s.enrolledAt), range);
+  const completionTrend = monthBuckets(
+    students.filter((s) => s.completed).map((s) => s.enrolledAt),
+    range,
+  );
 
   const perCourse = courses.map((c) => {
     const list = students.filter((s) => s.courseId === c.id);
     const total = list.length;
     const done = list.filter((s) => s.completed).length;
+    const certs = list.filter((s) => s.certificateId).length;
     const avg = total === 0 ? 0 : Math.round(list.reduce((s, x) => s + x.progress, 0) / total);
     return {
       course: c,
       total,
       done,
+      certs,
       avg,
       completionRate: total === 0 ? 0 : Math.round((done / total) * 100),
     };
@@ -61,7 +73,6 @@ export default function TeacherAnalyticsPage() {
     value: p.total,
   }));
 
-  // Progress distribution
   const buckets = [
     { label: "0–24%", value: 0 },
     { label: "25–49%", value: 0 },
@@ -77,15 +88,85 @@ export default function TeacherAnalyticsPage() {
     else buckets[0].value++;
   }
 
-  // Top performing courses
-  const topCourses = [...perCourse].filter((p) => p.total > 0).sort((a, b) => b.completionRate - a.completionRate).slice(0, 5);
+  const sortedCourses = [...perCourse].sort((a, b) => {
+    const diff =
+      sortCol === "total"
+        ? b.total - a.total
+        : sortCol === "avg"
+          ? b.avg - a.avg
+          : sortCol === "rate"
+            ? b.completionRate - a.completionRate
+            : b.certs - a.certs;
+    return sortAsc ? -diff : diff;
+  });
 
-  const stats = [
-    { label: "Total students", value: enrolled, icon: <Icon.Users size={18} />, series: enrollTrend.map((b) => b.hours) },
-    { label: "Active learners", value: inProgress, icon: <Icon.PlayCircle size={18} />, series: enrollTrend.map((b) => Math.max(0, b.hours - 1)) },
-    { label: "Completions", value: completed, icon: <Icon.CheckCircle size={18} />, series: completionTrend.map((b) => b.hours) },
-    { label: "Certificates", value: certified, icon: <Icon.Award size={18} />, series: completionTrend.map((b) => b.hours) },
+  const topCourse = [...perCourse].filter((p) => p.total > 0).sort((a, b) => b.completionRate - a.completionRate)[0];
+  const mostPopular = [...perCourse].sort((a, b) => b.total - a.total)[0];
+  const atRiskCount = perCourse.filter((p) => p.total >= 3 && p.completionRate < 30).length;
+  const retentionRate = enrolled === 0 ? 0 : Math.round(((enrolled - neverStarted) / enrolled) * 100);
+
+  const radialData = [...perCourse]
+    .filter((p) => p.total > 0)
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 4)
+    .map((p, i) => ({
+      label: p.course.title,
+      value: p.completionRate,
+      color: (["var(--primary)", "var(--accent)", "#34d399", "#60a5fa"] as const)[i] ?? "var(--primary)",
+    }));
+
+  const stats: { label: string; value: number; suffix: string; icon: React.ReactNode; series: number[] }[] = [
+    {
+      label: "Total students",
+      value: enrolled,
+      suffix: "",
+      icon: <Icon.Users size={18} />,
+      series: enrollTrend.map((b) => b.hours),
+    },
+    {
+      label: "Active learners",
+      value: inProgress,
+      suffix: "",
+      icon: <Icon.PlayCircle size={18} />,
+      series: enrollTrend.map((b) => Math.max(0, b.hours - 1)),
+    },
+    {
+      label: "Completions",
+      value: completed,
+      suffix: "",
+      icon: <Icon.CheckCircle size={18} />,
+      series: completionTrend.map((b) => b.hours),
+    },
+    {
+      label: "Certificates",
+      value: certified,
+      suffix: "",
+      icon: <Icon.Award size={18} />,
+      series: completionTrend.map((b) => b.hours),
+    },
+    {
+      label: "Avg progress",
+      value: avgProgress,
+      suffix: "%",
+      icon: <Icon.BarChart3 size={18} />,
+      series: enrollTrend.map((b) => b.hours),
+    },
+    {
+      label: "Never started",
+      value: neverStarted,
+      suffix: "",
+      icon: <Icon.Clock size={18} />,
+      series: enrollTrend.map((b) => b.hours),
+    },
   ];
+
+  function handleSort(col: SortCol) {
+    if (col === sortCol) setSortAsc((v) => !v);
+    else {
+      setSortCol(col);
+      setSortAsc(false);
+    }
+  }
 
   return (
     <div className="space-y-6 fade-in">
@@ -107,32 +188,85 @@ export default function TeacherAnalyticsPage() {
         </Card>
       ) : (
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* 6 stat cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
             {stats.map((s) => (
               <Card key={s.label}>
                 <CardBody className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <div className="h-10 w-10 rounded-xl bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center">
+                    <div className="h-9 w-9 rounded-xl bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center">
                       {s.icon}
                     </div>
-                    <Sparkline data={s.series.length >= 2 ? s.series : [0, 0, 0, 0, 0, 0]} width={70} height={26} />
+                    <Sparkline data={s.series.length >= 2 ? s.series : [0, 0, 0, 0, 0]} width={56} height={22} />
                   </div>
-                  <p className="text-3xl font-bold">{s.value}</p>
+                  <p className="text-2xl font-bold">
+                    {s.value}
+                    {s.suffix}
+                  </p>
                   <p className="text-xs text-[var(--muted)]">{s.label}</p>
                 </CardBody>
               </Card>
             ))}
           </div>
 
+          {/* Quick insights */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {topCourse && (
+              <InsightCard
+                icon={<Icon.Star size={15} />}
+                label="Best completion rate"
+                title={topCourse.course.title}
+                value={`${topCourse.completionRate}% complete`}
+                color="var(--primary)"
+              />
+            )}
+            {mostPopular && mostPopular.total > 0 && (
+              <InsightCard
+                icon={<Icon.Users size={15} />}
+                label="Most enrolled course"
+                title={mostPopular.course.title}
+                value={`${mostPopular.total} student${mostPopular.total !== 1 ? "s" : ""}`}
+                color="var(--accent)"
+              />
+            )}
+            <InsightCard
+              icon={<Icon.TrendingUp size={15} />}
+              label="Retention rate"
+              title={`${retentionRate}% of students started`}
+              value={
+                atRiskCount > 0
+                  ? `${atRiskCount} course${atRiskCount > 1 ? "s" : ""} at risk`
+                  : "All courses on track"
+              }
+              color={atRiskCount > 0 ? "#f59e0b" : "#10b981"}
+            />
+          </div>
+
+          {/* Enrollment trend with range selector + completion donut */}
           <div className="grid lg:grid-cols-3 gap-4">
             <Card className="lg:col-span-2">
               <CardBody>
                 <div className="flex items-center justify-between mb-1">
                   <div>
                     <h2 className="font-semibold">Enrollment trend</h2>
-                    <p className="text-xs text-[var(--muted)]">Sign-ups over the last 6 months</p>
+                    <p className="text-xs text-[var(--muted)]">Sign-ups over the last {range} months</p>
                   </div>
-                  <Badge variant="primary"><Icon.TrendingUp size={12} /> 6 months</Badge>
+                  <div className="flex items-center gap-1">
+                    {RANGES.map((r) => (
+                      <button
+                        key={r}
+                        onClick={() => setRange(r)}
+                        className={[
+                          "px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors",
+                          range === r
+                            ? "bg-[var(--primary)] text-white"
+                            : "bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)]",
+                        ].join(" ")}
+                      >
+                        {r}M
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div className="h-[220px] mt-3">
                   <LineChart data={enrollTrend} yFormatter={(v) => Math.round(v).toString()} />
@@ -154,6 +288,7 @@ export default function TeacherAnalyticsPage() {
             </Card>
           </div>
 
+          {/* Bar charts */}
           <div className="grid lg:grid-cols-2 gap-4">
             <Card>
               <CardBody>
@@ -183,7 +318,95 @@ export default function TeacherAnalyticsPage() {
             </Card>
           </div>
 
-          {topCourses.length > 0 && (
+          {/* Course breakdown table + radial */}
+          <div className="grid lg:grid-cols-3 gap-4">
+            <Card className="lg:col-span-2">
+              <CardBody>
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h2 className="font-semibold">Course breakdown</h2>
+                    <p className="text-xs text-[var(--muted)]">Click column headers to sort</p>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-[var(--border)]">
+                        <th className="pb-2 text-left font-semibold text-[var(--muted)] text-xs tracking-wide">
+                          Course
+                        </th>
+                        {(
+                          [
+                            { key: "total" as SortCol, label: "Students" },
+                            { key: "avg" as SortCol, label: "Avg %" },
+                            { key: "rate" as SortCol, label: "Completion" },
+                            { key: "certs" as SortCol, label: "Certs" },
+                          ] as const
+                        ).map((col) => (
+                          <th
+                            key={col.key}
+                            onClick={() => handleSort(col.key)}
+                            className="pb-2 text-right font-semibold text-[var(--muted)] text-xs tracking-wide cursor-pointer hover:text-[var(--foreground)] select-none transition-colors"
+                          >
+                            {col.label}
+                            {sortCol === col.key && (
+                              <span className="ml-1 text-[var(--primary)]">{sortAsc ? "↑" : "↓"}</span>
+                            )}
+                          </th>
+                        ))}
+                        <th className="pb-2 text-center font-semibold text-[var(--muted)] text-xs tracking-wide">
+                          Status
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--border)]">
+                      {sortedCourses.map((p) => (
+                        <tr key={p.course.id} className="hover:bg-[var(--surface-2)] transition-colors group">
+                          <td className="py-3 pr-4 font-medium text-xs max-w-[180px] truncate">{p.course.title}</td>
+                          <td className="py-3 text-right tabular-nums text-xs text-[var(--muted)]">{p.total}</td>
+                          <td className="py-3 text-right tabular-nums text-xs text-[var(--muted)]">{p.avg}%</td>
+                          <td className="py-3 text-right tabular-nums text-xs text-[var(--muted)]">
+                            {p.completionRate}%
+                          </td>
+                          <td className="py-3 text-right tabular-nums text-xs text-[var(--muted)]">{p.certs}</td>
+                          <td className="py-3 text-center">
+                            <StatusBadge rate={p.completionRate} total={p.total} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {sortedCourses.length === 0 && (
+                    <p className="text-sm text-[var(--muted)] py-8 text-center">No courses yet.</p>
+                  )}
+                </div>
+              </CardBody>
+            </Card>
+
+            {radialData.length > 0 && (
+              <Card>
+                <CardBody>
+                  <h2 className="font-semibold mb-1">Completion by course</h2>
+                  <p className="text-xs text-[var(--muted)] mb-4">Top courses, completion %</p>
+                  <div className="flex justify-center mb-5">
+                    <RadialBars data={radialData} size={176} trackWidth={10} gap={5} />
+                  </div>
+                  <ul className="space-y-2">
+                    {radialData.map((d) => (
+                      <li key={d.label} className="flex items-center gap-2 text-xs">
+                        <span className="h-2 w-2 rounded-full shrink-0" style={{ background: d.color }} />
+                        <span className="truncate text-[var(--muted)]">{d.label}</span>
+                        <span className="ml-auto font-semibold tabular-nums">{d.value}%</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardBody>
+              </Card>
+            )}
+          </div>
+
+          {/* Top performing courses */}
+          {perCourse.filter((p) => p.total > 0).length > 0 && (
             <Card>
               <CardBody>
                 <div className="flex items-center justify-between mb-3">
@@ -191,15 +414,19 @@ export default function TeacherAnalyticsPage() {
                   <span className="text-xs text-[var(--muted)]">By completion rate</span>
                 </div>
                 <ul className="space-y-3">
-                  {topCourses.map((p) => (
-                    <li key={p.course.id}>
-                      <ProgressBar
-                        label={p.course.title}
-                        value={p.completionRate}
-                        hint={`${p.completionRate}% completion · ${p.done}/${p.total} learners`}
-                      />
-                    </li>
-                  ))}
+                  {[...perCourse]
+                    .filter((p) => p.total > 0)
+                    .sort((a, b) => b.completionRate - a.completionRate)
+                    .slice(0, 5)
+                    .map((p) => (
+                      <li key={p.course.id}>
+                        <ProgressBar
+                          label={p.course.title}
+                          value={p.completionRate}
+                          hint={`${p.completionRate}% completion · ${p.done}/${p.total} learners`}
+                        />
+                      </li>
+                    ))}
                 </ul>
               </CardBody>
             </Card>
@@ -216,5 +443,57 @@ function Mini({ label, value }: { label: string; value: number }) {
       <p className="text-[10px] uppercase tracking-wider text-[var(--muted-2)] font-semibold">{label}</p>
       <p className="text-sm font-bold mt-0.5">{value}</p>
     </div>
+  );
+}
+
+function InsightCard({
+  icon,
+  label,
+  title,
+  value,
+  color,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  title: string;
+  value: string;
+  color: string;
+}) {
+  return (
+    <Card>
+      <CardBody>
+        <div className="flex items-center gap-2 mb-2">
+          <span
+            className="h-7 w-7 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: `color-mix(in srgb, ${color} 15%, transparent)`, color }}
+          >
+            {icon}
+          </span>
+          <span className="text-[10px] uppercase tracking-wider text-[var(--muted)] font-semibold">{label}</span>
+        </div>
+        <p className="font-semibold text-sm truncate">{title}</p>
+        <p className="text-xs text-[var(--muted)] mt-0.5">{value}</p>
+      </CardBody>
+    </Card>
+  );
+}
+
+function StatusBadge({ rate, total }: { rate: number; total: number }) {
+  if (total === 0) return <span className="text-xs text-[var(--muted)]">—</span>;
+  const [bg, fg, text] =
+    rate >= 75
+      ? ["rgba(16,185,129,0.15)", "#10b981", "Excellent"]
+      : rate >= 50
+        ? ["rgba(59,130,246,0.15)", "#3b82f6", "Good"]
+        : rate >= 25
+          ? ["rgba(245,158,11,0.15)", "#f59e0b", "Fair"]
+          : ["rgba(239,68,68,0.15)", "#ef4444", "At risk"];
+  return (
+    <span
+      className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+      style={{ background: bg, color: fg }}
+    >
+      {text}
+    </span>
   );
 }

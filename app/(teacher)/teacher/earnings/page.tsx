@@ -14,7 +14,7 @@ import {
   Select,
   useToast,
 } from "@/components/ui";
-import { BarChart, Sparkline } from "@/components/charts";
+import { BarChart, Donut, Sparkline } from "@/components/charts";
 import { useTeacher } from "@/lib/store";
 import { relativeTime } from "@/lib/utils";
 
@@ -25,6 +25,7 @@ const MONTHS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
+const RANGES = [3, 6, 12] as const;
 
 type Payout = {
   id: string;
@@ -44,6 +45,10 @@ export default function TeacherEarningsPage() {
   const [payouts, setPayouts] = React.useState<Payout[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [requesting, setRequesting] = React.useState(false);
+  const [range, setRange] = React.useState<number>(6);
+  const [monthlyGoal, setMonthlyGoal] = React.useState<number>(1000);
+  const [editingGoal, setEditingGoal] = React.useState(false);
+  const [goalInput, setGoalInput] = React.useState("1000");
 
   const load = React.useCallback(async () => {
     const r = await fetch("/api/teacher/payouts");
@@ -56,7 +61,6 @@ export default function TeacherEarningsPage() {
     load();
   }, [load]);
 
-  // Earnings are derived from real enrollments × course price × revenue share.
   const totalGross = React.useMemo(() => {
     let g = 0;
     for (const s of students) {
@@ -73,8 +77,8 @@ export default function TeacherEarningsPage() {
 
   const trend = React.useMemo(() => {
     const now = new Date();
-    const buckets = Array.from({ length: 6 }, (_, i) => {
-      const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+    const buckets = Array.from({ length: range }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (range - 1 - i), 1);
       return { label: MONTHS[d.getMonth()], value: 0, key: `${d.getFullYear()}-${d.getMonth()}` };
     });
     for (const s of students) {
@@ -86,7 +90,22 @@ export default function TeacherEarningsPage() {
       if (idx >= 0) buckets[idx].value += Math.round(c.price * REVENUE_SHARE);
     }
     return buckets;
-  }, [students, courses]);
+  }, [students, courses, range]);
+
+  const thisMonthEarnings = trend[trend.length - 1]?.value ?? 0;
+  const prevMonthEarnings = trend[trend.length - 2]?.value ?? 0;
+  const momGrowth =
+    prevMonthEarnings === 0
+      ? null
+      : Math.round(((thisMonthEarnings - prevMonthEarnings) / prevMonthEarnings) * 100);
+  const bestMonth =
+    trend.length > 0 ? trend.reduce((best, b) => (b.value > best.value ? b : best), trend[0]) : null;
+  const avgMonthly =
+    trend.length === 0 ? 0 : Math.round(trend.reduce((s, b) => s + b.value, 0) / trend.length);
+  const revenuePerStudent =
+    students.length === 0 ? 0 : Math.round((totalEarnings / students.length) * 100) / 100;
+  const goalProgress =
+    monthlyGoal === 0 ? 0 : Math.min(100, Math.round((thisMonthEarnings / monthlyGoal) * 100));
 
   const breakdown = React.useMemo(
     () =>
@@ -99,6 +118,12 @@ export default function TeacherEarningsPage() {
         .sort((a, b) => b.earned - a.earned),
     [courses, students],
   );
+
+  const totalBreakdownEarned = breakdown.reduce((s, b) => s + b.earned, 0);
+  const paidCount = payouts.filter((p) => p.status === "paid").length;
+  const pendingCount = payouts.filter((p) => p.status === "pending").length;
+  const avgPayoutAmount =
+    paidCount === 0 ? 0 : Math.round((totalPaid / paidCount) * 100) / 100;
 
   async function requestPayout(amount: number, method: string) {
     const r = await fetch("/api/teacher/payouts", {
@@ -137,6 +162,7 @@ export default function TeacherEarningsPage() {
         </Button>
       </div>
 
+      {/* 4 big stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <BigStat label="Available" value={`$${available.toFixed(2)}`} icon={<Icon.DollarSign size={18} />} tint="emerald" />
         <BigStat label="Pending payout" value={`$${pending.toFixed(2)}`} icon={<Icon.Clock size={18} />} tint="amber" />
@@ -144,15 +170,64 @@ export default function TeacherEarningsPage() {
         <BigStat label="Total earned" value={`$${totalEarnings.toFixed(2)}`} icon={<Icon.TrendingUp size={18} />} tint="violet" />
       </div>
 
+      {/* Quick insight strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <QuickStat
+          label="Best earning month"
+          value={bestMonth && bestMonth.value > 0 ? `$${bestMonth.value}` : "$0"}
+          sub={bestMonth && bestMonth.value > 0 ? bestMonth.label : "No data yet"}
+          icon={<Icon.Star size={15} />}
+          color="#10b981"
+        />
+        <QuickStat
+          label="Monthly average"
+          value={`$${avgMonthly}`}
+          sub={`over ${range} month${range !== 1 ? "s" : ""}`}
+          icon={<Icon.BarChart3 size={15} />}
+          color="var(--primary)"
+        />
+        <QuickStat
+          label="Revenue per student"
+          value={`$${revenuePerStudent.toFixed(2)}`}
+          sub={`${students.length} total student${students.length !== 1 ? "s" : ""}`}
+          icon={<Icon.Users size={15} />}
+          color="var(--accent)"
+        />
+      </div>
+
+      {/* Monthly chart + revenue share / goal tracker */}
       <div className="grid lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2">
           <CardBody>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
                 <h2 className="font-semibold">Monthly earnings</h2>
-                <p className="text-xs text-[var(--muted)]">Last 6 months</p>
+                <p className="text-xs text-[var(--muted)]">Last {range} months</p>
               </div>
-              <Sparkline data={trend.map((t) => t.value)} width={120} height={32} />
+              <div className="flex items-center gap-2 flex-wrap">
+                {momGrowth !== null && (
+                  <Badge variant={momGrowth >= 0 ? "success" : "danger"}>
+                    {momGrowth >= 0 ? "↑" : "↓"} {Math.abs(momGrowth)}% MoM
+                  </Badge>
+                )}
+                <div className="flex gap-1">
+                  {RANGES.map((r) => (
+                    <button
+                      key={r}
+                      onClick={() => setRange(r)}
+                      className={[
+                        "px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors",
+                        range === r
+                          ? "bg-[var(--primary)] text-white"
+                          : "bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)]",
+                      ].join(" ")}
+                    >
+                      {r}M
+                    </button>
+                  ))}
+                </div>
+                <Sparkline data={trend.map((t) => t.value)} width={80} height={28} />
+              </div>
             </div>
             <div className="h-[220px] mt-4">
               <BarChart
@@ -163,6 +238,7 @@ export default function TeacherEarningsPage() {
             </div>
           </CardBody>
         </Card>
+
         <Card>
           <CardBody className="space-y-3">
             <h2 className="font-semibold">Revenue share</h2>
@@ -182,10 +258,65 @@ export default function TeacherEarningsPage() {
                 <b className="text-[var(--foreground)]">${totalEarnings.toFixed(2)}</b>
               </li>
             </ul>
+
+            {/* Monthly goal tracker */}
+            <div className="border-t border-[var(--border)] pt-3">
+              <div className="flex items-center justify-between mb-2.5">
+                <span className="text-xs font-semibold">Monthly goal</span>
+                {editingGoal ? (
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="number"
+                      min={1}
+                      value={goalInput}
+                      onChange={(e) => setGoalInput(e.target.value)}
+                      className="w-20 text-xs border border-[var(--border)] rounded-lg px-2 py-0.5 bg-[var(--surface)] text-[var(--foreground)] outline-none focus:border-[var(--primary)]"
+                    />
+                    <button
+                      onClick={() => {
+                        const v = Number(goalInput);
+                        if (v > 0) setMonthlyGoal(v);
+                        setEditingGoal(false);
+                      }}
+                      className="text-xs text-[var(--primary)] font-semibold hover:underline"
+                    >
+                      Save
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setGoalInput(monthlyGoal.toString());
+                      setEditingGoal(true);
+                    }}
+                    className="text-xs text-[var(--primary)] hover:underline"
+                  >
+                    Edit
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                <Donut value={goalProgress} size={76} label="goal" />
+                <div className="text-xs space-y-1 min-w-0">
+                  <p className="font-semibold">
+                    ${thisMonthEarnings}{" "}
+                    <span className="text-[var(--muted)] font-normal">this month</span>
+                  </p>
+                  <p className="text-[var(--muted)]">Target: ${monthlyGoal}</p>
+                  <p
+                    className="font-semibold"
+                    style={{ color: goalProgress >= 100 ? "#10b981" : "var(--muted)" }}
+                  >
+                    {goalProgress >= 100 ? "Goal reached!" : `${goalProgress}% reached`}
+                  </p>
+                </div>
+              </div>
+            </div>
           </CardBody>
         </Card>
       </div>
 
+      {/* Earnings by course — enhanced with share bar */}
       <Card>
         <CardBody className="space-y-3">
           <h2 className="font-semibold">Earnings by course</h2>
@@ -200,29 +331,54 @@ export default function TeacherEarningsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-[var(--muted)] border-b border-[var(--border)]">
-                    <th className="py-2.5 px-3 font-medium">Course</th>
-                    <th className="py-2.5 px-3 font-medium">Price</th>
-                    <th className="py-2.5 px-3 font-medium">Enrollments</th>
-                    <th className="py-2.5 px-3 font-medium text-right">Earned</th>
+                    <th className="py-2.5 px-3 font-medium text-xs">Course</th>
+                    <th className="py-2.5 px-3 font-medium text-xs">Price</th>
+                    <th className="py-2.5 px-3 font-medium text-xs">Enrollments</th>
+                    <th className="py-2.5 px-3 font-medium text-xs">Revenue share</th>
+                    <th className="py-2.5 px-3 font-medium text-xs text-right">Earned</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {breakdown.map((b) => (
-                    <tr key={b.course.id} className="border-b border-[var(--border)] last:border-0">
-                      <td className="py-3 px-3 font-medium truncate max-w-xs">{b.course.title}</td>
-                      <td className="py-3 px-3">
-                        {b.course.price === 0 ? (
-                          <Badge variant="default">Free</Badge>
-                        ) : (
-                          `$${b.course.price}`
-                        )}
-                      </td>
-                      <td className="py-3 px-3">{b.count}</td>
-                      <td className="py-3 px-3 text-right font-semibold">
-                        ${b.earned.toFixed(2)}
-                      </td>
-                    </tr>
-                  ))}
+                  {breakdown.map((b) => {
+                    const share =
+                      totalBreakdownEarned === 0
+                        ? 0
+                        : Math.round((b.earned / totalBreakdownEarned) * 100);
+                    return (
+                      <tr
+                        key={b.course.id}
+                        className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors"
+                      >
+                        <td className="py-3 px-3 font-medium truncate max-w-xs text-xs">
+                          {b.course.title}
+                        </td>
+                        <td className="py-3 px-3 text-xs">
+                          {b.course.price === 0 ? (
+                            <Badge variant="default">Free</Badge>
+                          ) : (
+                            `$${b.course.price}`
+                          )}
+                        </td>
+                        <td className="py-3 px-3 text-xs">{b.count}</td>
+                        <td className="py-3 px-3 min-w-[140px]">
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 h-1.5 rounded-full bg-[var(--surface-2)] overflow-hidden">
+                              <div
+                                className="h-full rounded-full bg-gradient-to-r from-[var(--primary)] to-[var(--accent)]"
+                                style={{ width: `${share}%` }}
+                              />
+                            </div>
+                            <span className="text-[10px] text-[var(--muted)] tabular-nums w-7 shrink-0">
+                              {share}%
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-3 text-right font-semibold text-xs">
+                          ${b.earned.toFixed(2)}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -230,9 +386,31 @@ export default function TeacherEarningsPage() {
         </CardBody>
       </Card>
 
+      {/* Payouts — with summary stats in header */}
       <Card>
         <CardBody className="space-y-3">
-          <h2 className="font-semibold">Payouts</h2>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <h2 className="font-semibold">Payouts</h2>
+            {payouts.length > 0 && (
+              <div className="flex items-center gap-3 text-xs text-[var(--muted)]">
+                {paidCount > 0 && (
+                  <span>
+                    <span className="font-semibold" style={{ color: "#10b981" }}>{paidCount}</span> paid
+                  </span>
+                )}
+                {pendingCount > 0 && (
+                  <span>
+                    <span className="font-semibold" style={{ color: "#f59e0b" }}>{pendingCount}</span> pending
+                  </span>
+                )}
+                {paidCount > 0 && (
+                  <span>
+                    avg <b className="text-[var(--foreground)]">${avgPayoutAmount.toFixed(2)}</b>
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
           {loading ? (
             <p className="text-sm text-[var(--muted)]">Loading…</p>
           ) : payouts.length === 0 ? (
@@ -309,6 +487,40 @@ function BigStat({
           <p className="text-xs text-[var(--muted)]">{label}</p>
           <p className="text-2xl font-bold tracking-tight mt-0.5">{value}</p>
         </div>
+      </CardBody>
+    </Card>
+  );
+}
+
+function QuickStat({
+  label,
+  value,
+  sub,
+  icon,
+  color,
+}: {
+  label: string;
+  value: string;
+  sub: string;
+  icon: React.ReactNode;
+  color: string;
+}) {
+  return (
+    <Card>
+      <CardBody>
+        <div className="flex items-center gap-2 mb-2">
+          <span
+            className="h-7 w-7 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: `color-mix(in srgb, ${color} 15%, transparent)`, color }}
+          >
+            {icon}
+          </span>
+          <span className="text-[10px] uppercase tracking-wider text-[var(--muted)] font-semibold">
+            {label}
+          </span>
+        </div>
+        <p className="text-xl font-bold">{value}</p>
+        <p className="text-xs text-[var(--muted)] mt-0.5">{sub}</p>
       </CardBody>
     </Card>
   );
