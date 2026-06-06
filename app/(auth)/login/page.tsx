@@ -66,7 +66,12 @@ export default function LoginPage() {
       toast.push({ title: "Sign in failed", description: res.error, tone: "danger" });
       return;
     }
-    toast.push({ title: "Welcome back!", tone: "success" });
+    const roleLabel = res.user?.role === "Instructor" ? "Instructor" : res.user?.role ?? "User";
+    toast.push({
+      title: `Logged in as: ${roleLabel}`,
+      description: `Name: ${res.user?.name}  ·  Email: ${res.user?.email}`,
+      tone: "success",
+    });
     // Redirect handled by the useEffect watching user state.
   }
 
@@ -178,30 +183,6 @@ export default function LoginPage() {
         </Link>
       </p>
 
-      {/* Demo accounts — hidden in production to avoid exposing credentials */}
-      {process.env.NODE_ENV !== "production" && (
-        <div className="rounded-xl border border-[var(--border)] overflow-hidden bg-[var(--surface-2)]">
-          <div className="flex items-center gap-2 px-3.5 py-2 border-b border-[var(--border)] bg-[var(--surface)]">
-            <Icon.AlertCircle size={13} className="text-[var(--muted)] shrink-0" />
-            <p className="text-xs font-semibold text-[var(--foreground)]">Demo accounts</p>
-          </div>
-          <div className="p-3 space-y-2">
-            {[
-              { role: "Student", email: "student@demo.com" },
-              { role: "Instructor", email: "teacher@demo.com" },
-              { role: "Admin", email: "admin@demo.com" },
-            ].map((d) => (
-              <div key={d.role} className="flex items-center justify-between text-xs">
-                <span className="text-[var(--muted-2)]">
-                  <span className="font-medium text-[var(--foreground)]">{d.role}</span>
-                  {" · "}{d.email}
-                </span>
-                <span className="text-[var(--muted)] font-mono">demo1234</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

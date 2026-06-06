@@ -32,7 +32,7 @@ export type User = {
 type Auth = {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<{ ok: boolean; error?: string; user?: User }>;
   loginWithGoogle: () => Promise<void>;
   register: (data: {
     name: string;
@@ -307,7 +307,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         if (!res.ok) return { ok: false, error: res.error };
         writeCachedUser(res.data.user);
         setUser(res.data.user);
-        return { ok: true };
+        return { ok: true, user: res.data.user };
       },
       loginWithGoogle: async () => {
         // Redirect the browser to the OAuth initiation endpoint.

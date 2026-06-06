@@ -922,7 +922,13 @@ function QuizEditor({
       toast.push({ title: "Couldn't save quiz", description: (e as { error?: string }).error, tone: "danger" });
       return;
     }
-    toast.push({ title: initial ? "Quiz updated" : "Quiz created", tone: "success" });
+    toast.push({
+      title: initial ? "Quiz updated" : "Quiz published",
+      description: initial
+        ? "Your changes have been saved."
+        : "Students enrolled in this course can now take the quiz.",
+      tone: "success",
+    });
     onSaved();
   }
 
