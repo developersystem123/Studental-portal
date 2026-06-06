@@ -5,7 +5,7 @@ import Link from "next/link";
 import Icon from "@/components/icons";
 import { Badge, Button, Card, CardBody, EmptyState, Input, Select, Tabs, useToast } from "@/components/ui";
 import { useTeacher } from "@/lib/store";
-import { relativeTime } from "@/lib/utils";
+import { formatDate, relativeTime } from "@/lib/utils";
 
 type Filter = "all" | "in-progress" | "completed" | "certified";
 type SortKey = "name" | "progress" | "enrolled";
@@ -91,6 +91,21 @@ function ProgressBar({ value }: { value: number }) {
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
+function SortIcon({
+  col,
+  sortKey,
+  sortDir,
+}: {
+  col: SortKey;
+  sortKey: SortKey;
+  sortDir: "asc" | "desc";
+}) {
+  if (sortKey !== col) return <Icon.ArrowUp size={12} className="text-[var(--muted-2)] ml-1 opacity-40" />;
+  return sortDir === "asc"
+    ? <Icon.ArrowUp size={12} className="text-[var(--primary)] ml-1" />
+    : <Icon.ArrowUp size={12} className="text-[var(--primary)] ml-1 rotate-180" />;
+}
+
 export default function TeacherStudentsPage() {
   const teacher = useTeacher();
   const toast = useToast();
@@ -103,7 +118,6 @@ export default function TeacherStudentsPage() {
   const [pageSize, setPageSize] = React.useState(10);
 
   const rows = teacher.myStudents();
-  const courses = teacher.myCourses();
 
   const courseOptions = React.useMemo(() => {
     const seen = new Set<string>();
@@ -118,6 +132,7 @@ export default function TeacherStudentsPage() {
   }, [rows]);
 
   function toggleSort(key: SortKey) {
+    setPage(1);
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else { setSortKey(key); setSortDir(key === "progress" ? "desc" : "asc"); }
   }
@@ -146,9 +161,6 @@ export default function TeacherStudentsPage() {
     return result;
   }, [rows, query, filter, courseFilter, sortKey, sortDir]);
 
-  // Reset to page 1 on any filter/sort change
-  React.useEffect(() => { setPage(1); }, [query, filter, courseFilter, sortKey, sortDir, pageSize]);
-
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages);
   const paginated = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
@@ -166,34 +178,46 @@ export default function TeacherStudentsPage() {
   const uniqueStudents = React.useMemo(() => new Set(rows.map((r) => r.userId)).size, [rows]);
   const avgProgress = rows.length ? Math.round(rows.reduce((a, r) => a + r.progress, 0) / rows.length) : 0;
 
-  function exportCsv() {
-    const csv = (v: string) => `"${String(v).replace(/"/g, '""')}"`;
-    const header = ["Student", "Email", "Course", "Enrolled", "Progress", "Status"].join(",");
-    const lines = filtered.map((r) =>
-      [
-        csv(r.userName),
-        csv(r.userEmail),
-        csv(r.courseTitle),
-        csv(new Date(r.enrolledAt).toLocaleDateString()),
-        `${r.progress}%`,
-        r.certificateId ? "Certified" : r.completed ? "Completed" : r.progress > 0 ? "In progress" : "Not started",
-      ].join(","),
-    );
-    const blob = new Blob([[header, ...lines].join("\n")], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "my-students.csv";
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.push({ title: "Exported CSV", tone: "success" });
+  function csvValue(value: string | number | boolean | null | undefined) {
+    return `"${String(value ?? "").replace(/"/g, '""')}"`;
   }
 
-  function SortIcon({ col }: { col: SortKey }) {
-    if (sortKey !== col) return <Icon.ArrowUp size={12} className="text-[var(--muted-2)] ml-1 opacity-40" />;
-    return sortDir === "asc"
-      ? <Icon.ArrowUp size={12} className="text-[var(--primary)] ml-1" />
-      : <Icon.ArrowUp size={12} className="text-[var(--primary)] ml-1 rotate-180" />;
+  function triggerCsvDownload(filename: string, csvRows: string[][]) {
+    const csv = `\uFEFF${csvRows.map((row) => row.map(csvValue).join(",")).join("\r\n")}`;
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+
+    a.href = url;
+    a.download = filename;
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }
+
+  function exportCsv() {
+    const status = (r: (typeof filtered)[number]) =>
+      r.certificateId ? "Certified" : r.completed ? "Completed" : r.progress > 0 ? "In progress" : "Not started";
+
+    triggerCsvDownload(
+      "my-students.csv",
+      [
+        ["Student", "Email", "Course", "Enrolled", "Progress", "Status"],
+        ...filtered.map((r) => [
+          r.userName,
+          r.userEmail,
+          r.courseTitle,
+          formatDate(r.enrolledAt),
+          `${r.progress}%`,
+          status(r),
+        ]),
+      ],
+    );
+
+    toast.push({ title: "Exported CSV", tone: "success" });
   }
 
   const fromEntry = filtered.length === 0 ? 0 : (safePage - 1) * pageSize + 1;
@@ -267,7 +291,7 @@ export default function TeacherStudentsPage() {
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
               <Tabs
                 value={filter}
-                onChange={(v) => setFilter(v as Filter)}
+                onChange={(v) => { setFilter(v as Filter); setPage(1); }}
                 options={[
                   { value: "all", label: "All", count: counts.all },
                   { value: "in-progress", label: "In progress", count: counts["in-progress"] },
@@ -281,11 +305,11 @@ export default function TeacherStudentsPage() {
                 icon={<Icon.Search size={16} />}
                 placeholder="Search student or course…"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => { setQuery(e.target.value); setPage(1); }}
                 className="flex-1"
               />
               {courseOptions.length > 1 && (
-                <Select value={courseFilter} onChange={(e) => setCourseFilter(e.target.value)} className="!h-10 sm:!w-52">
+                <Select value={courseFilter} onChange={(e) => { setCourseFilter(e.target.value); setPage(1); }} className="!h-10 sm:!w-52">
                   <option value="all">All courses</option>
                   {courseOptions.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
                 </Select>
@@ -307,7 +331,7 @@ export default function TeacherStudentsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => { setQuery(""); setFilter("all"); setCourseFilter("all"); }}
+                    onClick={() => { setQuery(""); setFilter("all"); setCourseFilter("all"); setPage(1); }}
                   >
                     Clear filters
                   </Button>
@@ -322,18 +346,18 @@ export default function TeacherStudentsPage() {
                     <tr className="text-left text-[var(--muted)] border-b border-[var(--border)]">
                       <th className="font-medium py-2.5 px-3">
                         <button onClick={() => toggleSort("name")} className="inline-flex items-center hover:text-[var(--foreground)] transition">
-                          Student <SortIcon col="name" />
+                          Student <SortIcon col="name" sortKey={sortKey} sortDir={sortDir} />
                         </button>
                       </th>
                       <th className="font-medium py-2.5 px-3">Course</th>
                       <th className="font-medium py-2.5 px-3 hidden md:table-cell">
                         <button onClick={() => toggleSort("enrolled")} className="inline-flex items-center hover:text-[var(--foreground)] transition">
-                          Enrolled <SortIcon col="enrolled" />
+                          Enrolled <SortIcon col="enrolled" sortKey={sortKey} sortDir={sortDir} />
                         </button>
                       </th>
                       <th className="font-medium py-2.5 px-3">
                         <button onClick={() => toggleSort("progress")} className="inline-flex items-center hover:text-[var(--foreground)] transition">
-                          Progress <SortIcon col="progress" />
+                          Progress <SortIcon col="progress" sortKey={sortKey} sortDir={sortDir} />
                         </button>
                       </th>
                       <th className="font-medium py-2.5 px-3">Status</th>
@@ -409,7 +433,7 @@ export default function TeacherStudentsPage() {
                     <span>Rows:</span>
                     <select
                       value={pageSize}
-                      onChange={(e) => setPageSize(Number(e.target.value))}
+                      onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
                       className="h-7 rounded-md border border-[var(--border)] bg-[var(--surface)] px-1.5 text-xs text-[var(--foreground)] focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
                     >
                       {PAGE_SIZE_OPTIONS.map((n) => (

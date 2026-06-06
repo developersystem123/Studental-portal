@@ -512,13 +512,13 @@ export default function TeacherSchedulePage() {
       <Card>
         <CardBody className="space-y-4">
           {/* View tabs */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
-            <div className="flex flex-wrap gap-1.5">
+          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(280px,320px)] gap-3 items-center">
+            <div className="grid grid-cols-4 gap-1.5 min-w-0 w-full">
               {VIEW_OPTIONS.map(({ key, label, icon }) => (
                 <button
                   key={key}
                   onClick={() => setView(key)}
-                  className={`inline-flex items-center gap-1.5 px-3 h-8 rounded-lg text-xs font-semibold transition ${
+                  className={`inline-flex w-full items-center justify-center gap-1.5 px-2 xl:px-3 h-8 rounded-lg text-xs font-semibold transition whitespace-nowrap ${
                     view === key
                       ? "bg-[var(--primary)] text-white"
                       : "bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)]"
@@ -536,7 +536,7 @@ export default function TeacherSchedulePage() {
                 placeholder="Search events…"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="sm:max-w-xs !h-8 text-sm"
+                className="w-full !h-8 text-sm"
               />
             )}
           </div>
