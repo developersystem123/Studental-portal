@@ -558,6 +558,7 @@ function ThreadModal({
   }
 
   async function togglePin() {
+    if (!thread) return;
     try {
       const r = await fetch(`/api/teacher/forum/${thread.id}`, {
         method: "PATCH",
@@ -572,6 +573,7 @@ function ThreadModal({
   }
 
   async function changeCategory() {
+    if (!thread) return;
     if (newCat === thread.category) { setCatEdit(false); return; }
     try {
       const r = await fetch(`/api/teacher/forum/${thread.id}`, {
@@ -590,6 +592,7 @@ function ThreadModal({
   }
 
   async function remove() {
+    if (!thread) return;
     if (!confirm(`Delete "${thread.title}"? This cannot be undone.`)) return;
     try {
       const r = await fetch(`/api/teacher/forum/${thread.id}`, { method: "DELETE" });

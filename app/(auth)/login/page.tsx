@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button, Checkbox, Input, Label, useToast } from "@/components/ui";
@@ -18,7 +18,7 @@ const GOOGLE_ERROR_MESSAGES: Record<string, string> = {
   google_invalid: "Invalid Google response. Please try again.",
 };
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const { user, login, loginWithGoogle } = useAuth();
   const toast = useToast();
@@ -184,5 +184,13 @@ export default function LoginPage() {
       </p>
 
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }
