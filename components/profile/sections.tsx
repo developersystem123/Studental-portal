@@ -51,6 +51,77 @@ export function SectionHeader({
   );
 }
 
+/* ──────────────────────────── Collapsible card ────────────────────────────── */
+export function CollapsibleCard({
+  icon,
+  title,
+  description,
+  tone = "primary",
+  defaultOpen = true,
+  children,
+  cardClassName,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description?: string;
+  tone?: "primary" | "danger";
+  defaultOpen?: boolean;
+  children?: React.ReactNode;
+  cardClassName?: string;
+}) {
+  const [open, setOpen] = React.useState(defaultOpen);
+
+  const iconCls =
+    tone === "danger"
+      ? "bg-red-500/10 text-[var(--danger)]"
+      : "bg-[var(--primary-soft)] text-[var(--primary)]";
+
+  return (
+    <div
+      className={cn(
+        "rounded-2xl border border-[var(--border)] bg-[var(--surface)] card-shadow overflow-hidden",
+        tone === "danger" && "border-[var(--danger)]/30",
+        cardClassName,
+      )}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-[var(--surface-2)] transition-colors"
+        aria-expanded={open}
+      >
+        <div
+          className={cn(
+            "h-10 w-10 rounded-xl flex items-center justify-center shrink-0",
+            iconCls,
+          )}
+        >
+          {icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold">{title}</p>
+          {description && (
+            <p className="text-xs text-[var(--muted)] mt-0.5">{description}</p>
+          )}
+        </div>
+        <Icon.ChevronDown
+          size={18}
+          className={cn(
+            "shrink-0 text-[var(--muted)] transition-transform duration-200",
+            open && "rotate-180",
+          )}
+        />
+      </button>
+
+      {open && (
+        <div className="border-t border-[var(--border)] px-5 pb-5 pt-5 space-y-4 fade-in">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─────────────────────────────── Profile hero ────────────────────────────── */
 export function ProfileHero({
   subtitle,
@@ -321,68 +392,61 @@ export function ProfileCompletionCard() {
   const complete = pct === 100;
 
   return (
-    <Card>
-      <CardBody className="space-y-4">
-        <div className="flex items-start justify-between gap-4">
-          <SectionHeader
-            icon={complete ? <Icon.CheckCircle size={18} /> : <Icon.User size={18} />}
-            title="Profile completion"
-            description={
-              complete
-                ? "Your profile is complete — looking great!"
-                : `${checks.length - done} item${checks.length - done !== 1 ? "s" : ""} remaining — fill them in to complete your profile.`
-            }
-          />
-          <div className="shrink-0 text-right">
-            <p className="text-2xl font-bold tabular-nums">{pct}%</p>
-            <p className="text-xs text-[var(--muted)]">{done}/{checks.length} done</p>
+    <CollapsibleCard
+      icon={complete ? <Icon.CheckCircle size={18} /> : <Icon.User size={18} />}
+      title="Profile completion"
+      description={
+        complete
+          ? "Your profile is complete — looking great!"
+          : `${checks.length - done} item${checks.length - done !== 1 ? "s" : ""} remaining.`
+      }
+    >
+      <div className="flex items-center justify-between gap-4 -mt-1">
+        <div className="flex-1">
+          <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-2)]">
+            <div
+              style={{ width: `${pct}%` }}
+              className={cn(
+                "h-full rounded-full transition-all duration-700",
+                complete ? "bg-emerald-500" : pct >= 60 ? "bg-[var(--primary)]" : "bg-amber-500",
+              )}
+            />
           </div>
         </div>
-
-        {/* Progress bar */}
-        <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-2)]">
-          <div
-            style={{ width: `${pct}%` }}
-            className={cn(
-              "h-full rounded-full transition-all duration-700",
-              complete
-                ? "bg-emerald-500"
-                : pct >= 60
-                ? "bg-[var(--primary)]"
-                : "bg-amber-500",
-            )}
-          />
+        <div className="shrink-0 text-right">
+          <p className="text-xl font-bold tabular-nums">{pct}%</p>
+          <p className="text-xs text-[var(--muted)]">{done}/{checks.length} done</p>
         </div>
+      </div>
 
-        {/* Checklist */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {checks.map(({ label, done: itemDone }) => (
-            <div
-              key={label}
+      {/* Checklist */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {checks.map(({ label, done: itemDone }) => (
+          <div
+            key={label}
+            className={cn(
+              "flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-sm transition-all",
+              itemDone
+                ? "border-emerald-500/25 bg-emerald-500/8 text-emerald-700 dark:text-emerald-400"
+                : "border-[var(--border)] bg-[var(--surface-2)]/40 text-[var(--muted)]",
+            )}
+          >
+            <span
               className={cn(
-                "flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-sm transition-all",
+                "flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
                 itemDone
-                  ? "border-emerald-500/25 bg-emerald-500/8 text-emerald-700 dark:text-emerald-400"
-                  : "border-[var(--border)] bg-[var(--surface-2)]/40 text-[var(--muted)]",
+                  ? "bg-emerald-500 text-white"
+                  : "border border-[var(--border-strong)] bg-[var(--surface)]",
               )}
             >
-              <span
-                className={cn(
-                  "flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
-                  itemDone
-                    ? "bg-emerald-500 text-white"
-                    : "border border-[var(--border-strong)] bg-[var(--surface)]",
-                )}
-              >
-                {itemDone && <Icon.Check size={10} />}
-              </span>
-              <span className="flex-1">{label}</span>
-              {itemDone && <Icon.Check size={13} className="text-emerald-500" />}
-            </div>
-          ))}
-        </div>
-      </CardBody>
-    </Card>
+              {itemDone && <Icon.Check size={10} />}
+            </span>
+            <span className="flex-1">{label}</span>
+            {itemDone && <Icon.Check size={13} className="text-emerald-500" />}
+          </div>
+        ))}
+      </div>
+    </CollapsibleCard>
   );
 }
 
@@ -458,87 +522,84 @@ export function PersonalInfoCard({
   }
 
   return (
-    <Card>
-      <CardBody className="space-y-5">
-        <SectionHeader
-          icon={<Icon.User size={18} />}
-          title="Personal information"
-          description={description}
-        />
-        <form onSubmit={save} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="pi-name">Full name</Label>
-              <Input
-                id="pi-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                icon={<Icon.User size={16} />}
-              />
-            </div>
-            <div>
-              <Label htmlFor="pi-email">Email</Label>
-              <Input
-                id="pi-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                icon={<Icon.Mail size={16} />}
-              />
-            </div>
-            <div>
-              <Label htmlFor="pi-phone">Phone</Label>
-              <Input
-                id="pi-phone"
-                value={phone}
-                onChange={(e) => setPhone(cleanPhoneInput(e.target.value))}
-                placeholder="+92 300 1234567"
-                inputMode="tel"
-                error={phone ? phoneError : undefined}
-              />
-            </div>
-            {showEducation && (
-              <div>
-                <Label htmlFor="pi-education">Highest qualification</Label>
-                <Select
-                  id="pi-education"
-                  value={education}
-                  onChange={(e) => setEducation(e.target.value as EducationLevel)}
-                >
-                  {EDUCATION_LEVELS.map((lvl) => (
-                    <option key={lvl} value={lvl}>
-                      {lvl === "None" ? "Below Matriculation" : lvl}
-                    </option>
-                  ))}
-                </Select>
-                <p className="mt-1.5 text-xs text-[var(--muted)]">
-                  Required for in-person class applications (Matriculation or above).
-                </p>
-              </div>
-            )}
+    <CollapsibleCard
+      icon={<Icon.User size={18} />}
+      title="Personal information"
+      description={description}
+    >
+      <form onSubmit={save} className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="pi-name">Full name</Label>
+            <Input
+              id="pi-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              icon={<Icon.User size={16} />}
+            />
           </div>
           <div>
-            <Label htmlFor="pi-bio">Bio</Label>
-            <Textarea
-              id="pi-bio"
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              placeholder={bioPlaceholder}
-              rows={3}
+            <Label htmlFor="pi-email">Email</Label>
+            <Input
+              id="pi-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              icon={<Icon.Mail size={16} />}
             />
-            <p className="mt-1 text-xs text-[var(--muted)]">{bio.length}/300 characters</p>
           </div>
-          <div className="flex justify-end gap-2 pt-1">
-            <Button type="button" variant="outline" onClick={reset} disabled={!dirty || saving}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={!dirty} loading={saving}>
-              Save changes
-            </Button>
+          <div>
+            <Label htmlFor="pi-phone">Phone</Label>
+            <Input
+              id="pi-phone"
+              value={phone}
+              onChange={(e) => setPhone(cleanPhoneInput(e.target.value))}
+              placeholder="+92 300 1234567"
+              inputMode="tel"
+              error={phone ? phoneError : undefined}
+            />
           </div>
-        </form>
-      </CardBody>
-    </Card>
+          {showEducation && (
+            <div>
+              <Label htmlFor="pi-education">Highest qualification</Label>
+              <Select
+                id="pi-education"
+                value={education}
+                onChange={(e) => setEducation(e.target.value as EducationLevel)}
+              >
+                {EDUCATION_LEVELS.map((lvl) => (
+                  <option key={lvl} value={lvl}>
+                    {lvl === "None" ? "Below Matriculation" : lvl}
+                  </option>
+                ))}
+              </Select>
+              <p className="mt-1.5 text-xs text-[var(--muted)]">
+                Required for in-person class applications (Matriculation or above).
+              </p>
+            </div>
+          )}
+        </div>
+        <div>
+          <Label htmlFor="pi-bio">Bio</Label>
+          <Textarea
+            id="pi-bio"
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            placeholder={bioPlaceholder}
+            rows={3}
+          />
+          <p className="mt-1 text-xs text-[var(--muted)]">{bio.length}/300 characters</p>
+        </div>
+        <div className="flex justify-end gap-2 pt-1">
+          <Button type="button" variant="outline" onClick={reset} disabled={!dirty || saving}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={!dirty} loading={saving}>
+            Save changes
+          </Button>
+        </div>
+      </form>
+    </CollapsibleCard>
   );
 }
 
@@ -547,7 +608,6 @@ export function ChangePasswordCard() {
   const { changePassword } = useAuth();
   const toast = useToast();
 
-  const [open, setOpen] = React.useState(false);
   const [current, setCurrent] = React.useState("");
   const [next, setNext] = React.useState("");
   const [confirm, setConfirm] = React.useState("");
@@ -565,11 +625,6 @@ export function ChangePasswordCard() {
     setShowConfirm(false);
   }
 
-  function closeForm() {
-    setOpen(false);
-    resetForm();
-  }
-
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!current) return toast.push({ title: "Enter your current password", tone: "danger" });
@@ -584,7 +639,6 @@ export function ChangePasswordCard() {
       return;
     }
     resetForm();
-    setOpen(false);
     toast.push({
       title: "Password updated",
       description: "Use your new password next time you sign in.",
@@ -595,88 +649,76 @@ export function ChangePasswordCard() {
   const strength = scorePassword(next);
 
   return (
-    <Card>
-      <CardBody className="space-y-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <SectionHeader
-            icon={<Icon.Lock size={18} />}
-            title="Change password"
-            description="Use a strong password with at least 8 characters."
+    <CollapsibleCard
+      icon={<Icon.Lock size={18} />}
+      title="Change password"
+      description="Use a strong password with at least 8 characters."
+      defaultOpen={false}
+    >
+      <form onSubmit={submit} className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <PasswordField
+            id="cp-current"
+            label="Current password"
+            value={current}
+            onChange={setCurrent}
+            show={showCurrent}
+            onToggleShow={() => setShowCurrent((s) => !s)}
           />
-          {!open && (
-            <Button variant="outline" onClick={() => setOpen(true)}>
-              <Icon.Lock size={16} /> Change password
-            </Button>
-          )}
+          <PasswordField
+            id="cp-new"
+            label="New password"
+            value={next}
+            onChange={setNext}
+            show={showNext}
+            onToggleShow={() => setShowNext((s) => !s)}
+          />
+          <PasswordField
+            id="cp-confirm"
+            label="Confirm new"
+            value={confirm}
+            onChange={setConfirm}
+            show={showConfirm}
+            onToggleShow={() => setShowConfirm((s) => !s)}
+            error={confirm.length > 0 && confirm !== next ? "Doesn't match." : undefined}
+          />
         </div>
 
-        {open && (
-          <form onSubmit={submit} className="space-y-4 fade-in">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <PasswordField
-                id="cp-current"
-                label="Current password"
-                value={current}
-                onChange={setCurrent}
-                show={showCurrent}
-                onToggleShow={() => setShowCurrent((s) => !s)}
-              />
-              <PasswordField
-                id="cp-new"
-                label="New password"
-                value={next}
-                onChange={setNext}
-                show={showNext}
-                onToggleShow={() => setShowNext((s) => !s)}
-              />
-              <PasswordField
-                id="cp-confirm"
-                label="Confirm new"
-                value={confirm}
-                onChange={setConfirm}
-                show={showConfirm}
-                onToggleShow={() => setShowConfirm((s) => !s)}
-                error={confirm.length > 0 && confirm !== next ? "Doesn't match." : undefined}
-              />
+        {next && (
+          <div className="space-y-1.5">
+            <div className="flex gap-1">
+              {[0, 1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "h-1 flex-1 rounded-full transition-all",
+                    i < strength.score ? strength.color : "bg-[var(--surface-2)]",
+                  )}
+                />
+              ))}
             </div>
-
-            {next && (
-              <div className="space-y-1.5">
-                <div className="flex gap-1">
-                  {[0, 1, 2, 3].map((i) => (
-                    <div
-                      key={i}
-                      className={cn(
-                        "h-1 flex-1 rounded-full transition-all",
-                        i < strength.score ? strength.color : "bg-[var(--surface-2)]",
-                      )}
-                    />
-                  ))}
-                </div>
-                <p className="text-xs text-[var(--muted)]">
-                  Strength:{" "}
-                  <span className={cn("font-medium", strength.textColor)}>{strength.label}</span>
-                  {strength.score < 3 && " — add length, a number, or a symbol."}
-                </p>
-              </div>
-            )}
-
-            <div className="flex justify-end gap-2 pt-1">
-              <Button type="button" variant="outline" onClick={closeForm} disabled={saving}>
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={!current || !next || next !== confirm}
-                loading={saving}
-              >
-                <Icon.Lock size={16} /> Update password
-              </Button>
-            </div>
-          </form>
+            <p className="text-xs text-[var(--muted)]">
+              Strength:{" "}
+              <span className={cn("font-medium", strength.textColor)}>{strength.label}</span>
+              {strength.score < 3 && " — add length, a number, or a symbol."}
+            </p>
+          </div>
         )}
-      </CardBody>
-    </Card>
+
+        <div className="flex justify-end gap-2 pt-1">
+          <Button type="button" variant="outline" onClick={resetForm} disabled={saving}>
+            Clear
+          </Button>
+          <Button
+            type="submit"
+            disabled={!current || !next || next !== confirm}
+            loading={saving}
+          >
+            <Icon.Lock size={16} /> Update password
+          </Button>
+        </div>
+      </form>
+    </CollapsibleCard>
   );
 }
 

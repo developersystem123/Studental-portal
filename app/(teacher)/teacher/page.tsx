@@ -57,7 +57,8 @@ export default function TeacherOverviewPage() {
   const stats = teacher.stats();
 
   const recentStudents = myStudents.slice(0, 6);
-  const isDemo = myStudents.length === 0;
+  const loaded = teacher.loaded();
+  const isDemo = loaded && myStudents.length === 0;
 
   const [lastUpdated, setLastUpdated] = React.useState<Date>(() => new Date());
   React.useEffect(() => {

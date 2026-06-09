@@ -249,7 +249,7 @@ export default function TeacherCoursesPage() {
   const hasFilters = catFilter !== "All" || lvlFilter !== "All" || query.trim();
 
   const completionRate =
-    stats.students > 0 ? Math.round((stats.completions / stats.students) * 100) : 0;
+    stats.students > 0 ? Math.min(100, Math.round((stats.completions / stats.students) * 100)) : 0;
 
   return (
     <div className="space-y-6 fade-in">

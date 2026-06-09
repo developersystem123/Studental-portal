@@ -174,6 +174,7 @@ type Teacher = {
   myStudents: () => TeacherStudentRow[];
   updateMyCourse: (id: string, data: Partial<Course>) => Promise<{ ok: boolean; error?: string }>;
   stats: () => { courses: number; students: number; completions: number };
+  loaded: () => boolean;
 };
 
 type Theme = "light" | "dark" | "system";
@@ -674,6 +675,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const [myCourses, setMyCourses] = React.useState<Course[]>([]);
   const [myStudents, setMyStudents] = React.useState<TeacherStudentRow[]>([]);
   const [teacherStats, setTeacherStats] = React.useState({ courses: 0, students: 0, completions: 0 });
+  const [teacherLoaded, setTeacherLoaded] = React.useState(false);
 
   React.useEffect(() => {
     if (!user || user.role !== "Instructor") return;
@@ -688,6 +690,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       if (cRes.ok) setMyCourses(cRes.data.courses);
       if (sRes.ok) setMyStudents(sRes.data.students);
       if (stRes.ok) setTeacherStats(stRes.data.stats);
+      setTeacherLoaded(true);
     })();
     return () => {
       cancelled = true;
@@ -699,6 +702,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       myCourses: () => myCourses,
       myStudents: () => myStudents,
       stats: () => teacherStats,
+      loaded: () => teacherLoaded,
       updateMyCourse: async (id, data) => {
         const res = await tryApi<{ course: Course }>("/api/teacher/courses", {
           method: "PATCH",
@@ -711,7 +715,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         return { ok: true };
       },
     }),
-    [myCourses, myStudents, teacherStats],
+    [myCourses, myStudents, teacherStats, teacherLoaded],
   );
 
   return (

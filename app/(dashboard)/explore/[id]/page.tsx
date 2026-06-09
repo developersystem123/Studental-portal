@@ -10,7 +10,33 @@ import { useAuth, useData } from "@/lib/store";
 import { COURSES } from "@/lib/mockData";
 import { cn, formatDuration, formatHours } from "@/lib/utils";
 
-const USD_TO_PKR = 280;
+function formatPKR(amount: number) {
+  return `Rs ${Math.round(amount).toLocaleString("en-PK")}`;
+}
+
+type PayMethod = "card" | "jazzcash" | "easypaisa" | "bank_transfer";
+
+const PAY_METHODS: { key: PayMethod; label: string; desc: string; icon: string }[] = [
+  { key: "card",          label: "Debit / Credit Card", desc: "Visa, Mastercard, or local bank card", icon: "💳" },
+  { key: "jazzcash",      label: "JazzCash",             desc: "Pay via JazzCash mobile account",      icon: "📱" },
+  { key: "easypaisa",     label: "EasyPaisa",            desc: "Pay via EasyPaisa mobile account",     icon: "📱" },
+  { key: "bank_transfer", label: "Bank Transfer",        desc: "Transfer directly to our bank account", icon: "🏦" },
+];
+
+function formatCardNumber(val: string) {
+  return val.replace(/\D/g, "").slice(0, 16).replace(/(\d{4})(?=\d)/g, "$1 ");
+}
+function formatExpiry(val: string) {
+  const d = val.replace(/\D/g, "").slice(0, 4);
+  return d.length >= 3 ? d.slice(0, 2) + "/" + d.slice(2) : d;
+}
+function detectBrand(num: string) {
+  const n = num.replace(/\s/g, "");
+  if (/^4/.test(n)) return "Visa";
+  if (/^5[1-5]/.test(n)) return "Mastercard";
+  if (/^3[47]/.test(n)) return "Amex";
+  return null;
+}
 
 export default function CoursePreviewPage() {
   const params = useParams<{ id: string }>();
@@ -30,8 +56,39 @@ export default function CoursePreviewPage() {
   const [enrolling, setEnrolling] = useState(false);
   const [payModal, setPayModal] = useState(false);
   const [paying, setPaying] = useState(false);
-  // After Stripe redirect back, auto-complete enrollment
   const [stripeProcessing, setStripeProcessing] = useState(false);
+
+  // Payment method + form state
+  const [payMethod, setPayMethod] = useState<PayMethod>("card");
+  const [cardName, setCardName] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [expiry, setExpiry] = useState("");
+  const [cvv, setCvv] = useState("");
+  const [mobileNum, setMobileNum] = useState("");
+  const [txnRef, setTxnRef] = useState("");
+  const [cardErrors, setCardErrors] = useState<Record<string, string>>({});
+  const [payStep, setPayStep] = useState<"summary" | "method" | "details">("summary");
+
+  function resetCardForm() {
+    setCardName(""); setCardNumber(""); setExpiry(""); setCvv("");
+    setMobileNum(""); setTxnRef("");
+    setCardErrors({}); setPayStep("summary"); setPayMethod("card");
+  }
+
+  function validateCard() {
+    const errors: Record<string, string> = {};
+    if (!cardName.trim()) errors.name = "Cardholder name is required";
+    const digits = cardNumber.replace(/\s/g, "");
+    if (digits.length < 16) errors.number = "Enter a valid 16-digit card number";
+    if (expiry.length < 5) {
+      errors.expiry = "Enter expiry as MM/YY";
+    } else {
+      const month = parseInt(expiry.slice(0, 2));
+      if (month < 1 || month > 12) errors.expiry = "Invalid month";
+    }
+    if (cvv.replace(/\D/g, "").length < 3) errors.cvv = "Enter 3-digit CVV";
+    return errors;
+  }
 
   // Handle return from Stripe checkout (?payment=success&courseId=xxx)
   useEffect(() => {
@@ -85,9 +142,22 @@ export default function CoursePreviewPage() {
     }
   }
 
-  // Paid course — payment then enroll
+  // Paid course — process payment for the selected method
   async function handlePurchase() {
     if (!course || !user) { if (!user) router.push("/login"); return; }
+
+    if (payMethod === "card") {
+      const errors = validateCard();
+      if (Object.keys(errors).length) { setCardErrors(errors); return; }
+      setCardErrors({});
+    }
+    if ((payMethod === "jazzcash" || payMethod === "easypaisa") && !mobileNum.trim()) {
+      toast.push({ title: "Enter your mobile number.", tone: "danger" }); return;
+    }
+    if (payMethod === "bank_transfer" && !txnRef.trim()) {
+      toast.push({ title: "Enter the transaction reference number.", tone: "danger" }); return;
+    }
+
     setPaying(true);
     try {
       const res = await fetch("/api/payments", {
@@ -97,24 +167,33 @@ export default function CoursePreviewPage() {
           amount: course.price,
           courseId: course.id,
           description: `Course: ${course.title}`,
-          method: "card",
+          method: payMethod,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error((data as { error?: string }).error ?? "Payment failed.");
 
-      // Stripe mode — redirect to hosted checkout
+      // Stripe redirect (card only)
       if ((data as { checkoutUrl?: string }).checkoutUrl) {
         window.location.href = (data as { checkoutUrl: string }).checkoutUrl;
         return;
       }
 
-      // Simulated payment completed — enroll immediately
-      await enroll(course.id);
-      addNotification({ type: "achievement", title: "Enrolled!", message: `You're now enrolled in ${course.title}.` });
-      toast.push({ title: "Payment successful!", description: `Welcome to ${course.title}`, tone: "success" });
+      const isImmediate = payMethod === "card";
+      if (isImmediate) {
+        await enroll(course.id);
+        addNotification({ type: "achievement", title: "Enrolled!", message: `You're now enrolled in ${course.title}.` });
+        toast.push({ title: "Payment successful!", description: `Welcome to ${course.title}`, tone: "success" });
+        router.push(`/my-courses/${course.id}`);
+      } else {
+        toast.push({
+          title: "Payment submitted — pending confirmation",
+          description: "We'll enroll you once your payment is verified (usually within a few hours).",
+          tone: "info",
+        });
+      }
       setPayModal(false);
-      router.push(`/my-courses/${course.id}`);
+      resetCardForm();
     } catch (err) {
       toast.push({ title: "Payment failed", description: err instanceof Error ? err.message : "Please try again.", tone: "danger" });
     } finally {
@@ -193,8 +272,7 @@ export default function CoursePreviewPage() {
               <div>
                 {isPaid ? (
                   <div className="space-y-0.5">
-                    <p className="text-3xl font-bold">${course.price}</p>
-                    <p className="text-sm text-[var(--muted)]">₨{(course.price * USD_TO_PKR).toLocaleString()} PKR</p>
+                    <p className="text-3xl font-bold">{formatPKR(course.price)}</p>
                     <p className="text-xs text-[var(--muted)]">One-time payment · Lifetime access</p>
                   </div>
                 ) : (
@@ -215,11 +293,13 @@ export default function CoursePreviewPage() {
               ) : isPaid ? (
                 <div className="space-y-2">
                   <Button className="w-full" size="lg" onClick={() => { if (!user) { router.push("/login"); return; } setPayModal(true); }}>
-                    <Icon.CreditCard size={16} /> Buy Now — ${course.price}
+                    <Icon.CreditCard size={16} /> Buy Now — {formatPKR(course.price)}
                   </Button>
-                  <p className="text-[10px] text-center text-[var(--muted)] flex items-center justify-center gap-1">
-                    <Icon.Lock size={10} /> Secure payment · 30-day money-back guarantee
-                  </p>
+                  <div className="flex items-center justify-center gap-3 text-[10px] text-[var(--muted)]">
+                    <span className="flex items-center gap-1"><Icon.Lock size={10} /> Secure</span>
+                    <span className="flex items-center gap-1">📱 JazzCash / EasyPaisa</span>
+                    <span className="flex items-center gap-1">🏦 Bank Transfer</span>
+                  </div>
                 </div>
               ) : (
                 <Button className="w-full" size="lg" loading={enrolling} onClick={handleFreeEnroll}>
@@ -293,59 +373,207 @@ export default function CoursePreviewPage() {
       </div>
 
       {/* ── Payment Modal ── */}
-      <Modal open={payModal} onClose={() => !paying && setPayModal(false)} title={`Purchase — ${course.title}`}>
+      <Modal
+        open={payModal}
+        onClose={() => { if (!paying) { setPayModal(false); resetCardForm(); } }}
+        title={payStep === "summary" ? "Order Summary" : payStep === "method" ? "Choose Payment Method" : PAY_METHODS.find(m => m.key === payMethod)?.label ?? "Payment Details"}
+      >
         <div className="p-5 space-y-5">
-          {/* Order summary */}
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-4 space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Order summary</p>
-            <div className="flex items-start gap-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={course.thumbnail} alt={course.title} className="h-14 w-20 rounded-lg object-cover shrink-0 border border-[var(--border)]" />
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm line-clamp-2">{course.title}</p>
-                <p className="text-xs text-[var(--muted)] mt-0.5">{course.instructor} · {course.level}</p>
-                <div className="flex items-center gap-1 mt-1">
-                  <Icon.Star size={11} className="text-amber-500" />
-                  <span className="text-xs text-[var(--muted)]">{course.rating} · {formatHours(course.durationMinutes)}</span>
+
+          {/* ── Step 1: Summary ── */}
+          {payStep === "summary" && (
+            <>
+              <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-4 space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Order summary</p>
+                <div className="flex items-start gap-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={course.thumbnail} alt={course.title} className="h-14 w-20 rounded-lg object-cover shrink-0 border border-[var(--border)]" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm line-clamp-2">{course.title}</p>
+                    <p className="text-xs text-[var(--muted)] mt-0.5">{course.instructor} · {course.level}</p>
+                    <div className="flex items-center gap-1 mt-1">
+                      <Icon.Star size={11} className="text-amber-500" />
+                      <span className="text-xs text-[var(--muted)]">{course.rating} · {formatHours(course.durationMinutes)}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="border-t border-[var(--border)] pt-3 flex items-center justify-between">
+                  <span className="text-sm text-[var(--muted)]">Total</span>
+                  <p className="font-bold text-xl">{formatPKR(course.price)}</p>
                 </div>
               </div>
-            </div>
-            <div className="border-t border-[var(--border)] pt-3 flex items-center justify-between">
-              <span className="text-sm text-[var(--muted)]">Total</span>
-              <div className="text-right">
-                <p className="font-bold text-lg">${course.price}</p>
-                <p className="text-xs text-[var(--muted)]">₨{(course.price * USD_TO_PKR).toLocaleString()} PKR</p>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { icon: Icon.CheckCircle, text: "Lifetime access" },
+                  { icon: Icon.Award, text: "Certificate included" },
+                  { icon: Icon.Book, text: `${course.chapters.length} chapters` },
+                  { icon: Icon.Clock, text: formatHours(course.durationMinutes) },
+                ].map(({ icon: Ic, text }) => (
+                  <div key={text} className="flex items-center gap-2 text-xs text-[var(--muted)]">
+                    <Ic size={13} className="text-[var(--primary)] shrink-0" /> {text}
+                  </div>
+                ))}
               </div>
-            </div>
-          </div>
-
-          {/* What you get */}
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              { icon: Icon.CheckCircle, text: "Lifetime access" },
-              { icon: Icon.Award, text: "Certificate included" },
-              { icon: Icon.Book, text: `${course.chapters.length} chapters` },
-              { icon: Icon.Clock, text: formatHours(course.durationMinutes) },
-            ].map(({ icon: Ic, text }) => (
-              <div key={text} className="flex items-center gap-2 text-xs text-[var(--muted)]">
-                <Ic size={13} className="text-[var(--primary)] shrink-0" /> {text}
+              <div className="flex gap-2 pt-1">
+                <Button variant="outline" className="flex-1" onClick={() => { setPayModal(false); resetCardForm(); }}>Cancel</Button>
+                <Button className="flex-1" onClick={() => setPayStep("method")}>
+                  Choose Payment <Icon.ChevronRight size={15} />
+                </Button>
               </div>
-            ))}
-          </div>
+            </>
+          )}
 
-          <div className="flex items-center gap-2 text-xs text-[var(--muted)] p-2.5 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]">
-            <Icon.Lock size={12} className="text-emerald-500 shrink-0" />
-            Secure payment · 30-day money-back guarantee
-          </div>
+          {/* ── Step 2: Method selection ── */}
+          {payStep === "method" && (
+            <>
+              <div className="space-y-2">
+                {PAY_METHODS.map((m) => (
+                  <button
+                    key={m.key}
+                    onClick={() => setPayMethod(m.key)}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition",
+                      payMethod === m.key
+                        ? "border-[var(--primary)] bg-[var(--primary-soft)]"
+                        : "border-[var(--border)] hover:border-[var(--primary)]/50 hover:bg-[var(--surface-2)]"
+                    )}
+                  >
+                    <span className="text-xl shrink-0">{m.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold">{m.label}</p>
+                      <p className="text-xs text-[var(--muted)]">{m.desc}</p>
+                    </div>
+                    {payMethod === m.key && <Icon.CheckCircle size={16} className="text-[var(--primary)] shrink-0" />}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-2 pt-1">
+                <Button variant="outline" className="flex-1" onClick={() => setPayStep("summary")}>Back</Button>
+                <Button className="flex-1" onClick={() => setPayStep("details")}>
+                  Continue <Icon.ChevronRight size={15} />
+                </Button>
+              </div>
+            </>
+          )}
 
-          <div className="flex gap-2 pt-1">
-            <Button variant="outline" className="flex-1" onClick={() => setPayModal(false)} disabled={paying}>
-              Cancel
-            </Button>
-            <Button className="flex-1" loading={paying} onClick={handlePurchase}>
-              <Icon.CreditCard size={15} /> Pay ${course.price}
-            </Button>
-          </div>
+          {/* ── Step 3: Payment details ── */}
+          {payStep === "details" && (
+            <>
+              {/* Compact order line */}
+              <div className="flex items-center justify-between p-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+                <p className="text-sm font-medium truncate flex-1 mr-3">{course.title}</p>
+                <p className="font-bold text-base shrink-0">{formatPKR(course.price)}</p>
+              </div>
+
+              {/* Card form */}
+              {payMethod === "card" && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--muted)] mb-1">Cardholder Name</label>
+                    <input type="text" placeholder="Ali Hassan" value={cardName}
+                      onChange={e => { setCardName(e.target.value); if (cardErrors.name) setCardErrors(p => ({ ...p, name: "" })); }}
+                      className={cn("w-full px-3 py-2.5 rounded-xl border text-sm bg-[var(--surface)] text-[var(--foreground)] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20", cardErrors.name ? "border-red-500" : "border-[var(--border)]")}
+                    />
+                    {cardErrors.name && <p className="text-[11px] text-red-500 mt-1">{cardErrors.name}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--muted)] mb-1">Card Number</label>
+                    <div className="relative">
+                      <input type="text" placeholder="1234 5678 9012 3456" value={cardNumber} inputMode="numeric"
+                        onChange={e => { setCardNumber(formatCardNumber(e.target.value)); if (cardErrors.number) setCardErrors(p => ({ ...p, number: "" })); }}
+                        className={cn("w-full px-3 py-2.5 pr-16 rounded-xl border text-sm bg-[var(--surface)] text-[var(--foreground)] outline-none transition font-mono tracking-widest focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20", cardErrors.number ? "border-red-500" : "border-[var(--border)]")}
+                      />
+                      {detectBrand(cardNumber) && (
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[var(--muted)] bg-[var(--surface-2)] border border-[var(--border)] rounded px-1.5 py-0.5">{detectBrand(cardNumber)}</span>
+                      )}
+                    </div>
+                    {cardErrors.number && <p className="text-[11px] text-red-500 mt-1">{cardErrors.number}</p>}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-[var(--muted)] mb-1">Expiry Date</label>
+                      <input type="text" placeholder="MM/YY" value={expiry} inputMode="numeric"
+                        onChange={e => { setExpiry(formatExpiry(e.target.value)); if (cardErrors.expiry) setCardErrors(p => ({ ...p, expiry: "" })); }}
+                        className={cn("w-full px-3 py-2.5 rounded-xl border text-sm bg-[var(--surface)] text-[var(--foreground)] outline-none transition font-mono focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20", cardErrors.expiry ? "border-red-500" : "border-[var(--border)]")}
+                      />
+                      {cardErrors.expiry && <p className="text-[11px] text-red-500 mt-1">{cardErrors.expiry}</p>}
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-[var(--muted)] mb-1">CVV</label>
+                      <input type="password" placeholder="•••" value={cvv} inputMode="numeric" maxLength={4}
+                        onChange={e => { setCvv(e.target.value.replace(/\D/g, "").slice(0, 4)); if (cardErrors.cvv) setCardErrors(p => ({ ...p, cvv: "" })); }}
+                        className={cn("w-full px-3 py-2.5 rounded-xl border text-sm bg-[var(--surface)] text-[var(--foreground)] outline-none transition font-mono focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20", cardErrors.cvv ? "border-red-500" : "border-[var(--border)]")}
+                      />
+                      {cardErrors.cvv && <p className="text-[11px] text-red-500 mt-1">{cardErrors.cvv}</p>}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* JazzCash / EasyPaisa form */}
+              {(payMethod === "jazzcash" || payMethod === "easypaisa") && (
+                <div className="space-y-3">
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-400 space-y-1">
+                    <p className="font-semibold">How to pay via {payMethod === "jazzcash" ? "JazzCash" : "EasyPaisa"}:</p>
+                    <p>1. Open your {payMethod === "jazzcash" ? "JazzCash" : "EasyPaisa"} app</p>
+                    <p>2. Send <strong>{formatPKR(course.price)}</strong> to: <strong>0300-1234567</strong></p>
+                    <p>3. Enter your mobile number and transaction reference below</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--muted)] mb-1">Your Mobile Number</label>
+                    <input type="tel" placeholder="03XX-XXXXXXX" value={mobileNum}
+                      onChange={e => setMobileNum(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-[var(--border)] text-sm bg-[var(--surface)] text-[var(--foreground)] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--muted)] mb-1">Transaction Reference (optional)</label>
+                    <input type="text" placeholder="e.g. TXN123456789" value={txnRef}
+                      onChange={e => setTxnRef(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-[var(--border)] text-sm bg-[var(--surface)] text-[var(--foreground)] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Bank Transfer form */}
+              {payMethod === "bank_transfer" && (
+                <div className="space-y-3">
+                  <div className="p-4 rounded-xl bg-sky-500/10 border border-sky-500/20 text-xs space-y-2">
+                    <p className="font-semibold text-sky-700 dark:text-sky-400">Bank Account Details</p>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[var(--muted)]">
+                      <span>Bank:</span>         <span className="font-medium text-[var(--foreground)]">HBL</span>
+                      <span>Account Title:</span><span className="font-medium text-[var(--foreground)]">EduPortal Pvt Ltd</span>
+                      <span>Account #:</span>    <span className="font-medium text-[var(--foreground)]">1234-5678-901</span>
+                      <span>IBAN:</span>         <span className="font-medium text-[var(--foreground)]">PK36HABB0000001234567901</span>
+                      <span>Amount:</span>       <span className="font-semibold text-[var(--primary)]">{formatPKR(course.price)}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--muted)] mb-1">Transaction Reference / TT Number</label>
+                    <input type="text" placeholder="Enter your transfer reference" value={txnRef}
+                      onChange={e => setTxnRef(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-[var(--border)] text-sm bg-[var(--surface)] text-[var(--foreground)] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 text-xs text-[var(--muted)] p-2.5 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]">
+                <Icon.Lock size={12} className="text-emerald-500 shrink-0" />
+                {payMethod === "card" ? "Secure payment · 30-day money-back guarantee" : "Payment will be verified within 1-2 hours. You'll receive email confirmation."}
+              </div>
+
+              <div className="flex gap-2 pt-1">
+                <Button variant="outline" className="flex-1" onClick={() => setPayStep("method")} disabled={paying}>Back</Button>
+                <Button className="flex-1" loading={paying} onClick={handlePurchase}>
+                  {payMethod === "card"
+                    ? <><Icon.CreditCard size={15} /> Pay {formatPKR(course.price)}</>
+                    : <><Icon.CheckCircle size={15} /> Submit Payment</>}
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       </Modal>
     </div>

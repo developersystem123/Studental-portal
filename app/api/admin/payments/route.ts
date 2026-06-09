@@ -39,7 +39,7 @@ export async function GET() {
       pending: payments.filter((p) => p.status === "pending").length,
       failed: payments.filter((p) => p.status === "failed").length,
       transactions: completed.length,
-      currency: payments[0]?.currency ?? "USD",
+      currency: payments[0]?.currency ?? "PKR",
     };
 
     return Response.json({ payments, summary });

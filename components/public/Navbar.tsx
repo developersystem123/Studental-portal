@@ -181,7 +181,7 @@ export function Navbar() {
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-0.5">
+        <nav className="hidden lg:flex items-center gap-0.5">
           {links.map((l) => {
             const active = l.href === "/" ? pathname === "/" : pathname.startsWith(l.href);
             return (
@@ -267,7 +267,7 @@ export function Navbar() {
         </nav>
 
         {/* Desktop actions */}
-        <div className="hidden md:flex items-center gap-1.5 shrink-0">
+        <div className="hidden lg:flex items-center gap-1.5 shrink-0">
           <button
             type="button"
             onClick={toggleTheme}
@@ -351,7 +351,7 @@ export function Navbar() {
         </div>
 
         {/* Mobile controls */}
-        <div className="md:hidden flex items-center gap-1.5">
+        <div className="lg:hidden flex items-center gap-1.5">
           <button
             type="button"
             onClick={toggleTheme}
@@ -378,7 +378,7 @@ export function Navbar() {
 
       {/* Mobile menu */}
       {open && (
-        <div className="md:hidden border-t border-[var(--border)] bg-[var(--surface)] fade-in">
+        <div className="lg:hidden border-t border-[var(--border)] bg-[var(--surface)] fade-in">
           <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-1">
             {links.map((l) => {
               const active = l.href === "/" ? pathname === "/" : pathname.startsWith(l.href);

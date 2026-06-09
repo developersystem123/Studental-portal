@@ -17,7 +17,7 @@ import {
   useToast,
 } from "@/components/ui";
 import Icon from "@/components/icons";
-import { cn, formatDate, relativeTime, uid } from "@/lib/utils";
+import { cn, formatDate, relativeTime } from "@/lib/utils";
 
 type Audience = "all" | "students" | "teachers" | "pro";
 type Channel = "in_app" | "email" | "both";
@@ -35,13 +35,6 @@ type Ann = {
   createdAt: string;
   reach: number;
 };
-
-const MOCK_ANNS: Ann[] = [
-  { id: "a1", title: "Platform maintenance on June 1st", body: "We'll be performing scheduled maintenance from 2–4 AM PKT. The platform may be briefly unavailable.", audience: "all", channel: "both", status: "sent", sentAt: "2026-05-24T10:00:00Z", scheduledAt: null, createdAt: "2026-05-23T09:00:00Z", reach: 12400 },
-  { id: "a2", title: "New AI Chat feature is live!", body: "Teachers can now access the full AI Chat assistant to help plan lessons and create content.", audience: "teachers", channel: "in_app", status: "sent", sentAt: "2026-05-20T08:30:00Z", scheduledAt: null, createdAt: "2026-05-19T12:00:00Z", reach: 340 },
-  { id: "a3", title: "Pro plan discount — 20% off annual", body: "For a limited time, upgrade to Pro annual and save 20%. Use code ANNUAL20 at checkout.", audience: "students", channel: "email", status: "sent", sentAt: "2026-05-15T11:00:00Z", scheduledAt: null, createdAt: "2026-05-14T10:00:00Z", reach: 8600 },
-  { id: "a4", title: "June curriculum updates", body: "New courses in Data Science and UI Design are coming next month. Stay tuned!", audience: "all", channel: "in_app", status: "scheduled", sentAt: null, scheduledAt: "2026-06-01T09:00:00Z", createdAt: "2026-05-25T14:00:00Z", reach: 0 },
-];
 
 const AUDIENCE_LABELS: Record<Audience, string> = {
   all: "All users", students: "Students only", teachers: "Teachers only", pro: "Pro subscribers",
@@ -106,7 +99,8 @@ function exportCSV(anns: Ann[]) {
 
 export default function AdminAnnouncementsPage() {
   const toast = useToast();
-  const [anns, setAnns] = React.useState<Ann[]>(MOCK_ANNS);
+  const [anns, setAnns] = React.useState<Ann[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const [filter, setFilter] = React.useState<AnnStatus | "all">("all");
   const [audienceFilter, setAudienceFilter] = React.useState<Audience | "all">("all");
   const [query, setQuery] = React.useState("");
@@ -122,6 +116,21 @@ export default function AdminAnnouncementsPage() {
 
   // Delete confirm
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
+
+  // Fetch on mount
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/announcements");
+        const data = await res.json();
+        if (res.ok) setAnns(data.announcements ?? []);
+      } catch {
+        // fail silently — empty list
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
   function openCompose(ann?: Ann) {
     if (ann) {
@@ -139,16 +148,23 @@ export default function AdminAnnouncementsPage() {
     setComposeOpen(true);
   }
 
-  function duplicateAnn(ann: Ann) {
-    const now = new Date().toISOString();
-    const dup: Ann = {
-      ...ann, id: uid(),
-      title: `Copy of ${ann.title}`,
-      status: "draft", sentAt: null, scheduledAt: null,
-      createdAt: now, reach: 0,
-    };
-    setAnns((p) => [dup, ...p]);
-    toast.push({ title: "Announcement duplicated as draft", tone: "success" });
+  async function duplicateAnn(ann: Ann) {
+    const res = await fetch("/api/admin/announcements", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: `Copy of ${ann.title}`,
+        body: ann.body,
+        audience: ann.audience,
+        channel: ann.channel,
+        status: "draft",
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setAnns((p) => [data.announcement, ...p]);
+      toast.push({ title: "Announcement duplicated as draft", tone: "success" });
+    }
   }
 
   async function handleSend(asDraft = false) {
@@ -159,43 +175,56 @@ export default function AdminAnnouncementsPage() {
       toast.push({ title: "Pick a schedule date/time.", tone: "danger" }); return;
     }
     setSending(true);
-    await new Promise((r) => setTimeout(r, 700));
-    const now = new Date().toISOString();
     const status: AnnStatus = asDraft ? "draft" : form.scheduleMode ? "scheduled" : "sent";
-
-    if (editingId) {
-      setAnns((p) => p.map((a) => a.id === editingId ? {
-        ...a, title: form.title.trim(), body: form.body.trim(),
-        audience: form.audience, channel: form.channel, status,
-        sentAt: status === "sent" ? now : a.sentAt,
-        scheduledAt: status === "scheduled" ? new Date(form.scheduledAt).toISOString() : null,
-        reach: status === "sent" ? AUDIENCE_REACH[form.audience] : a.reach,
-      } : a));
-      toast.push({ title: "Announcement updated", tone: "success" });
-    } else {
-      const newAnn: Ann = {
-        id: uid(), title: form.title.trim(), body: form.body.trim(),
-        audience: form.audience, channel: form.channel, status,
-        sentAt: status === "sent" ? now : null,
-        scheduledAt: status === "scheduled" ? new Date(form.scheduledAt).toISOString() : null,
-        createdAt: now, reach: status === "sent" ? AUDIENCE_REACH[form.audience] : 0,
-      };
-      setAnns((p) => [newAnn, ...p]);
-      toast.push({
-        title: asDraft ? "Saved as draft" : form.scheduleMode ? "Announcement scheduled!" : "Announcement sent!",
-        tone: "success",
-      });
+    const payload = {
+      title: form.title.trim(), body: form.body.trim(),
+      audience: form.audience, channel: form.channel, status,
+      scheduledAt: status === "scheduled" ? new Date(form.scheduledAt).toISOString() : undefined,
+    };
+    try {
+      if (editingId) {
+        const res = await fetch(`/api/admin/announcements/${editingId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setAnns((p) => p.map((a) => a.id === editingId ? data.announcement : a));
+          toast.push({ title: "Announcement updated", tone: "success" });
+        }
+      } else {
+        const res = await fetch("/api/admin/announcements", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setAnns((p) => [data.announcement, ...p]);
+          toast.push({
+            title: asDraft ? "Saved as draft" : form.scheduleMode ? "Announcement scheduled!" : "Announcement sent!",
+            tone: "success",
+          });
+        }
+      }
+    } catch {
+      toast.push({ title: "Network error, please try again.", tone: "danger" });
+    } finally {
+      setSending(false);
+      setComposeOpen(false);
     }
-    setSending(false);
-    setComposeOpen(false);
   }
 
-  function confirmDelete() {
+  async function confirmDelete() {
     if (!deletingId) return;
-    setAnns((p) => p.filter((a) => a.id !== deletingId));
+    const res = await fetch(`/api/admin/announcements/${deletingId}`, { method: "DELETE" });
+    if (res.ok) {
+      setAnns((p) => p.filter((a) => a.id !== deletingId));
+      if (viewing?.id === deletingId) setViewing(null);
+      toast.push({ title: "Announcement deleted", tone: "info" });
+    }
     setDeletingId(null);
-    if (viewing?.id === deletingId) setViewing(null);
-    toast.push({ title: "Announcement deleted", tone: "info" });
   }
 
   const stats = React.useMemo(() => ({
@@ -298,7 +327,9 @@ export default function AdminAnnouncementsPage() {
       </div>
 
       {/* ── History ── */}
-      {filtered.length === 0 ? (
+      {loading ? (
+        <Card><CardBody><div className="flex items-center justify-center py-12 text-[var(--muted)]"><Icon.Loader size={22} className="animate-spin mr-2" /> Loading announcements…</div></CardBody></Card>
+      ) : filtered.length === 0 ? (
         <Card>
           <CardBody>
             <EmptyState

@@ -3,15 +3,15 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card, CardBody, Input, Label, Modal, useToast } from "@/components/ui";
+import { Badge, Button, Input, Label, Modal, useToast } from "@/components/ui";
 import Icon from "@/components/icons";
 import { useAuth, useData } from "@/lib/store";
 import {
   ChangePasswordCard,
+  CollapsibleCard,
   PersonalInfoCard,
   ProfileCompletionCard,
   ProfileHero,
-  SectionHeader,
 } from "@/components/profile/sections";
 import { cn, relativeTime } from "@/lib/utils";
 
@@ -139,174 +139,164 @@ export default function StudentProfilePage() {
       <ChangePasswordCard />
 
       {/* ── Connected accounts ── */}
-      <Card>
-        <CardBody className="space-y-5">
-          <SectionHeader
-            icon={<Icon.Google size={18} />}
-            title="Connected accounts"
-            description="Link external accounts for faster sign-in."
-          />
-          <div className="flex items-center justify-between gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface-2)]/40 p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)]">
-                <Icon.Google size={20} />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Google</p>
-                <p className="text-xs text-[var(--muted)]">
-                  {user.googleConnected ? `Connected · ${user.email}` : "Not connected"}
-                </p>
-              </div>
-              {user.googleConnected && (
-                <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                  Active
-                </span>
-              )}
+      <CollapsibleCard
+        icon={<Icon.Google size={18} />}
+        title="Connected accounts"
+        description="Link external accounts for faster sign-in."
+      >
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface-2)]/40 p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)]">
+              <Icon.Google size={20} />
             </div>
-            <Button
-              variant={user.googleConnected ? "ghost" : "outline"}
-              size="sm"
-              onClick={() => setGoogleModal(user.googleConnected ? "disconnect" : "connect")}
-            >
-              {user.googleConnected ? "Disconnect" : "Connect"}
-            </Button>
+            <div>
+              <p className="text-sm font-medium">Google</p>
+              <p className="text-xs text-[var(--muted)]">
+                {user.googleConnected ? `Connected · ${user.email}` : "Not connected"}
+              </p>
+            </div>
+            {user.googleConnected && (
+              <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                Active
+              </span>
+            )}
           </div>
-        </CardBody>
-      </Card>
+          <Button
+            variant={user.googleConnected ? "ghost" : "outline"}
+            size="sm"
+            onClick={() => setGoogleModal(user.googleConnected ? "disconnect" : "connect")}
+          >
+            {user.googleConnected ? "Disconnect" : "Connect"}
+          </Button>
+        </div>
+      </CollapsibleCard>
 
       {/* ── Your learning ── */}
-      <Card>
-        <CardBody className="space-y-4">
-          <SectionHeader
-            icon={<Icon.Compass size={18} />}
-            title="Your learning"
-            description="Pick up where you left off."
-          />
-
-          {/* Recent enrollments */}
-          {recentEnrollments.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-2)]">
-                Recent courses
-              </p>
-              <ul className="space-y-2">
-                {recentEnrollments.map((e) => {
-                  const course = getCourse(e.courseId);
-                  if (!course) return null;
-                  return (
-                    <li key={e.courseId}>
-                      <Link
-                        href={`/my-courses/${e.courseId}`}
-                        className="flex items-center gap-3 rounded-xl border border-[var(--border)] p-3 transition hover:border-[var(--primary)]/30 hover:bg-[var(--primary-soft)]/20 group"
-                      >
-                        <div className="h-12 w-16 shrink-0 overflow-hidden rounded-lg border border-[var(--border)]">
-                          <img
-                            src={course.thumbnail}
-                            alt={course.title}
-                            className="h-full w-full object-cover"
+      <CollapsibleCard
+        icon={<Icon.Compass size={18} />}
+        title="Your learning"
+        description="Pick up where you left off."
+      >
+        {/* Recent enrollments */}
+        {recentEnrollments.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-2)]">
+              Recent courses
+            </p>
+            <ul className="space-y-2">
+              {recentEnrollments.map((e) => {
+                const course = getCourse(e.courseId);
+                if (!course) return null;
+                return (
+                  <li key={e.courseId}>
+                    <Link
+                      href={`/my-courses/${e.courseId}`}
+                      className="flex items-center gap-3 rounded-xl border border-[var(--border)] p-3 transition hover:border-[var(--primary)]/30 hover:bg-[var(--primary-soft)]/20 group"
+                    >
+                      <div className="h-12 w-16 shrink-0 overflow-hidden rounded-lg border border-[var(--border)]">
+                        <img
+                          src={course.thumbnail}
+                          alt={course.title}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{course.title}</p>
+                        <p className="text-xs text-[var(--muted)]">
+                          {e.completed ? "Completed" : `${e.progress}% complete`}
+                          {" · "}
+                          {relativeTime(e.enrolledAt)}
+                        </p>
+                        <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-[var(--surface-2)]">
+                          <div
+                            className={cn(
+                              "h-full rounded-full",
+                              e.completed ? "bg-emerald-500" : "bg-[var(--primary)]",
+                            )}
+                            style={{ width: `${e.progress}%` }}
                           />
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium">{course.title}</p>
-                          <p className="text-xs text-[var(--muted)]">
-                            {e.completed ? "Completed" : `${e.progress}% complete`}
-                            {" · "}
-                            {relativeTime(e.enrolledAt)}
-                          </p>
-                          {/* Mini progress bar */}
-                          <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-[var(--surface-2)]">
-                            <div
-                              className={cn(
-                                "h-full rounded-full",
-                                e.completed ? "bg-emerald-500" : "bg-[var(--primary)]",
-                              )}
-                              style={{ width: `${e.progress}%` }}
-                            />
-                          </div>
-                        </div>
-                        <div className="shrink-0">
-                          {e.completed ? (
-                            <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                              <Icon.CheckCircle size={11} /> Done
-                            </span>
-                          ) : (
-                            <Icon.ChevronRight
-                              size={16}
-                              className="text-[var(--muted-2)] transition group-hover:translate-x-0.5 group-hover:text-[var(--primary)]"
-                            />
-                          )}
-                        </div>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          )}
-
-          {/* Quick links */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-            <QuickLink
-              href="/my-courses"
-              icon={<Icon.Book size={16} />}
-              title="My courses"
-              description={`${enrollments.length} enrolled`}
-            />
-            <QuickLink
-              href="/certificates"
-              icon={<Icon.Award size={16} />}
-              title="Certificates"
-              description={`${certificates.length} earned`}
-            />
-            <QuickLink
-              href="/explore"
-              icon={<Icon.Compass size={16} />}
-              title="Explore"
-              description="Browse the catalog"
-            />
+                      </div>
+                      <div className="shrink-0">
+                        {e.completed ? (
+                          <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                            <Icon.CheckCircle size={11} /> Done
+                          </span>
+                        ) : (
+                          <Icon.ChevronRight
+                            size={16}
+                            className="text-[var(--muted-2)] transition group-hover:translate-x-0.5 group-hover:text-[var(--primary)]"
+                          />
+                        )}
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
+        )}
 
-          {/* Progress summary */}
-          {enrollments.length > 0 && (
-            <div className="mt-1 grid grid-cols-3 gap-3">
-              {[
-                { label: "Not started", value: notStarted, color: "bg-[var(--surface-2)]" },
-                { label: "In progress", value: inProgress, color: "bg-amber-500" },
-                { label: "Completed", value: completed, color: "bg-emerald-500" },
-              ].map(({ label, value, color }) => (
-                <div key={label} className="rounded-xl border border-[var(--border)] p-3 text-center">
-                  <div className={cn("mx-auto mb-1.5 h-1.5 w-8 rounded-full", color)} />
-                  <p className="text-xl font-bold tabular-nums">{value}</p>
-                  <p className="text-xs text-[var(--muted)]">{label}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardBody>
-      </Card>
+        {/* Quick links */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <QuickLink
+            href="/my-courses"
+            icon={<Icon.Book size={16} />}
+            title="My courses"
+            description={`${enrollments.length} enrolled`}
+          />
+          <QuickLink
+            href="/certificates"
+            icon={<Icon.Award size={16} />}
+            title="Certificates"
+            description={`${certificates.length} earned`}
+          />
+          <QuickLink
+            href="/explore"
+            icon={<Icon.Compass size={16} />}
+            title="Explore"
+            description="Browse the catalog"
+          />
+        </div>
+
+        {/* Progress summary */}
+        {enrollments.length > 0 && (
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: "Not started", value: notStarted, color: "bg-[var(--surface-2)]" },
+              { label: "In progress", value: inProgress, color: "bg-amber-500" },
+              { label: "Completed", value: completed, color: "bg-emerald-500" },
+            ].map(({ label, value, color }) => (
+              <div key={label} className="rounded-xl border border-[var(--border)] p-3 text-center">
+                <div className={cn("mx-auto mb-1.5 h-1.5 w-8 rounded-full", color)} />
+                <p className="text-xl font-bold tabular-nums">{value}</p>
+                <p className="text-xs text-[var(--muted)]">{label}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </CollapsibleCard>
 
       {/* ── Danger zone ── */}
-      <Card className="border-[var(--danger)]/30">
-        <CardBody className="space-y-5">
-          <SectionHeader
-            icon={<Icon.Trash size={18} />}
-            title="Danger zone"
-            description="Permanent actions. Cannot be undone."
-            tone="danger"
-          />
-          <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[var(--danger)]/20 p-4">
-            <div className="min-w-0">
-              <p className="text-sm font-medium">Delete account</p>
-              <p className="mt-0.5 text-xs text-[var(--muted)]">
-                Permanently removes your account, enrollments, certificates, and all progress.
-              </p>
-            </div>
-            <Button variant="danger" onClick={() => setConfirmDelete(true)}>
-              <Icon.Trash size={16} /> Delete account
-            </Button>
+      <CollapsibleCard
+        icon={<Icon.Trash size={18} />}
+        title="Danger zone"
+        description="Permanent actions. Cannot be undone."
+        tone="danger"
+        defaultOpen={false}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[var(--danger)]/20 p-4">
+          <div className="min-w-0">
+            <p className="text-sm font-medium">Delete account</p>
+            <p className="mt-0.5 text-xs text-[var(--muted)]">
+              Permanently removes your account, enrollments, certificates, and all progress.
+            </p>
           </div>
-        </CardBody>
-      </Card>
+          <Button variant="danger" onClick={() => setConfirmDelete(true)}>
+            <Icon.Trash size={16} /> Delete account
+          </Button>
+        </div>
+      </CollapsibleCard>
 
       {/* ── Google connect modal ── */}
       <Modal

@@ -78,8 +78,11 @@ const STATUS_BORDER: Record<PaymentStatus, string> = {
 
 const PAGE_SIZE = 10;
 
-function money(cents: number, currency = "USD") {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(cents / 100);
+function money(amount: number, currency = "PKR") {
+  if (currency === "PKR" || currency === "pkr") {
+    return `Rs ${Math.round(amount).toLocaleString("en-PK")}`;
+  }
+  return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount);
 }
 
 function avatarColor(name: string) {
@@ -122,7 +125,7 @@ function exportCSV(payments: Payment[]) {
     `"${p.description.replace(/"/g, '""')}"`,
     `"${(p.courseTitle ?? "").replace(/"/g, '""')}"`,
     p.method,
-    (p.amount / 100).toFixed(2),
+    money(p.amount, p.currency),
     p.currency,
     p.status,
     p.txnId ?? "",

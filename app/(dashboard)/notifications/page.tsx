@@ -86,6 +86,19 @@ export default function NotificationsPage() {
   const [grouped, setGrouped] = useState(true);
   const [inboxOpen, setInboxOpen] = useState(true);
   const [deletingBulk, setDeletingBulk] = useState(false);
+  const [showPrefs, setShowPrefs] = useState(false);
+  const [mutedTypes, setMutedTypes] = useState<Set<Notification["type"]>>(new Set());
+  const [emailNotifs, setEmailNotifs] = useState(true);
+  const [browserNotifs, setBrowserNotifs] = useState(false);
+
+  const toggleMute = (type: Notification["type"]) => {
+    setMutedTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
+    });
+  };
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -190,6 +203,13 @@ export default function NotificationsPage() {
             >
               <Icon.Check size={14} /> Mark all read
             </Button>
+            <Button
+              variant={showPrefs ? "soft" : "outline"}
+              size="sm"
+              onClick={() => setShowPrefs((v) => !v)}
+            >
+              <Icon.Settings size={14} /> Preferences
+            </Button>
           </div>
         </div>
 
@@ -226,6 +246,158 @@ export default function NotificationsPage() {
           })}
         </div>
       </div>
+
+      {/* ── Notification Preferences Panel ─────────────────────── */}
+      {showPrefs && (
+        <Card className="border-[var(--primary)]/20">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--primary-soft)] text-[var(--primary)]">
+                  <Icon.Settings size={14} />
+                </span>
+                Notification Preferences
+              </CardTitle>
+              <button
+                onClick={() => setShowPrefs(false)}
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)] transition"
+              >
+                <Icon.X size={14} />
+              </button>
+            </div>
+          </CardHeader>
+          <CardBody className="space-y-5">
+            {/* Notification type toggles */}
+            <div>
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+                Notification Types
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {(Object.keys(TYPE_INFO) as Notification["type"][]).map((type) => {
+                  const info = TYPE_INFO[type];
+                  const muted = mutedTypes.has(type);
+                  const count = notifications.filter((n) => n.type === type).length;
+                  return (
+                    <div
+                      key={type}
+                      className={cn(
+                        "flex items-center justify-between rounded-xl border p-3 transition-colors",
+                        muted
+                          ? "border-[var(--border)] bg-[var(--surface-2)] opacity-60"
+                          : "border-[var(--border)] bg-[var(--surface)]",
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={cn(
+                            "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
+                            muted ? "bg-[var(--surface-2)] text-[var(--muted)]" : `${info.bg} ${info.color}`,
+                          )}
+                        >
+                          {info.icon}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{info.label}</p>
+                          <p className="text-xs text-[var(--muted)]">
+                            {muted ? "Muted" : `${count} notification${count !== 1 ? "s" : ""}`}
+                          </p>
+                        </div>
+                      </div>
+                      {/* Toggle switch */}
+                      <button
+                        onClick={() => toggleMute(type)}
+                        className={cn(
+                          "relative h-6 w-11 shrink-0 rounded-full transition-colors duration-200",
+                          muted ? "bg-[var(--border-strong)]" : "bg-[var(--primary)]",
+                        )}
+                        aria-label={muted ? `Unmute ${info.label}` : `Mute ${info.label}`}
+                      >
+                        <span
+                          className={cn(
+                            "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200",
+                            muted ? "translate-x-0.5" : "translate-x-[1.375rem]",
+                          )}
+                        />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Delivery preferences */}
+            <div>
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+                Delivery Channels
+              </p>
+              <div className="space-y-2">
+                {[
+                  {
+                    label: "Email notifications",
+                    description: "Receive a daily digest to your email",
+                    icon: <Icon.Mail size={15} />,
+                    value: emailNotifs,
+                    toggle: () => setEmailNotifs((v) => !v),
+                  },
+                  {
+                    label: "Browser notifications",
+                    description: "Show alerts in your browser",
+                    icon: <Icon.Bell size={15} />,
+                    value: browserNotifs,
+                    toggle: () => setBrowserNotifs((v) => !v),
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-[var(--muted)]">{item.icon}</span>
+                      <div>
+                        <p className="text-sm font-medium">{item.label}</p>
+                        <p className="text-xs text-[var(--muted)]">{item.description}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={item.toggle}
+                      className={cn(
+                        "relative h-6 w-11 shrink-0 rounded-full transition-colors duration-200",
+                        item.value ? "bg-[var(--primary)]" : "bg-[var(--border-strong)]",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200",
+                          item.value ? "translate-x-[1.375rem]" : "translate-x-0.5",
+                        )}
+                      />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Clear read */}
+            <div className="flex items-center justify-between border-t border-[var(--border)] pt-4">
+              <p className="text-sm text-[var(--muted)]">
+                {notifications.filter((n) => n.read).length} read notification{notifications.filter((n) => n.read).length !== 1 ? "s" : ""} can be cleared
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  for (const n of notifications.filter((n) => n.read)) {
+                    await deleteNotification(n.id);
+                  }
+                }}
+                disabled={notifications.filter((n) => n.read).length === 0}
+              >
+                <Icon.Trash size={13} /> Clear read
+              </Button>
+            </div>
+          </CardBody>
+        </Card>
+      )}
 
       {/* ── Search + controls row ───────────────────────────────── */}
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center">

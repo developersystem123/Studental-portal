@@ -391,10 +391,13 @@ export default function AiChatPage() {
                   />
                 </div>
               ) : (
-                <button
+                <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() => { setActiveId(s.id); setSidebarOpen(false); }}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { setActiveId(s.id); setSidebarOpen(false); } }}
                   className={cn(
-                    "w-full text-left px-4 py-3 hover:bg-[var(--surface-2)] flex items-start gap-2 group transition-colors",
+                    "w-full text-left px-4 py-3 hover:bg-[var(--surface-2)] flex items-start gap-2 group transition-colors cursor-pointer",
                     s.id === activeId && "bg-[var(--primary-soft)]",
                   )}
                 >
@@ -420,7 +423,7 @@ export default function AiChatPage() {
                       <Icon.Trash size={11} />
                     </button>
                   </div>
-                </button>
+                </div>
               )}
             </li>
           ))}

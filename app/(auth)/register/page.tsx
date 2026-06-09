@@ -151,11 +151,7 @@ export default function RegisterPage() {
         <h2 className="text-3xl font-bold leading-tight">
           Create your <span className="gradient-text">EduPortal</span> account
         </h2>
-        <p className="text-xs text-[var(--muted)] flex items-start gap-1.5 mt-1 p-2.5 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]">
-          <Icon.AlertCircle size={13} className="text-primary shrink-0 mt-0.5" />
-          This form is for <strong>students only</strong>. Teacher &amp; Admin accounts are created by the EduPortal team — contact us at{" "}
-          <a href="mailto:support@eduportal.app" className="text-[var(--primary)] hover:underline font-medium">support@eduportal.app</a>.
-        </p>
+        {/* Notice removed per request */}
       </div>
 
       {/* Google */}

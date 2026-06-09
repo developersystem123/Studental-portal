@@ -197,7 +197,7 @@ export default function HomePage() {
           </div>
 
           {/* Hero visual — real photo */}
-          <div className="relative fade-in hidden lg:block">
+          <div className="relative fade-in hidden lg:block overflow-hidden">
             <div className="absolute -inset-6 bg-gradient-to-tr from-[var(--primary)]/25 via-transparent to-[var(--accent)]/20 blur-3xl rounded-3xl pointer-events-none" />
             <div className="relative rounded-3xl overflow-hidden shadow-2xl ring-1 ring-[var(--border)]">
               <Image
@@ -720,7 +720,7 @@ function AIShowcaseSection() {
           </div>
         </div>
 
-        <div className="relative fade-in">
+        <div className="relative fade-in overflow-hidden">
           <div className="absolute -inset-6 bg-linear-to-tr from-(--primary)/15 via-transparent to-(--accent)/20 blur-3xl rounded-3xl pointer-events-none" />
           <div className="relative rounded-3xl overflow-hidden shadow-2xl ring-1 ring-[var(--border)]">
             <Image

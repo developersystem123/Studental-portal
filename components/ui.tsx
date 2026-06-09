@@ -636,7 +636,7 @@ export function StatCard({
           {icon}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-[var(--muted)] uppercase tracking-wide">{label}</p>
+          <p className="text-xs font-medium text-[var(--muted)] uppercase tracking-wide truncate">{label}</p>
           <p className="text-2xl font-bold mt-0.5 tracking-tight">{value}</p>
           {delta && (
             <p className={cn("text-xs mt-1.5 flex items-center gap-1 font-medium", t.delta)}>

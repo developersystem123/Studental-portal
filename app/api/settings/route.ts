@@ -9,6 +9,8 @@ const DEFAULTS = {
   language: "en",
   timezone: "UTC",
   theme: "auto",
+  profilePublic: true,
+  reduceAnimations: false,
 };
 
 export async function GET() {
@@ -36,6 +38,8 @@ export async function PUT(request: Request) {
         "language",
         "timezone",
         "theme",
+        "profilePublic",
+        "reduceAnimations",
       ] as const
     ).reduce<Record<string, unknown>>((acc, k) => {
       if (k in patch) acc[k] = patch[k as keyof typeof DEFAULTS];

@@ -147,16 +147,18 @@ export default function StudentApplicationsPage() {
 
       {/* Filters row */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-        <Tabs
-          value={filter}
-          onChange={(v) => setFilter(v as Filter)}
-          options={[
-            { value: "all", label: "All", count: counts.all },
-            { value: "pending", label: "Pending", count: counts.pending },
-            { value: "approved", label: "Approved", count: counts.approved },
-            { value: "rejected", label: "Rejected", count: counts.rejected },
-          ]}
-        />
+        <div className="overflow-x-auto max-w-full scrollbar-thin">
+          <Tabs
+            value={filter}
+            onChange={(v) => setFilter(v as Filter)}
+            options={[
+              { value: "all", label: "All", count: counts.all },
+              { value: "pending", label: "Pending", count: counts.pending },
+              { value: "approved", label: "Approved", count: counts.approved },
+              { value: "rejected", label: "Rejected", count: counts.rejected },
+            ]}
+          />
+        </div>
         <div className="flex items-center gap-2 sm:ml-auto">
           <Input
             value={search}
@@ -356,9 +358,14 @@ export default function StudentApplicationsPage() {
                     <div className="flex items-center justify-between pt-2 border-t border-[var(--border)] flex-wrap gap-2">
                       <button
                         onClick={() => setExpandedId(isExpanded ? null : app.id)}
-                        className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] flex items-center gap-1 transition"
+                        className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] flex items-center gap-1.5 transition-colors"
                       >
-                        {isExpanded ? <Icon.ChevronDown size={13} className="rotate-180" /> : <Icon.ChevronDown size={13} />}
+                        <span className="flex items-center justify-center h-5 w-5 rounded-full border border-[var(--border)] bg-[var(--surface-2)]">
+                          <Icon.ChevronDown
+                            size={12}
+                            className={cn("transition-transform duration-200", isExpanded && "rotate-180")}
+                          />
+                        </span>
                         {isExpanded ? "Hide details" : "View full application"}
                       </button>
                       <div className="flex items-center gap-2">

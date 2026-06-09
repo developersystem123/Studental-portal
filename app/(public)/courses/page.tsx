@@ -283,22 +283,8 @@ export default function PublicCoursesPage() {
             </div>
 
             {/* Sort */}
-            <div className="relative hidden sm:block">
-              <select
-                value={sort}
-                onChange={(e) => setSort(e.target.value as Sort)}
-                className={cn(
-                  "h-10 pl-3 pr-8 rounded-xl text-sm appearance-none cursor-pointer",
-                  "bg-[var(--surface)] border border-[var(--border)]",
-                  "focus:outline-none focus:ring-2 focus:ring-[var(--ring)]/35",
-                  "text-[var(--foreground)] transition-all",
-                )}
-              >
-                {SORT_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-              <Icon.ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)] pointer-events-none" />
+            <div className="hidden sm:block">
+              <SortDropdown value={sort} onChange={setSort} />
             </div>
 
             {/* Level pills (desktop) */}
@@ -383,17 +369,8 @@ export default function PublicCoursesPage() {
           </div>
 
           {/* Mobile sort */}
-          <div className="flex items-center gap-2 sm:hidden">
-            <Icon.Filter size={14} className="text-[var(--muted)]" />
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value as Sort)}
-              className="text-xs bg-transparent text-[var(--foreground)] focus:outline-none"
-            >
-              {SORT_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
+          <div className="sm:hidden">
+            <SortDropdown value={sort} onChange={setSort} compact />
           </div>
         </div>
 
@@ -601,6 +578,101 @@ function StatPill({ icon, label }: { icon: React.ReactNode; label: string }) {
       <span className="text-[var(--primary)]">{icon}</span>
       {label}
     </span>
+  );
+}
+
+function SortDropdown({
+  value,
+  onChange,
+  compact = false,
+}: {
+  value: Sort;
+  onChange: (v: Sort) => void;
+  compact?: boolean;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+  const current = SORT_OPTIONS.find((o) => o.value === value)!;
+
+  React.useEffect(() => {
+    if (!open) return;
+    function onDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      {/* Trigger */}
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className={cn(
+          "flex items-center gap-2 rounded-xl text-sm font-medium transition-all select-none",
+          "bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)]",
+          "hover:border-[var(--border-strong)] hover:bg-[var(--surface-2)]",
+          "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]/40",
+          open && "border-[var(--primary)]/40 shadow-sm shadow-[var(--primary)]/10",
+          compact ? "h-8 pl-2.5 pr-2 min-w-0 text-xs" : "h-10 pl-3.5 pr-3 min-w-[168px]",
+        )}
+      >
+        <Icon.Filter size={compact ? 12 : 13} className="text-[var(--primary)] shrink-0" />
+        <span className={cn("flex-1 text-left truncate", compact && "hidden xs:block")}>
+          {current.label}
+        </span>
+        <Icon.ChevronDown
+          size={13}
+          className={cn(
+            "text-[var(--muted)] shrink-0 transition-transform duration-200",
+            open && "rotate-180",
+          )}
+        />
+      </button>
+
+      {/* Panel */}
+      <div
+        className={cn(
+          "absolute z-50 right-0 top-[calc(100%+6px)] w-52",
+          "bg-[var(--surface)] border border-[var(--border)] rounded-xl",
+          "shadow-xl shadow-black/12 dark:shadow-black/30",
+          "overflow-hidden origin-top",
+          "transition-all duration-200 ease-out",
+          open
+            ? "opacity-100 scale-100 translate-y-0 pointer-events-auto"
+            : "opacity-0 scale-95 -translate-y-2 pointer-events-none",
+        )}
+      >
+        {/* Header */}
+        <div className="px-3 pt-2.5 pb-1.5 border-b border-[var(--border)]">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--muted-2)]">
+            Sort by
+          </p>
+        </div>
+        <div className="p-1.5 space-y-0.5">
+          {SORT_OPTIONS.map((o) => {
+            const active = o.value === value;
+            return (
+              <button
+                key={o.value}
+                onClick={() => { onChange(o.value); setOpen(false); }}
+                className={cn(
+                  "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-all duration-150",
+                  active
+                    ? "bg-[var(--primary-soft)] text-[var(--primary)] font-semibold"
+                    : "text-[var(--foreground)] hover:bg-[var(--surface-2)]",
+                )}
+              >
+                <span className="w-4 h-4 flex items-center justify-center shrink-0">
+                  {active && <Icon.Check size={13} />}
+                </span>
+                {o.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }
 

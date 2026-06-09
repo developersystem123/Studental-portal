@@ -5,7 +5,7 @@ import { hasStripeKey, createCheckoutSession } from "@/lib/stripe";
 import { sendEmailAsync, paymentReceiptEmail } from "@/lib/email";
 import type { Payment, PaymentMethod } from "@/lib/generated/prisma/client";
 
-const VALID_METHODS: PaymentMethod[] = ["card", "bank", "manual", "scholarship"];
+const VALID_METHODS: PaymentMethod[] = ["card", "bank", "manual", "scholarship", "jazzcash", "easypaisa", "bank_transfer"];
 
 function serializePayment(p: Payment & { course?: { id: string; title: string } | null }) {
   return {
@@ -56,7 +56,8 @@ export async function POST(request: Request) {
     if (courseId) {
       const course = await prisma.course.findUnique({ where: { id: courseId } });
       if (!course) throw new HttpError(404, "Course not found.");
-      // Allow a small rounding tolerance (1 cent) but reject amounts far from actual price.
+      // amount from frontend is in whole currency units (e.g., 59 = Rs 59 / $59).
+      // course.price is also stored in whole units. Allow ±1 unit tolerance.
       if (Math.abs(course.price - amount) > 1) {
         throw new HttpError(400, "Payment amount does not match course price.");
       }
@@ -72,8 +73,8 @@ export async function POST(request: Request) {
         data: {
           userId: me.id,
           courseId: courseId ?? null,
-          amount,
-          currency: "USD",
+          amount, // whole PKR rupees
+          currency: "PKR",
           method: "card",
           status: "pending",
           description,
@@ -102,15 +103,17 @@ export async function POST(request: Request) {
     }
 
     // ---- Simulated charge (no Stripe key) ----
+    // JazzCash / EasyPaisa / bank_transfer are held as pending until admin confirms.
+    const immediateMethod = payMethod === "card";
     const payment = await prisma.payment.create({
       data: {
         userId: me.id,
         courseId: courseId ?? null,
-        amount,
-        currency: "USD",
+        amount, // whole PKR rupees
+        currency: "PKR",
         method: payMethod,
-        status: payMethod === "card" ? "completed" : "pending",
-        txnId: `txn_demo_${uid()}`,
+        status: immediateMethod ? "completed" : "pending",
+        txnId: immediateMethod ? `txn_demo_${uid()}` : null,
         description,
       },
     });
