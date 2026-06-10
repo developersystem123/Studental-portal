@@ -269,16 +269,18 @@ export default function TeacherAssignmentsPage() {
           {/* Filters row */}
           <div className="flex flex-col gap-3">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <Tabs
-                value={filter}
-                onChange={(v) => setFilter(v as Filter)}
-                options={[
-                  { value: "all", label: "All", count: counts.all },
-                  { value: "open", label: "Open", count: counts.open },
-                  { value: "draft", label: "Draft", count: counts.draft },
-                  { value: "closed", label: "Closed", count: counts.closed },
-                ]}
-              />
+              <div className="overflow-x-auto w-full sm:w-auto pb-0.5">
+                <Tabs
+                  value={filter}
+                  onChange={(v) => setFilter(v as Filter)}
+                  options={[
+                    { value: "all", label: "All", count: counts.all },
+                    { value: "open", label: "Open", count: counts.open },
+                    { value: "draft", label: "Draft", count: counts.draft },
+                    { value: "closed", label: "Closed", count: counts.closed },
+                  ]}
+                />
+              </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
               <Input

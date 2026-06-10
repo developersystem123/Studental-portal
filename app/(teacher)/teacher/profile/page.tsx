@@ -109,11 +109,11 @@ export default function TeacherProfilePage() {
               border,
             )}
           >
-            <div className={cn("h-9 w-9 rounded-xl flex items-center justify-center", bg, color)}>
+            <div className={cn("h-8 w-8 sm:h-9 sm:w-9 rounded-xl flex items-center justify-center", bg, color)}>
               {icon}
             </div>
-            <p className="mt-3 text-xs font-medium text-[var(--muted)]">{label}</p>
-            <p className="mt-0.5 text-2xl font-bold tabular-nums">{value}</p>
+            <p className="mt-2 sm:mt-3 text-[10px] sm:text-xs font-medium text-[var(--muted)]">{label}</p>
+            <p className="mt-0.5 text-xl sm:text-2xl font-bold tabular-nums">{value}</p>
           </div>
         ))}
       </div>

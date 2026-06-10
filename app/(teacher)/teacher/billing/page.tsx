@@ -239,7 +239,7 @@ export default function TeacherBillingPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard label="Total earned" value={loading ? "…" : money(data.totalEarned * 100)} icon={<Icon.Wallet size={18} />} tone="success" delta="All time" />
         <StatCard label="This month" value={loading ? "…" : money(data.thisMonthEarnings * 100)} icon={<Icon.TrendingUp size={18} />} tone="primary" delta="↑ 22% vs last month" />
         <StatCard label="Pending payout" value={loading ? "…" : money(data.pendingPayout * 100)} icon={<Icon.Clock size={18} />} tone="warning" delta="Processing Jun 1" />
@@ -328,7 +328,26 @@ export default function TeacherBillingPage() {
         <Card>
           <CardBody>
             <h2 className="font-semibold mb-4">Payout history</h2>
-            <div className="overflow-x-auto">
+
+            {/* Mobile card list */}
+            <div className="sm:hidden space-y-2">
+              {data.payouts.map((p) => {
+                const sm = PAYOUT_STATUS_META[p.status];
+                return (
+                  <div key={p.id} className="flex items-center gap-3 p-3 rounded-xl bg-[var(--surface-2)]">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm capitalize">{p.method}</p>
+                      <p className="text-xs text-[var(--muted)] mt-0.5">{formatDate(p.date)}</p>
+                    </div>
+                    <Badge variant={sm.variant}>{sm.label}</Badge>
+                    <span className="tabular-nums font-semibold text-sm shrink-0">{money(p.amount)}</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[var(--border)]">
@@ -366,15 +385,15 @@ export default function TeacherBillingPage() {
               Update
             </Button>
           </div>
-          <div className="flex items-center gap-4 p-3 rounded-xl bg-[var(--surface-2)]">
-            <div className="h-10 w-16 rounded-lg bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center">
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--surface-2)]">
+            <div className="h-10 w-14 rounded-lg bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center shrink-0">
               <Icon.CreditCard size={18} className="text-white" />
             </div>
-            <div>
-              <p className="font-medium text-sm">Visa ending in 4242</p>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm truncate">Visa ending in 4242</p>
               <p className="text-xs text-[var(--muted)]">Expires 08/2028</p>
             </div>
-            <Badge variant="success" className="ml-auto">Default</Badge>
+            <Badge variant="success" className="shrink-0">Default</Badge>
           </div>
         </CardBody>
       </Card>
@@ -383,7 +402,35 @@ export default function TeacherBillingPage() {
       <Card>
         <CardBody>
           <h2 className="font-semibold mb-4">Invoice history</h2>
-          <div className="overflow-x-auto">
+
+          {/* Mobile card list */}
+          <div className="sm:hidden space-y-2">
+            {data.invoices.map((inv) => {
+              const sm = STATUS_META[inv.status];
+              return (
+                <div key={inv.id} className="flex items-center gap-3 p-3 rounded-xl bg-[var(--surface-2)]">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{inv.description}</p>
+                    <p className="text-xs text-[var(--muted)] mt-0.5">{formatDate(inv.date)}</p>
+                  </div>
+                  <Badge variant={sm.variant}>{sm.label}</Badge>
+                  <span className="tabular-nums font-semibold text-sm shrink-0">{money(inv.amount)}</span>
+                  <button
+                    onClick={() => {
+                      downloadInvoiceHtml(inv);
+                      toast.push({ title: "Invoice downloaded", tone: "success" });
+                    }}
+                    className="text-xs text-[var(--primary)] hover:underline shrink-0"
+                  >
+                    PDF
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)]">

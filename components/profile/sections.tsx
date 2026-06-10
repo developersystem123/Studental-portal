@@ -289,8 +289,7 @@ export function ProfileHero({
       <CardBody className="pt-0">
         <div className="flex flex-col sm:flex-row sm:items-start gap-4">
           {/* Avatar */}
-          {/* Avatar: render large on sm+ and a smaller variant on mobile */}
-          <div className="shrink-0">
+          <div className="shrink-0 self-start">
             {/* Desktop / tablet */}
             <div className="relative -mt-16 hidden sm:block">
               <div className="rounded-full ring-4 ring-[var(--surface)] shadow-xl bg-[var(--surface)]">

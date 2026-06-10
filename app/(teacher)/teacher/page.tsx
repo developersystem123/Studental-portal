@@ -196,25 +196,26 @@ export default function TeacherOverviewPage() {
             <span className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full bg-white/15 backdrop-blur border border-white/20 uppercase tracking-wider font-semibold">
               <Icon.Sparkles size={11} /> Teacher portal
             </span>
-            <h1 className="mt-3 text-3xl sm:text-4xl font-bold tracking-tight">
+            <h1 className="mt-3 text-2xl sm:text-4xl font-bold tracking-tight">
               Welcome back, {user?.name?.split(" ")[0] ?? "Teacher"}
             </h1>
-            <p className="mt-2 text-white/85 max-w-xl">
-              A quick look at your courses and the students learning from you. Jump in below to manage content or track progress.
+            <p className="mt-2 text-sm sm:text-base text-white/85 max-w-xl">
+              <span className="hidden sm:inline">A quick look at your courses and the students learning from you. Jump in below to manage content or track progress.</span>
+              <span className="sm:hidden">Your courses and student progress at a glance.</span>
             </p>
           </div>
-          <div className="hidden sm:flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 flex-wrap mt-1 sm:mt-0">
             <Link
               href="/teacher/students"
-              className="inline-flex h-10 items-center gap-2 px-4 rounded-xl bg-white/15 hover:bg-white/25 backdrop-blur text-sm font-semibold transition"
+              className="inline-flex h-9 sm:h-10 items-center gap-1.5 sm:gap-2 px-3 sm:px-4 rounded-xl bg-white/15 hover:bg-white/25 backdrop-blur text-xs sm:text-sm font-semibold transition"
             >
-              <Icon.User size={16} /> View students
+              <Icon.User size={15} /> Students
             </Link>
             <Link
               href="/teacher/courses"
-              className="inline-flex h-10 items-center gap-2 px-4 rounded-xl bg-white text-[var(--primary)] hover:brightness-95 text-sm font-semibold transition"
+              className="inline-flex h-9 sm:h-10 items-center gap-1.5 sm:gap-2 px-3 sm:px-4 rounded-xl bg-white text-[var(--primary)] hover:brightness-95 text-xs sm:text-sm font-semibold transition"
             >
-              <Icon.Book size={16} /> My courses
+              <Icon.Book size={15} /> Courses
             </Link>
           </div>
         </div>
@@ -222,13 +223,13 @@ export default function TeacherOverviewPage() {
 
       {/* Live refresh status bar */}
       <div className="flex items-center justify-between gap-3 flex-wrap rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5">
-        <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
+        <div className="flex items-center gap-2 text-xs text-[var(--muted)] min-w-0">
           <LivePulse />
-          <span>Auto-refreshes every 30s · Updated <span className="font-medium text-[var(--foreground)]">{relativeTime(lastUpdated)}</span></span>
+          <span className="truncate">Auto-refreshes every 30s · Updated <span className="font-medium text-[var(--foreground)]">{relativeTime(lastUpdated)}</span></span>
         </div>
-        <div className="flex items-center gap-4 text-xs flex-wrap">
+        <div className="flex items-center gap-3 text-xs flex-wrap">
           <span className="text-[var(--muted)]">Avg rating <span className="font-semibold text-[var(--foreground)]">⭐ 4.8</span></span>
-          <span className="text-[var(--muted-2)]">·</span>
+          <span className="hidden sm:inline text-[var(--muted-2)]">·</span>
           <span className="text-[var(--muted)]">Revenue <span className="font-semibold text-emerald-600 dark:text-emerald-400">$810 this month</span></span>
         </div>
       </div>
@@ -243,10 +244,10 @@ export default function TeacherOverviewPage() {
               href={a.href}
               className="group flex flex-col items-center gap-2 p-3 rounded-xl border border-[var(--border)] hover:border-[var(--primary)]/30 hover:bg-[var(--primary-soft)]/20 transition text-center"
             >
-              <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${a.tint}`}>
+              <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${a.tint}`}>
                 {a.icon}
               </div>
-              <p className="text-[11px] font-medium text-[var(--muted)] group-hover:text-[var(--foreground)] leading-tight">{a.label}</p>
+              <p className="text-[11px] font-medium text-[var(--muted)] group-hover:text-[var(--foreground)] leading-tight line-clamp-2 w-full">{a.label}</p>
             </Link>
           ))}
         </div>
@@ -266,8 +267,8 @@ export default function TeacherOverviewPage() {
                 </div>
                 <p className="text-3xl font-bold tracking-tight">{c.value}</p>
                 <p className="text-xs font-medium text-[var(--foreground)]">{c.label}</p>
-                <div className="flex items-end justify-between gap-2 pt-1">
-                  <p className="text-[11px] text-[var(--muted-2)]">{c.hint}</p>
+                <div className="flex items-end justify-between gap-2 pt-1 min-w-0">
+                  <p className="text-[11px] text-[var(--muted-2)] truncate">{c.hint}</p>
                   <Sparkline data={c.series.length >= 2 ? c.series : [0, 0, 0, 0, 0, 0]} width={80} height={28} />
                 </div>
               </CardBody>
@@ -277,18 +278,18 @@ export default function TeacherOverviewPage() {
       </div>
 
       {/* Charts row 1: enrollment trend + completion donut */}
-      <div className="grid lg:grid-cols-3 gap-4">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2">
           <CardBody>
-            <div className="flex items-center justify-between mb-1">
-              <div>
-                <h2 className="font-semibold flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5 mb-1">
+              <div className="min-w-0 flex-1">
+                <h2 className="font-semibold flex items-center gap-2 flex-wrap">
                   Student enrollments
                   <LivePulse />
                 </h2>
-                <p className="text-xs text-[var(--muted)]">New sign-ups across your courses, last 6 months</p>
+                <p className="text-xs text-[var(--muted)]">New sign-ups · last 6 months</p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 {isDemo && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--surface-2)] text-[var(--muted)] uppercase tracking-wider font-semibold">
                     Sample
@@ -299,7 +300,7 @@ export default function TeacherOverviewPage() {
                 </span>
               </div>
             </div>
-            <div className="h-[220px] mt-3">
+            <div className="h-[180px] sm:h-[220px] mt-3">
               <LineChart data={trendBuckets} yFormatter={(v) => Math.round(v).toString()} />
             </div>
           </CardBody>
@@ -330,7 +331,7 @@ export default function TeacherOverviewPage() {
       </div>
 
       {/* Charts row 2: per-course bars + progress distribution */}
-      <div className="grid lg:grid-cols-2 gap-4">
+      <div className="grid sm:grid-cols-2 gap-4">
         <Card>
           <CardBody>
             <div className="flex items-center justify-between mb-1">
@@ -343,7 +344,7 @@ export default function TeacherOverviewPage() {
             {courseBarData.length === 0 ? (
               <p className="text-sm text-[var(--muted)] py-10 text-center">No enrollments yet.</p>
             ) : (
-              <div className="h-[240px] mt-3">
+              <div className="h-[200px] sm:h-[240px] mt-3">
                 <BarChart data={courseBarData} height={240} />
               </div>
             )}
@@ -362,7 +363,7 @@ export default function TeacherOverviewPage() {
             {myStudents.length === 0 ? (
               <p className="text-sm text-[var(--muted)] py-10 text-center">No enrollments yet.</p>
             ) : (
-              <div className="h-[240px] mt-3">
+              <div className="h-[200px] sm:h-[240px] mt-3">
                 <BarChart data={buckets} height={240} />
               </div>
             )}
@@ -399,20 +400,20 @@ export default function TeacherOverviewPage() {
       )}
 
       {/* Monthly earnings + Recent reviews */}
-      <div className="grid lg:grid-cols-3 gap-4">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2">
           <CardBody>
-            <div className="flex items-center justify-between mb-1">
-              <div>
-                <h2 className="font-semibold flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5 mb-1">
+              <div className="min-w-0 flex-1">
+                <h2 className="font-semibold flex items-center gap-2 flex-wrap">
                   Monthly earnings
                   <LivePulse />
                 </h2>
-                <p className="text-xs text-[var(--muted)]">Revenue from course enrollments · last 6 months</p>
+                <p className="text-xs text-[var(--muted)]">Revenue · last 6 months</p>
               </div>
-              <span className="text-[11px] px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold">↑ 37% vs last period</span>
+              <span className="text-[11px] px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold self-start whitespace-nowrap">↑ 37% vs last period</span>
             </div>
-            <div className="h-[220px] mt-3">
+            <div className="h-[180px] sm:h-[220px] mt-3">
               <LineChart data={EARNINGS_MOCK} yFormatter={(v) => `$${v}`} />
             </div>
           </CardBody>
@@ -469,7 +470,7 @@ export default function TeacherOverviewPage() {
         </CardBody>
       </Card>
 
-      <div className="grid lg:grid-cols-2 gap-4">
+      <div className="grid sm:grid-cols-2 gap-4">
         <Card>
           <CardBody>
             <div className="flex items-center justify-between mb-4">
@@ -486,17 +487,19 @@ export default function TeacherOverviewPage() {
               <ul className="space-y-3">
                 {myCourses.slice(0, 5).map((c) => (
                   <li key={c.id} className="flex items-center gap-3">
-                    <div className="h-10 w-14 rounded-lg overflow-hidden border border-[var(--border)] shrink-0">
+                    <div className="h-10 w-12 sm:w-14 rounded-lg overflow-hidden border border-[var(--border)] shrink-0">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={c.thumbnail} alt={c.title} className="w-full h-full object-cover" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{c.title}</p>
-                      <p className="text-xs text-[var(--muted)] truncate">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-medium truncate">{c.title}</p>
+                        <Badge variant="default" className="shrink-0 text-[10px]">{c.level}</Badge>
+                      </div>
+                      <p className="text-xs text-[var(--muted)] mt-0.5 truncate">
                         {c.category} · {c.chapters.length} chapters
                       </p>
                     </div>
-                    <Badge variant="default">{c.level}</Badge>
                   </li>
                 ))}
               </ul>
@@ -522,16 +525,18 @@ export default function TeacherOverviewPage() {
                       {s.userName.slice(0, 1).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{s.userName}</p>
-                      <p className="text-xs text-[var(--muted)] truncate">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-medium truncate">{s.userName}</p>
+                        {s.completed ? (
+                          <Badge variant="success" className="shrink-0 text-[10px]">Done</Badge>
+                        ) : (
+                          <Badge variant="info" className="shrink-0 text-[10px]">{s.progress}%</Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-[var(--muted)] mt-0.5 truncate">
                         {s.courseTitle} · {relativeTime(s.enrolledAt)}
                       </p>
                     </div>
-                    {s.completed ? (
-                      <Badge variant="success">Completed</Badge>
-                    ) : (
-                      <Badge variant="info">{s.progress}%</Badge>
-                    )}
                   </li>
                 ))}
               </ul>

@@ -219,6 +219,9 @@ export default function TeacherMessagesPage() {
   const activeContact = contacts.find((c) => c.id === activeId);
   const totalUnread = contacts.reduce((s, c) => s + c.unread, 0);
 
+  // Mobile: track whether to show chat pane or contacts list
+  const [showChatOnMobile, setShowChatOnMobile] = React.useState(false);
+
   const allCourses = React.useMemo(() => {
     const set = new Set<string>();
     for (const [, v] of rawContacts) for (const c of v.courses) set.add(c);
@@ -300,7 +303,7 @@ export default function TeacherMessagesPage() {
             style={{ height: "calc(100vh - 250px)" }}
           >
             {/* ---- Sidebar ---- */}
-            <aside className="border-r border-[var(--border)] flex flex-col overflow-hidden">
+            <aside className={`border-r border-[var(--border)] flex flex-col overflow-hidden ${showChatOnMobile ? "hidden md:flex" : "flex"}`}>
               {/* Search + course filter */}
               <div className="p-3 space-y-2 border-b border-[var(--border)] shrink-0">
                 <Input
@@ -339,7 +342,7 @@ export default function TeacherMessagesPage() {
                     {filteredContacts.map((c) => (
                       <li key={c.id}>
                         <button
-                          onClick={() => setActiveId(c.id)}
+                          onClick={() => { setActiveId(c.id); setShowChatOnMobile(true); }}
                           className={`w-full text-left flex items-center gap-3 px-3 py-3 border-b border-[var(--border)] hover:bg-[var(--surface-2)]/60 transition-colors ${
                             activeId === c.id ? "bg-[var(--surface-2)]" : ""
                           }`}
@@ -399,11 +402,18 @@ export default function TeacherMessagesPage() {
             </aside>
 
             {/* ---- Chat pane ---- */}
-            <section className="flex flex-col overflow-hidden">
+            <section className={`flex flex-col overflow-hidden ${showChatOnMobile ? "flex" : "hidden md:flex"}`}>
               {activeContact ? (
                 <>
                   {/* Chat header */}
                   <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--border)] shrink-0">
+                    <button
+                      onClick={() => setShowChatOnMobile(false)}
+                      className="md:hidden p-1.5 -ml-1 rounded-lg text-[var(--muted)] hover:bg-[var(--surface-2)] transition shrink-0"
+                      aria-label="Back to contacts"
+                    >
+                      <Icon.ChevronLeft size={18} />
+                    </button>
                     <Avatar name={activeContact.name} size={38} />
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold truncate">{activeContact.name}</p>

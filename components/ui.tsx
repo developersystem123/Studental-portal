@@ -627,20 +627,20 @@ export function StatCard({
   const t = tones[tone];
   return (
     <Card className={cn("overflow-hidden group transition-all duration-200 hover:-translate-y-0.5", t.glow)}>
-      <CardBody className="flex items-start gap-4">
+      <CardBody className="flex items-start gap-2 sm:gap-4 p-3 sm:p-4">
         <div className={cn(
-          "h-12 w-12 rounded-xl flex items-center justify-center shrink-0 shadow-sm border border-[var(--border)]",
+          "h-9 w-9 sm:h-12 sm:w-12 rounded-xl flex items-center justify-center shrink-0 shadow-sm border border-[var(--border)]",
           t.iconBg,
           t.iconText,
         )}>
           {icon}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-[var(--muted)] uppercase tracking-wide truncate">{label}</p>
-          <p className="text-2xl font-bold mt-0.5 tracking-tight">{value}</p>
+          <p className="text-[10px] sm:text-xs font-medium text-[var(--muted)] uppercase tracking-wide truncate">{label}</p>
+          <p className="text-base sm:text-2xl font-bold mt-0.5 tracking-tight truncate">{value}</p>
           {delta && (
-            <p className={cn("text-xs mt-1.5 flex items-center gap-1 font-medium", t.delta)}>
-              <Icon.TrendingUp size={11} />
+            <p className={cn("text-[10px] sm:text-xs mt-1 sm:mt-1.5 flex items-center gap-1 font-medium leading-tight", t.delta)}>
+              <Icon.TrendingUp size={10} />
               {delta}
             </p>
           )}

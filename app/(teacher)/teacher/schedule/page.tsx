@@ -133,7 +133,7 @@ function CalendarView({
         <div className="grid grid-cols-7 gap-1">
           {Array.from({ length: totalCells }, (_, i) => {
             const dayNum = i - firstDow + 1;
-            if (dayNum < 1 || dayNum > lastDay) return <div key={`e-${i}`} className="min-h-[68px]" />;
+            if (dayNum < 1 || dayNum > lastDay) return <div key={`e-${i}`} className="min-h-11 sm:min-h-17" />;
             const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
             const dayEvents = eventsByDay.get(dateStr) ?? [];
             const isToday    = dateStr === todayStr;
@@ -144,7 +144,7 @@ function CalendarView({
               <button
                 key={dateStr}
                 onClick={() => setSelectedDay(dateStr)}
-                className={`min-h-[68px] p-1.5 rounded-xl text-left transition flex flex-col border ${
+                className={`min-h-11 sm:min-h-17 p-1 sm:p-1.5 rounded-xl text-left transition flex flex-col border ${
                   isSelected
                     ? "border-[var(--primary)] bg-[var(--primary)]/10 ring-1 ring-[var(--primary)]"
                     : isToday
@@ -518,13 +518,13 @@ export default function TeacherSchedulePage() {
                 <button
                   key={key}
                   onClick={() => setView(key)}
-                  className={`inline-flex w-full items-center justify-center gap-1.5 px-2 xl:px-3 h-8 rounded-lg text-xs font-semibold transition whitespace-nowrap ${
+                  className={`inline-flex w-full items-center justify-center gap-1 sm:gap-1.5 px-1 sm:px-2 xl:px-3 h-8 rounded-lg text-xs font-semibold transition ${
                     view === key
                       ? "bg-[var(--primary)] text-white"
                       : "bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)]"
                   }`}
                 >
-                  {icon} {label}
+                  {icon} <span className="hidden sm:inline">{label}</span>
                 </button>
               ))}
             </div>

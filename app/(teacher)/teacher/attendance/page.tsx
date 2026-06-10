@@ -685,7 +685,7 @@ export default function TeacherAttendancePage() {
         title="Attendance Analytics"
         size="lg"
       >
-        <div className="space-y-6">
+        <div className="p-5 max-h-[80vh] overflow-y-auto space-y-6">
           {/* Course overview */}
           {courseStats && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

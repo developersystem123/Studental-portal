@@ -289,16 +289,18 @@ export default function TeacherStudentsPage() {
           {/* Filters */}
           <div className="flex flex-col gap-3">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
-              <Tabs
-                value={filter}
-                onChange={(v) => { setFilter(v as Filter); setPage(1); }}
-                options={[
-                  { value: "all", label: "All", count: counts.all },
-                  { value: "in-progress", label: "In progress", count: counts["in-progress"] },
-                  { value: "completed", label: "Completed", count: counts.completed },
-                  { value: "certified", label: "Certified", count: counts.certified },
-                ]}
-              />
+              <div className="overflow-x-auto w-full sm:w-auto pb-0.5">
+                <Tabs
+                  value={filter}
+                  onChange={(v) => { setFilter(v as Filter); setPage(1); }}
+                  options={[
+                    { value: "all", label: "All", count: counts.all },
+                    { value: "in-progress", label: "In progress", count: counts["in-progress"] },
+                    { value: "completed", label: "Completed", count: counts.completed },
+                    { value: "certified", label: "Certified", count: counts.certified },
+                  ]}
+                />
+              </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
               <Input

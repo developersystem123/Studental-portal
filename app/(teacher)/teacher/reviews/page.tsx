@@ -47,6 +47,8 @@ export default function TeacherReviewsPage() {
   const [replyText, setReplyText] = React.useState("");
   const [savingReply, setSavingReply] = React.useState(false);
   const [query, setQuery] = React.useState("");
+  const [page, setPage] = React.useState(1);
+  const PAGE_SIZE = 10;
 
   React.useEffect(() => {
     let cancelled = false;
@@ -81,6 +83,8 @@ export default function TeacherReviewsPage() {
       })
       .filter((r) => !q || r.body.toLowerCase().includes(q) || r.author.name.toLowerCase().includes(q));
   }, [reviews, filter, courseFilter, query]);
+
+  React.useEffect(() => { setPage(1); }, [filter, courseFilter, query]);
 
   const scoped = React.useMemo(
     () => reviews.filter((r) => (courseFilter === "all" ? true : r.courseId === courseFilter)),
@@ -176,7 +180,7 @@ export default function TeacherReviewsPage() {
       </div>
 
       {/* Overview */}
-      <div className="grid lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card>
           <CardBody className="text-center">
             <p className="text-xs uppercase tracking-wider text-[var(--muted-2)] font-semibold">Average rating</p>
@@ -185,7 +189,7 @@ export default function TeacherReviewsPage() {
             <p className="text-xs text-[var(--muted)] mt-2">From {counts.all} reviews</p>
           </CardBody>
         </Card>
-        <Card className="lg:col-span-2">
+        <Card className="col-span-1 lg:col-span-2">
           <CardBody className="space-y-4">
             <div>
               <p className="text-xs uppercase tracking-wider text-[var(--muted-2)] font-semibold mb-2">Rating distribution</p>
@@ -210,10 +214,10 @@ export default function TeacherReviewsPage() {
                 <p className="text-xs uppercase tracking-wider text-[var(--muted-2)] font-semibold mb-2">By course</p>
                 <ul className="space-y-2">
                   {perCourseRatings.map((c) => (
-                    <li key={c.title} className="flex items-center gap-3 text-sm">
+                    <li key={c.title} className="flex items-center gap-2 text-sm">
                       <span className="flex-1 truncate text-xs text-[var(--muted)]">{c.title}</span>
                       <Stars value={Math.round(c.avg)} />
-                      <span className="text-xs text-[var(--muted-2)] tabular-nums w-10 text-right">{c.avg.toFixed(1)} ({c.count})</span>
+                      <span className="text-xs text-[var(--muted-2)] tabular-nums shrink-0 text-right">{c.avg.toFixed(1)} ({c.count})</span>
                     </li>
                   ))}
                 </ul>
@@ -225,30 +229,33 @@ export default function TeacherReviewsPage() {
 
       <Card>
         <CardBody className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
-            <Tabs
-              value={filter}
-              onChange={(v) => setFilter(v as Filter)}
-              options={[
-                { value: "all", label: "All", count: counts.all },
-                { value: "unanswered", label: "Unanswered", count: counts.unanswered },
-                { value: "5", label: "5★" },
-                { value: "4", label: "4★" },
-                { value: "3", label: "3★" },
-                { value: "low", label: "1–2★" },
-              ]}
-            />
-            <div className="flex gap-2 items-center">
-              <Select value={courseFilter} onChange={(e) => setCourseFilter(e.target.value)} className="!h-9 !w-48">
+          {/* Single-row filter bar */}
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex-1 overflow-x-auto min-w-0 pb-0.5 scrollbar-none">
+              <Tabs
+                value={filter}
+                onChange={(v) => setFilter(v as Filter)}
+                options={[
+                  { value: "all", label: "All", count: counts.all },
+                  { value: "unanswered", label: "Unanswered", count: counts.unanswered },
+                  { value: "5", label: "5★" },
+                  { value: "4", label: "4★" },
+                  { value: "3", label: "3★" },
+                  { value: "low", label: "1–2★" },
+                ]}
+              />
+            </div>
+            <div className="flex gap-2 shrink-0 items-center">
+              <Select value={courseFilter} onChange={(e) => setCourseFilter(e.target.value)} className="!h-9 !w-40">
                 <option value="all">All courses</option>
                 {courses.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
               </Select>
               <Input
                 icon={<Icon.Search size={16} />}
-                placeholder="Search reviews…"
+                placeholder="Search…"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="!h-9 sm:max-w-[200px]"
+                className="!h-9 !w-36"
               />
             </div>
           </div>
@@ -266,47 +273,89 @@ export default function TeacherReviewsPage() {
               }
             />
           ) : (
-            <ul className="space-y-3">
-              {filtered.map((r) => (
-                <li key={r.id} className={`rounded-xl border border-[var(--border)] p-4 ${r.hidden ? "opacity-60" : ""}`}>
-                  <div className="flex items-start gap-3">
-                    <Avatar name={r.author.name} src={r.author.avatar} size={40} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-medium truncate">{r.author.name}</p>
-                        <Stars value={r.rating} />
-                        {r.hidden && <Badge variant="default">Hidden</Badge>}
-                        <span className="text-xs text-[var(--muted-2)] ml-auto">{relativeTime(r.createdAt)}</span>
-                      </div>
-                      <p className="text-xs text-[var(--muted)] truncate mt-0.5">{r.course?.title ?? "—"}</p>
-                      <p className="text-sm mt-2 whitespace-pre-wrap">{r.body}</p>
-                      {r.reply && (
-                        <div className="mt-3 ml-3 pl-3 border-l-2 border-[var(--primary)]/30">
-                          <p className="text-xs font-semibold text-[var(--primary)] flex items-center gap-1.5">
-                            <Icon.MessageSquare size={12} /> Your reply
-                            {r.repliedAt && (
-                              <span className="text-[var(--muted-2)] font-normal ml-1">· {relativeTime(r.repliedAt)}</span>
-                            )}
-                          </p>
-                          <p className="text-sm mt-1 whitespace-pre-wrap">{r.reply}</p>
+            <>
+              <ul className="space-y-3">
+                {filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((r) => (
+                  <li key={r.id} className={`rounded-xl border border-[var(--border)] p-4 ${r.hidden ? "opacity-60" : ""}`}>
+                    <div className="flex items-start gap-3">
+                      <Avatar name={r.author.name} src={r.author.avatar} size={40} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-medium truncate">{r.author.name}</p>
+                          <Stars value={r.rating} />
+                          {r.hidden && <Badge variant="default">Hidden</Badge>}
+                          <span className="text-xs text-[var(--muted-2)] ml-auto">{relativeTime(r.createdAt)}</span>
                         </div>
-                      )}
+                        <p className="text-xs text-[var(--muted)] truncate mt-0.5">{r.course?.title ?? "—"}</p>
+                        <p className="text-sm mt-2 whitespace-pre-wrap">{r.body}</p>
+                        {r.reply && (
+                          <div className="mt-3 ml-3 pl-3 border-l-2 border-[var(--primary)]/30">
+                            <p className="text-xs font-semibold text-[var(--primary)] flex items-center gap-1.5">
+                              <Icon.MessageSquare size={12} /> Your reply
+                              {r.repliedAt && (
+                                <span className="text-[var(--muted-2)] font-normal ml-1">· {relativeTime(r.repliedAt)}</span>
+                              )}
+                            </p>
+                            <p className="text-sm mt-1 whitespace-pre-wrap">{r.reply}</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
+                    <div className="flex justify-end gap-2 pt-3">
+                      <Button size="sm" variant="ghost" onClick={() => toggleHidden(r)}>
+                        <Icon.Eye size={14} /> {r.hidden ? "Show" : "Hide"}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => remove(r.id)}>
+                        <Icon.Trash size={14} /> Delete
+                      </Button>
+                      <Button size="sm" variant={r.reply ? "outline" : "primary"} onClick={() => setReplying(r)}>
+                        <Icon.MessageSquare size={14} /> {r.reply ? "Edit reply" : "Reply"}
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+
+              {/* Pagination */}
+              {filtered.length > PAGE_SIZE && (
+                <div className="flex items-center justify-between gap-3 pt-2 border-t border-[var(--border)]">
+                  <p className="text-xs text-[var(--muted)]">
+                    Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={page === 1}
+                      onClick={() => setPage((p) => p - 1)}
+                    >
+                      <Icon.ChevronLeft size={14} />
+                    </Button>
+                    {Array.from({ length: Math.ceil(filtered.length / PAGE_SIZE) }, (_, i) => i + 1).map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => setPage(p)}
+                        className={`h-8 w-8 rounded-lg text-sm font-medium transition-colors ${
+                          p === page
+                            ? "btn-primary"
+                            : "hover:bg-[var(--surface-2)] text-[var(--muted)]"
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={page === Math.ceil(filtered.length / PAGE_SIZE)}
+                      onClick={() => setPage((p) => p + 1)}
+                    >
+                      <Icon.ChevronRight size={14} />
+                    </Button>
                   </div>
-                  <div className="flex justify-end gap-2 pt-3">
-                    <Button size="sm" variant="ghost" onClick={() => toggleHidden(r)}>
-                      <Icon.Eye size={14} /> {r.hidden ? "Show" : "Hide"}
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => remove(r.id)}>
-                      <Icon.Trash size={14} /> Delete
-                    </Button>
-                    <Button size="sm" variant={r.reply ? "outline" : "primary"} onClick={() => setReplying(r)}>
-                      <Icon.MessageSquare size={14} /> {r.reply ? "Edit reply" : "Reply"}
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                </div>
+              )}
+            </>
           )}
         </CardBody>
       </Card>

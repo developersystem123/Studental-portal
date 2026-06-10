@@ -94,7 +94,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
 
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <Topbar onToggleSidebar={handleToggle} sidebarOpen={desktopOpen} />
-        <main className="flex-1 overflow-y-auto scrollbar-fade">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-fade">
           <div className="max-w-9xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 page-enter">{children}</div>
         </main>
       </div>
