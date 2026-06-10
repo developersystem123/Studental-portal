@@ -196,8 +196,8 @@ export default function TeacherEarningsPage() {
       </div>
 
       {/* Monthly chart + revenue share / goal tracker */}
-      <div className="grid lg:grid-cols-3 gap-4">
-        <Card className="lg:col-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card className="col-span-1 lg:col-span-2">
           <CardBody>
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
@@ -327,61 +327,71 @@ export default function TeacherEarningsPage() {
               description="When students enroll in paid courses, the revenue appears here."
             />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-[var(--muted)] border-b border-[var(--border)]">
-                    <th className="py-2.5 px-3 font-medium text-xs">Course</th>
-                    <th className="py-2.5 px-3 font-medium text-xs">Price</th>
-                    <th className="py-2.5 px-3 font-medium text-xs">Enrollments</th>
-                    <th className="py-2.5 px-3 font-medium text-xs">Revenue share</th>
-                    <th className="py-2.5 px-3 font-medium text-xs text-right">Earned</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {breakdown.map((b) => {
-                    const share =
-                      totalBreakdownEarned === 0
-                        ? 0
-                        : Math.round((b.earned / totalBreakdownEarned) * 100);
-                    return (
-                      <tr
-                        key={b.course.id}
-                        className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors"
-                      >
-                        <td className="py-3 px-3 font-medium truncate max-w-xs text-xs">
-                          {b.course.title}
-                        </td>
-                        <td className="py-3 px-3 text-xs">
-                          {b.course.price === 0 ? (
-                            <Badge variant="default">Free</Badge>
-                          ) : (
-                            `$${b.course.price}`
-                          )}
-                        </td>
-                        <td className="py-3 px-3 text-xs">{b.count}</td>
-                        <td className="py-3 px-3 min-w-[140px]">
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1 h-1.5 rounded-full bg-[var(--surface-2)] overflow-hidden">
-                              <div
-                                className="h-full rounded-full bg-gradient-to-r from-[var(--primary)] to-[var(--accent)]"
-                                style={{ width: `${share}%` }}
-                              />
+            <>
+              {/* Mobile card list */}
+              <div className="sm:hidden space-y-2">
+                {breakdown.map((b) => {
+                  const share = totalBreakdownEarned === 0 ? 0 : Math.round((b.earned / totalBreakdownEarned) * 100);
+                  return (
+                    <div key={b.course.id} className="p-3 rounded-xl bg-[var(--surface-2)] space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-medium leading-snug flex-1 min-w-0">{b.course.title}</p>
+                        <span className="text-sm font-bold shrink-0">${b.earned.toFixed(2)}</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-[var(--muted)]">
+                        <span>{b.course.price === 0 ? "Free" : `$${b.course.price}`}</span>
+                        <span>·</span>
+                        <span>{b.count} enrolled</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-1.5 rounded-full bg-[var(--border)] overflow-hidden">
+                          <div className="h-full rounded-full bg-gradient-to-r from-[var(--primary)] to-[var(--accent)]" style={{ width: `${share}%` }} />
+                        </div>
+                        <span className="text-[10px] text-[var(--muted)] tabular-nums shrink-0">{share}%</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop table */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-[var(--muted)] border-b border-[var(--border)]">
+                      <th className="py-2.5 px-3 font-medium text-xs">Course</th>
+                      <th className="py-2.5 px-3 font-medium text-xs">Price</th>
+                      <th className="py-2.5 px-3 font-medium text-xs">Enrollments</th>
+                      <th className="py-2.5 px-3 font-medium text-xs">Revenue share</th>
+                      <th className="py-2.5 px-3 font-medium text-xs text-right">Earned</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {breakdown.map((b) => {
+                      const share = totalBreakdownEarned === 0 ? 0 : Math.round((b.earned / totalBreakdownEarned) * 100);
+                      return (
+                        <tr key={b.course.id} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors">
+                          <td className="py-3 px-3 font-medium truncate max-w-xs text-xs">{b.course.title}</td>
+                          <td className="py-3 px-3 text-xs">
+                            {b.course.price === 0 ? <Badge variant="default">Free</Badge> : `$${b.course.price}`}
+                          </td>
+                          <td className="py-3 px-3 text-xs">{b.count}</td>
+                          <td className="py-3 px-3 min-w-[140px]">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-1.5 rounded-full bg-[var(--surface-2)] overflow-hidden">
+                                <div className="h-full rounded-full bg-gradient-to-r from-[var(--primary)] to-[var(--accent)]" style={{ width: `${share}%` }} />
+                              </div>
+                              <span className="text-[10px] text-[var(--muted)] tabular-nums w-7 shrink-0">{share}%</span>
                             </div>
-                            <span className="text-[10px] text-[var(--muted)] tabular-nums w-7 shrink-0">
-                              {share}%
-                            </span>
-                          </div>
-                        </td>
-                        <td className="py-3 px-3 text-right font-semibold text-xs">
-                          ${b.earned.toFixed(2)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                          </td>
+                          <td className="py-3 px-3 text-right font-semibold text-xs">${b.earned.toFixed(2)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </CardBody>
       </Card>
@@ -479,13 +489,13 @@ function BigStat({
   };
   return (
     <Card>
-      <CardBody className="flex items-start gap-3">
-        <div className={`h-11 w-11 rounded-xl flex items-center justify-center ${tints[tint]}`}>
+      <CardBody className="flex items-start gap-2 sm:gap-3 p-3 sm:p-4">
+        <div className={`h-9 w-9 sm:h-11 sm:w-11 rounded-xl flex items-center justify-center shrink-0 ${tints[tint]}`}>
           {icon}
         </div>
-        <div className="min-w-0">
-          <p className="text-xs text-[var(--muted)]">{label}</p>
-          <p className="text-2xl font-bold tracking-tight mt-0.5">{value}</p>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] sm:text-xs text-[var(--muted)] truncate">{label}</p>
+          <p className="text-base sm:text-2xl font-bold tracking-tight mt-0.5 truncate">{value}</p>
         </div>
       </CardBody>
     </Card>

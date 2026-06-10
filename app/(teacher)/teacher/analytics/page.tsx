@@ -189,21 +189,21 @@ export default function TeacherAnalyticsPage() {
       ) : (
         <>
           {/* 6 stat cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
             {stats.map((s) => (
               <Card key={s.label}>
-                <CardBody className="space-y-2">
+                <CardBody className="space-y-2 p-3 sm:p-4">
                   <div className="flex items-center justify-between">
-                    <div className="h-9 w-9 rounded-xl bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center">
+                    <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center">
                       {s.icon}
                     </div>
-                    <Sparkline data={s.series.length >= 2 ? s.series : [0, 0, 0, 0, 0]} width={56} height={22} />
+                    <Sparkline data={s.series.length >= 2 ? s.series : [0, 0, 0, 0, 0]} width={44} height={20} />
                   </div>
-                  <p className="text-2xl font-bold">
+                  <p className="text-lg sm:text-2xl font-bold">
                     {s.value}
                     {s.suffix}
                   </p>
-                  <p className="text-xs text-[var(--muted)]">{s.label}</p>
+                  <p className="text-[10px] sm:text-xs text-[var(--muted)] leading-tight">{s.label}</p>
                 </CardBody>
               </Card>
             ))}
@@ -243,8 +243,8 @@ export default function TeacherAnalyticsPage() {
           </div>
 
           {/* Enrollment trend with range selector + completion donut */}
-          <div className="grid lg:grid-cols-3 gap-4">
-            <Card className="lg:col-span-2">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 overflow-hidden">
+            <Card className="col-span-1 lg:col-span-2">
               <CardBody>
                 <div className="flex items-center justify-between mb-1">
                   <div>
@@ -289,7 +289,7 @@ export default function TeacherAnalyticsPage() {
           </div>
 
           {/* Bar charts */}
-          <div className="grid lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 overflow-hidden">
             <Card>
               <CardBody>
                 <h2 className="font-semibold">Enrollments per course</h2>
@@ -319,8 +319,8 @@ export default function TeacherAnalyticsPage() {
           </div>
 
           {/* Course breakdown table + radial */}
-          <div className="grid lg:grid-cols-3 gap-4">
-            <Card className="lg:col-span-2">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 overflow-hidden">
+            <Card className="col-span-1 lg:col-span-2">
               <CardBody>
                 <div className="flex items-center justify-between mb-3">
                   <div>
@@ -328,75 +328,87 @@ export default function TeacherAnalyticsPage() {
                     <p className="text-xs text-[var(--muted)]">Click column headers to sort</p>
                   </div>
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-[var(--border)]">
-                        <th className="pb-2 text-left font-semibold text-[var(--muted)] text-xs tracking-wide">
-                          Course
-                        </th>
-                        {(
-                          [
-                            { key: "total" as SortCol, label: "Students" },
-                            { key: "avg" as SortCol, label: "Avg %" },
-                            { key: "rate" as SortCol, label: "Completion" },
-                            { key: "certs" as SortCol, label: "Certs" },
-                          ] as const
-                        ).map((col) => (
-                          <th
-                            key={col.key}
-                            onClick={() => handleSort(col.key)}
-                            className="pb-2 text-right font-semibold text-[var(--muted)] text-xs tracking-wide cursor-pointer hover:text-[var(--foreground)] select-none transition-colors"
-                          >
-                            {col.label}
-                            {sortCol === col.key && (
-                              <span className="ml-1 text-[var(--primary)]">{sortAsc ? "↑" : "↓"}</span>
-                            )}
-                          </th>
-                        ))}
-                        <th className="pb-2 text-center font-semibold text-[var(--muted)] text-xs tracking-wide">
-                          Status
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[var(--border)]">
+                {sortedCourses.length === 0 ? (
+                  <p className="text-sm text-[var(--muted)] py-8 text-center">No courses yet.</p>
+                ) : (
+                  <>
+                    {/* Mobile card list */}
+                    <div className="sm:hidden space-y-2">
                       {sortedCourses.map((p) => (
-                        <tr key={p.course.id} className="hover:bg-[var(--surface-2)] transition-colors group">
-                          <td className="py-3 pr-4 font-medium text-xs max-w-[180px] truncate">{p.course.title}</td>
-                          <td className="py-3 text-right tabular-nums text-xs text-[var(--muted)]">{p.total}</td>
-                          <td className="py-3 text-right tabular-nums text-xs text-[var(--muted)]">{p.avg}%</td>
-                          <td className="py-3 text-right tabular-nums text-xs text-[var(--muted)]">
-                            {p.completionRate}%
-                          </td>
-                          <td className="py-3 text-right tabular-nums text-xs text-[var(--muted)]">{p.certs}</td>
-                          <td className="py-3 text-center">
+                        <div key={p.course.id} className="p-3 rounded-xl bg-[var(--surface-2)] space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-sm font-medium leading-snug flex-1 min-w-0">{p.course.title}</p>
                             <StatusBadge rate={p.completionRate} total={p.total} />
-                          </td>
-                        </tr>
+                          </div>
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--muted)]">
+                            <span><b className="text-[var(--foreground)]">{p.total}</b> students</span>
+                            <span><b className="text-[var(--foreground)]">{p.avg}%</b> avg</span>
+                            <span><b className="text-[var(--foreground)]">{p.completionRate}%</b> done</span>
+                            <span><b className="text-[var(--foreground)]">{p.certs}</b> certs</span>
+                          </div>
+                        </div>
                       ))}
-                    </tbody>
-                  </table>
-                  {sortedCourses.length === 0 && (
-                    <p className="text-sm text-[var(--muted)] py-8 text-center">No courses yet.</p>
-                  )}
-                </div>
+                    </div>
+
+                    {/* Desktop table */}
+                    <div className="hidden sm:block overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-[var(--border)]">
+                            <th className="pb-2 text-left font-semibold text-[var(--muted)] text-xs tracking-wide">Course</th>
+                            {([
+                              { key: "total" as SortCol, label: "Students" },
+                              { key: "avg" as SortCol, label: "Avg %" },
+                              { key: "rate" as SortCol, label: "Completion" },
+                              { key: "certs" as SortCol, label: "Certs" },
+                            ] as const).map((col) => (
+                              <th
+                                key={col.key}
+                                onClick={() => handleSort(col.key)}
+                                className="pb-2 text-right font-semibold text-[var(--muted)] text-xs tracking-wide cursor-pointer hover:text-[var(--foreground)] select-none transition-colors"
+                              >
+                                {col.label}
+                                {sortCol === col.key && (
+                                  <span className="ml-1 text-[var(--primary)]">{sortAsc ? "↑" : "↓"}</span>
+                                )}
+                              </th>
+                            ))}
+                            <th className="pb-2 text-center font-semibold text-[var(--muted)] text-xs tracking-wide">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[var(--border)]">
+                          {sortedCourses.map((p) => (
+                            <tr key={p.course.id} className="hover:bg-[var(--surface-2)] transition-colors">
+                              <td className="py-3 pr-4 font-medium text-xs max-w-[180px] truncate">{p.course.title}</td>
+                              <td className="py-3 text-right tabular-nums text-xs text-[var(--muted)]">{p.total}</td>
+                              <td className="py-3 text-right tabular-nums text-xs text-[var(--muted)]">{p.avg}%</td>
+                              <td className="py-3 text-right tabular-nums text-xs text-[var(--muted)]">{p.completionRate}%</td>
+                              <td className="py-3 text-right tabular-nums text-xs text-[var(--muted)]">{p.certs}</td>
+                              <td className="py-3 text-center"><StatusBadge rate={p.completionRate} total={p.total} /></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
               </CardBody>
             </Card>
 
             {radialData.length > 0 && (
-              <Card>
+              <Card className="overflow-hidden">
                 <CardBody>
                   <h2 className="font-semibold mb-1">Completion by course</h2>
                   <p className="text-xs text-[var(--muted)] mb-4">Top courses, completion %</p>
-                  <div className="flex justify-center mb-5">
+                  <div className="flex justify-center mb-5 px-4">
                     <RadialBars data={radialData} size={176} trackWidth={10} gap={5} />
                   </div>
                   <ul className="space-y-2">
                     {radialData.map((d) => (
-                      <li key={d.label} className="flex items-center gap-2 text-xs">
+                      <li key={d.label} className="flex items-center gap-2 text-xs min-w-0">
                         <span className="h-2 w-2 rounded-full shrink-0" style={{ background: d.color }} />
-                        <span className="truncate text-[var(--muted)]">{d.label}</span>
-                        <span className="ml-auto font-semibold tabular-nums">{d.value}%</span>
+                        <span className="truncate flex-1 text-[var(--muted)]">{d.label}</span>
+                        <span className="shrink-0 font-semibold tabular-nums">{d.value}%</span>
                       </li>
                     ))}
                   </ul>

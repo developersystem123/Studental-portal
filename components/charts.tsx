@@ -318,8 +318,8 @@ export function RadialBars({
   const ringStep = trackWidth + gap;
   const reactId = React.useId();
   return (
-    <div className="relative inline-block" style={{ width: size, height: size }}>
-      <svg width={size} height={size}>
+    <div className="relative w-full" style={{ maxWidth: size, aspectRatio: "1 / 1" }}>
+      <svg viewBox={`0 0 ${size} ${size}`} width="100%" height="100%">
         {data.map((d, i) => {
           const r = c - trackWidth / 2 - i * ringStep;
           if (r <= 6) return null;
