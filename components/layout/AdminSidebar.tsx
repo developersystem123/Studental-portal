@@ -162,17 +162,12 @@ function NavGroup({
                   "relative flex items-center h-10 rounded-xl text-sm font-medium transition-all duration-150",
                   collapsed ? "justify-center px-0" : "gap-3 px-3",
                   active
-                    ? [
-                        "text-[var(--primary)]",
-                        collapsed
-                          ? "bg-[var(--primary-soft)]"
-                          : "bg-gradient-to-r from-[var(--primary-soft)] to-[color-mix(in_oklab,var(--primary-soft)_40%,transparent)]",
-                      ]
+                    ? "text-[var(--primary)] font-semibold bg-[var(--primary)]/10 hover:bg-[var(--primary)]/15 shadow-sm ring-1 ring-[var(--primary)]/20"
                     : "text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)]",
                 )}
               >
                 {active && !collapsed && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-[var(--primary)]" />
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[4px] h-6 rounded-r-md bg-[var(--primary)] shadow-sm" />
                 )}
                 <NavLinkIcon icon={Icn} size={17} />
                 {!collapsed && <span className="truncate">{item.label}</span>}

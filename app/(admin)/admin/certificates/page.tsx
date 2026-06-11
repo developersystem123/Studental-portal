@@ -12,7 +12,6 @@ import {
   Modal,
   Select,
   StatCard,
-  Tabs,
   useToast,
 } from "@/components/ui";
 import Icon from "@/components/icons";
@@ -260,21 +259,21 @@ export default function AdminCertificatesPage() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Manage</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">Certificates</h1>
-          <p className="mt-1 text-[var(--muted)]">Every certificate issued across the platform — issue, preview, download or revoke.</p>
+          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">Certificates</h1>
+          <p className="mt-1 text-sm text-[var(--muted)]">Every certificate issued across the platform — issue, preview, download or revoke.</p>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" onClick={() => { exportCSV(filtered); toast.push({ title: "CSV exported", tone: "success" }); }}>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={() => { exportCSV(filtered); toast.push({ title: "CSV exported", tone: "success" }); }} className="flex-1 sm:flex-none justify-center">
             <Icon.Download size={15} /> Export CSV
           </Button>
-          <Button onClick={() => setIssueOpen(true)}>
+          <Button onClick={() => setIssueOpen(true)} className="flex-1 sm:flex-none justify-center">
             <Icon.Plus size={16} /> Issue certificate
           </Button>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <StatCard label="Total issued"  value={stats.total}       icon={<Icon.Award size={16} />}       tone="primary" delta="All time" />
         <StatCard label="This month"    value={stats.thisMonth}   icon={<Icon.Calendar size={16} />}    tone="accent"  delta="New certificates" />
         <StatCard label="Avg score"     value={stats.total ? `${stats.avg}%` : "—"} icon={<Icon.TrendingUp size={16} />} tone="success" delta="Across all certs" />
@@ -284,27 +283,49 @@ export default function AdminCertificatesPage() {
 
       <Card>
         <CardBody className="space-y-4">
-          {/* Filters — one row */}
-          <div className="flex items-center gap-2">
-            <Tabs
-              value={scoreFilter}
-              onChange={(v) => setScoreFilter(v as ScoreFilter)}
-              options={[
-                { value: "all",         label: "All",         count: certs.length },
-                { value: "distinction", label: "Distinction", count: stats.distinction },
-                { value: "pass",        label: "Pass",        count: stats.pass },
-                { value: "fail",        label: "Fail",        count: certs.filter((c) => c.score < 60).length },
-              ]}
-            />
-            <div className="flex gap-2 ml-auto shrink-0">
+          {/* Filters */}
+          <div className="space-y-3">
+            {/* Scrollable tab bar */}
+            <div className="overflow-x-auto pb-1">
+              <div className="flex p-1 rounded-xl bg-[var(--surface-2)] gap-1 w-max min-w-full">
+                {([
+                  { value: "all",         label: "All",         count: certs.length },
+                  { value: "distinction", label: "Distinction", count: stats.distinction },
+                  { value: "pass",        label: "Pass",        count: stats.pass },
+                  { value: "fail",        label: "Fail",        count: certs.filter((c) => c.score < 60).length },
+                ] as { value: ScoreFilter; label: string; count: number }[]).map((o) => (
+                  <button
+                    key={o.value}
+                    onClick={() => setScoreFilter(o.value)}
+                    className={`px-3 h-9 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
+                      scoreFilter === o.value
+                        ? "bg-[var(--surface)] text-[var(--foreground)] shadow-sm"
+                        : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                    }`}
+                  >
+                    {o.label}
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                      scoreFilter === o.value
+                        ? "bg-[var(--primary-soft)] text-[var(--primary)]"
+                        : "bg-[var(--surface-2)]"
+                    }`}>
+                      {o.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Search + course filter */}
+            <div className="flex flex-col sm:flex-row gap-2">
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search student, course, code…"
                 icon={<Icon.Search size={15} />}
-                className="!h-9 !w-52"
+                className="!h-9 flex-1"
               />
-              <Select value={courseFilter} onChange={(e) => setCourseFilter(e.target.value)} className="!h-9 !w-40 shrink-0">
+              <Select value={courseFilter} onChange={(e) => setCourseFilter(e.target.value)} className="!h-9 w-full sm:!w-40">
                 <option value="all">All courses</option>
                 {courseOptions.map(([id, title]) => (
                   <option key={id} value={id}>{title.length > 28 ? title.slice(0, 26) + "…" : title}</option>

@@ -185,15 +185,15 @@ export default function AdminTeachersPage() {
       <Card>
         <CardBody className="space-y-4">
           {/* Search + sort */}
-          <div className="flex items-center gap-3 justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Input
               icon={<Icon.Search size={16} />}
               placeholder="Search by name or email…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="max-w-xs"
+              className="w-full sm:max-w-xs"
             />
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-xs text-[var(--muted)] shrink-0 mr-0.5">Sort:</span>
               {SORTS.map(({ key, label }) => (
                 <button

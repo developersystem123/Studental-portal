@@ -11,7 +11,6 @@ import {
   Modal,
   Select,
   StatCard,
-  Tabs,
   useToast,
 } from "@/components/ui";
 import Icon from "@/components/icons";
@@ -198,8 +197,8 @@ export default function AdminReviewsPage() {
           <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">
             Manage
           </p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">Reviews moderation</h1>
-          <p className="mt-1 text-[var(--muted)]">
+          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">Reviews moderation</h1>
+          <p className="mt-1 text-sm text-[var(--muted)]">
             Browse every course review and hide anything inappropriate. Hidden reviews stop counting
             toward a course&apos;s public rating.
           </p>
@@ -210,7 +209,7 @@ export default function AdminReviewsPage() {
       </div>
 
       {/* ── StatCards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatCard
           label="Total reviews"
           value={counts.all}
@@ -283,40 +282,60 @@ export default function AdminReviewsPage() {
 
       {/* ── Toolbar: tabs + search + sort ── */}
       <div className="space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <Tabs
-            value={filter}
-            onChange={(v) => setFilter(v as Filter)}
-            options={[
-              { value: "all", label: "All", count: counts.all },
-              { value: "visible", label: "Visible", count: counts.visible },
-              { value: "hidden", label: "Hidden", count: counts.hidden },
-              { value: "low", label: "Low-rated", count: counts.low },
-            ]}
-          />
-          <div className="flex items-center gap-2 shrink-0">
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search reviews…"
-              icon={<Icon.Search size={16} />}
-              className="w-52"
-            />
-            <Select
-              value={sortKey}
-              onChange={(e) => setSortKey(e.target.value as SortKey)}
-              className="h-9 text-xs !py-0 w-[145px]"
-            >
-              <option value="newest">Newest first</option>
-              <option value="oldest">Oldest first</option>
-              <option value="high">Highest rated</option>
-              <option value="low-rating">Lowest rated</option>
-            </Select>
+        {/* Scrollable tab bar */}
+        <div className="overflow-x-auto pb-1">
+          <div className="flex p-1 rounded-xl bg-[var(--surface-2)] gap-1 w-max min-w-full">
+            {([
+              { value: "all",     label: "All",        count: counts.all },
+              { value: "visible", label: "Visible",    count: counts.visible },
+              { value: "hidden",  label: "Hidden",     count: counts.hidden },
+              { value: "low",     label: "Low-rated",  count: counts.low },
+            ] as { value: Filter; label: string; count: number }[]).map((o) => (
+              <button
+                key={o.value}
+                onClick={() => setFilter(o.value)}
+                className={`px-3 h-9 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
+                  filter === o.value
+                    ? "bg-[var(--surface)] text-[var(--foreground)] shadow-sm"
+                    : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                }`}
+              >
+                {o.label}
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                  filter === o.value
+                    ? "bg-[var(--primary-soft)] text-[var(--primary)]"
+                    : "bg-[var(--surface-2)]"
+                }`}>
+                  {o.count}
+                </span>
+              </button>
+            ))}
           </div>
         </div>
 
+        {/* Search + sort */}
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search reviews…"
+            icon={<Icon.Search size={16} />}
+            className="flex-1 !h-9"
+          />
+          <Select
+            value={sortKey}
+            onChange={(e) => setSortKey(e.target.value as SortKey)}
+            className="!h-9 text-xs !py-0 w-full sm:w-[145px]"
+          >
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+            <option value="high">Highest rated</option>
+            <option value="low-rating">Lowest rated</option>
+          </Select>
+        </div>
+
         {/* Star filter chips */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-xs text-[var(--muted)] shrink-0">Stars:</span>
           <button
             onClick={() => setStarFilter(null)}

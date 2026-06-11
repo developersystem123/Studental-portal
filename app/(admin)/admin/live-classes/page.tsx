@@ -12,7 +12,6 @@ import {
   Modal,
   Select,
   StatCard,
-  Tabs,
   Textarea,
   useToast,
 } from "@/components/ui";
@@ -286,23 +285,23 @@ export default function AdminLiveClassesPage() {
           <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">
             Manage
           </p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">Live Classes</h1>
-          <p className="mt-1 text-[var(--muted)]">
+          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">Live Classes</h1>
+          <p className="mt-1 text-sm text-[var(--muted)]">
             Schedule and manage live online sessions across all courses.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => exportCSV(filtered)}>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={() => exportCSV(filtered)} className="flex-1 sm:flex-none justify-center">
             <Icon.Download size={15} /> Export CSV
           </Button>
-          <Button onClick={openCreate}>
+          <Button onClick={openCreate} className="flex-1 sm:flex-none justify-center">
             <Icon.Plus size={16} /> Schedule class
           </Button>
         </div>
       </div>
 
       {/* ── Stats ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatCard
           label="Total classes"
           value={liveStats.total}
@@ -331,31 +330,51 @@ export default function AdminLiveClassesPage() {
 
       {/* ── Tabs + search/sort toolbar ── */}
       <div className="space-y-3">
-        <Tabs
-          value={filter}
-          onChange={(v) => setFilter(v as Filter)}
-          options={[
-            { value: "all", label: "All", count: counts.all },
-            { value: "upcoming", label: "Upcoming", count: counts.upcoming },
-            { value: "live", label: "Live", count: counts.live },
-            { value: "ended", label: "Ended", count: counts.ended },
-            { value: "cancelled", label: "Cancelled", count: counts.cancelled },
-          ]}
-        />
+        {/* Scrollable tab bar */}
+        <div className="overflow-x-auto pb-1">
+          <div className="flex p-1 rounded-xl bg-[var(--surface-2)] gap-1 w-max min-w-full">
+            {([
+              { value: "all",       label: "All",       count: counts.all },
+              { value: "upcoming",  label: "Upcoming",  count: counts.upcoming },
+              { value: "live",      label: "Live",      count: counts.live },
+              { value: "ended",     label: "Ended",     count: counts.ended },
+              { value: "cancelled", label: "Cancelled", count: counts.cancelled },
+            ] as { value: Filter; label: string; count: number }[]).map((o) => (
+              <button
+                key={o.value}
+                onClick={() => setFilter(o.value)}
+                className={`px-3 h-9 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
+                  filter === o.value
+                    ? "bg-[var(--surface)] text-[var(--foreground)] shadow-sm"
+                    : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                }`}
+              >
+                {o.label}
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                  filter === o.value
+                    ? "bg-[var(--primary-soft)] text-[var(--primary)]"
+                    : "bg-[var(--surface-2)]"
+                }`}>
+                  {o.count}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
 
-        {/* Search + sort in one row */}
-        <div className="flex items-center gap-2">
+        {/* Search + sort */}
+        <div className="flex flex-col sm:flex-row gap-2">
           <Input
             icon={<Icon.Search size={16} />}
             placeholder="Search by title, course, instructor…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="flex-1 min-w-0 max-w-sm"
+            className="flex-1 !h-9"
           />
           <Select
             value={sortKey}
             onChange={(e) => setSortKey(e.target.value as SortKey)}
-            className="h-9 text-xs !py-0 w-[155px] shrink-0"
+            className="!h-9 text-xs !py-0 w-full sm:w-[155px]"
           >
             <option value="date-desc">Newest first</option>
             <option value="date-asc">Oldest first</option>

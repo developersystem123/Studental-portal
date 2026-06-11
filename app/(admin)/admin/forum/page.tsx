@@ -11,7 +11,6 @@ import {
   Modal,
   Select,
   StatCard,
-  Tabs,
   useToast,
 } from "@/components/ui";
 import Icon from "@/components/icons";
@@ -203,8 +202,8 @@ export default function AdminForumPage() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Manage</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">Forum moderation</h1>
-          <p className="mt-1 text-[var(--muted)]">Review community posts — pin, moderate, and export.</p>
+          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">Forum moderation</h1>
+          <p className="mt-1 text-sm text-[var(--muted)]">Review community posts — pin, moderate, and export.</p>
         </div>
         <Button variant="outline" onClick={() => { exportCSV(filtered); toast.push({ title: "CSV exported", tone: "success" }); }}>
           <Icon.Download size={15} /> Export CSV
@@ -222,46 +221,70 @@ export default function AdminForumPage() {
 
       <Card>
         <CardBody className="space-y-4">
-          {/* Filters — one row */}
-          <div className="flex items-center gap-2">
-            <Tabs
-              value={filter}
-              onChange={(v) => setFilter(v as Filter)}
-              options={[
-                { value: "all",          label: "All",          count: counts.all },
-                { value: "question",     label: "Questions",    count: counts.question },
-                { value: "discussion",   label: "Discussion",   count: counts.discussion },
-                { value: "announcement", label: "Announcements",count: counts.announcement },
-                { value: "pinned",       label: "Pinned",       count: counts.pinned },
-              ]}
-            />
-            <div className="flex gap-2 ml-auto shrink-0">
+          {/* Filters */}
+          <div className="space-y-3">
+            {/* Scrollable tab bar */}
+            <div className="overflow-x-auto pb-1">
+              <div className="flex p-1 rounded-xl bg-[var(--surface-2)] gap-1 w-max min-w-full">
+                {([
+                  { value: "all",          label: "All",           count: counts.all },
+                  { value: "question",     label: "Questions",     count: counts.question },
+                  { value: "discussion",   label: "Discussion",    count: counts.discussion },
+                  { value: "announcement", label: "Announcements", count: counts.announcement },
+                  { value: "pinned",       label: "Pinned",        count: counts.pinned },
+                ] as { value: Filter; label: string; count: number }[]).map((o) => (
+                  <button
+                    key={o.value}
+                    onClick={() => setFilter(o.value)}
+                    className={`px-3 h-9 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
+                      filter === o.value
+                        ? "bg-[var(--surface)] text-[var(--foreground)] shadow-sm"
+                        : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                    }`}
+                  >
+                    {o.label}
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                      filter === o.value
+                        ? "bg-[var(--primary-soft)] text-[var(--primary)]"
+                        : "bg-[var(--surface-2)]"
+                    }`}>
+                      {o.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Search + filters */}
+            <div className="flex flex-col sm:flex-row gap-2">
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search posts or authors…"
                 icon={<Icon.Search size={15} />}
-                className="!h-9 !w-52"
+                className="!h-9 flex-1"
               />
-              <Select value={course} onChange={(e) => setCourse(e.target.value)} className="!h-9 !w-40 shrink-0">
-                <option value="all">All courses</option>
-                {courseOptions.map(([id, title]) => (
-                  <option key={id} value={id}>{title.length > 28 ? title.slice(0, 26) + "…" : title}</option>
-                ))}
-              </Select>
-              <Select
-                value={`${sortKey}-${sortDir}`}
-                onChange={(e) => {
-                  const [k, d] = e.target.value.split("-");
-                  setSortKey(k as SortKey); setSortDir(d as SortDir);
-                }}
-                className="!h-9 !w-36 shrink-0"
-              >
-                <option value="date-desc">Latest first</option>
-                <option value="date-asc">Oldest first</option>
-                <option value="views-desc">Most viewed</option>
-                <option value="replies-desc">Most replies</option>
-              </Select>
+              <div className="flex gap-2">
+                <Select value={course} onChange={(e) => setCourse(e.target.value)} className="!h-9 flex-1 sm:!w-40">
+                  <option value="all">All courses</option>
+                  {courseOptions.map(([id, title]) => (
+                    <option key={id} value={id}>{title.length > 28 ? title.slice(0, 26) + "…" : title}</option>
+                  ))}
+                </Select>
+                <Select
+                  value={`${sortKey}-${sortDir}`}
+                  onChange={(e) => {
+                    const [k, d] = e.target.value.split("-");
+                    setSortKey(k as SortKey); setSortDir(d as SortDir);
+                  }}
+                  className="!h-9 flex-1 sm:!w-36"
+                >
+                  <option value="date-desc">Latest first</option>
+                  <option value="date-asc">Oldest first</option>
+                  <option value="views-desc">Most viewed</option>
+                  <option value="replies-desc">Most replies</option>
+                </Select>
+              </div>
             </div>
           </div>
 

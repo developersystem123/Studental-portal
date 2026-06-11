@@ -12,7 +12,6 @@ import {
   Modal,
   Select,
   StatCard,
-  Tabs,
   useToast,
 } from "@/components/ui";
 import { useAdmin, type EnrollmentRow } from "@/lib/store";
@@ -146,8 +145,8 @@ export default function AdminEnrollmentsPage() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Manage</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">Enrollments</h1>
-          <p className="mt-1 text-[var(--muted)]">See who&apos;s taking what, award certificates, revoke when needed.</p>
+          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">Enrollments</h1>
+          <p className="mt-1 text-sm text-[var(--muted)]">See who&apos;s taking what, award certificates, revoke when needed.</p>
         </div>
         <Button variant="outline" onClick={() => { exportCSV(filtered); toast.push({ title: "CSV exported", tone: "success" }); }}>
           <Icon.Download size={15} /> Export CSV
@@ -155,7 +154,7 @@ export default function AdminEnrollmentsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <StatCard label="Total"        value={counts.all}          icon={<Icon.ListChecks size={16} />} tone="primary" delta="All enrollments" />
         <StatCard label="In progress"  value={counts["in-progress"]} icon={<Icon.PlayCircle size={16} />} tone="accent"  delta="Currently active" />
         <StatCard label="Completed"    value={counts.completed}    icon={<Icon.CheckCircle size={16} />} tone="success" delta="Finished course" />
@@ -167,36 +166,56 @@ export default function AdminEnrollmentsPage() {
         <CardBody className="space-y-4">
           {/* Filters row */}
           <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-2">
-              <Tabs
-                value={filter}
-                onChange={(v) => setFilter(v as Filter)}
-                options={[
+            {/* Scrollable tab bar */}
+            <div className="overflow-x-auto pb-1">
+              <div className="flex p-1 rounded-xl bg-[var(--surface-2)] gap-1 w-max min-w-full">
+                {([
                   { value: "all",         label: "All",         count: counts.all },
                   { value: "in-progress", label: "In progress", count: counts["in-progress"] },
                   { value: "completed",   label: "Completed",   count: counts.completed },
                   { value: "certified",   label: "Certified",   count: counts.certified },
-                ]}
-              />
-              <div className="flex gap-2 ml-auto shrink-0">
-                <Input
-                  icon={<Icon.Search size={15} />}
-                  placeholder="Search student or course…"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  className="!h-9 !w-52"
-                />
-                <Select
-                  value={courseQ}
-                  onChange={(e) => setCourseQ(e.target.value)}
-                  className="!h-9 !w-40 shrink-0"
-                >
-                  <option value="all">All courses</option>
-                  {courseOptions.map(([id, title]) => (
-                    <option key={id} value={id}>{title.length > 28 ? title.slice(0, 26) + "…" : title}</option>
-                  ))}
-                </Select>
+                ] as { value: Filter; label: string; count: number }[]).map((o) => (
+                  <button
+                    key={o.value}
+                    onClick={() => setFilter(o.value)}
+                    className={`px-3 h-9 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
+                      filter === o.value
+                        ? "bg-[var(--surface)] text-[var(--foreground)] shadow-sm"
+                        : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                    }`}
+                  >
+                    {o.label}
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                      filter === o.value
+                        ? "bg-[var(--primary-soft)] text-[var(--primary)]"
+                        : "bg-[var(--surface-2)]"
+                    }`}>
+                      {o.count}
+                    </span>
+                  </button>
+                ))}
               </div>
+            </div>
+
+            {/* Search + course filter */}
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Input
+                icon={<Icon.Search size={15} />}
+                placeholder="Search student or course…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="!h-9 flex-1"
+              />
+              <Select
+                value={courseQ}
+                onChange={(e) => setCourseQ(e.target.value)}
+                className="!h-9 w-full sm:!w-40"
+              >
+                <option value="all">All courses</option>
+                {courseOptions.map(([id, title]) => (
+                  <option key={id} value={id}>{title.length > 28 ? title.slice(0, 26) + "…" : title}</option>
+                ))}
+              </Select>
             </div>
 
             {/* Active filter chips */}

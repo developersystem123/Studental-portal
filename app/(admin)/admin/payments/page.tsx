@@ -11,7 +11,6 @@ import {
   Modal,
   Select,
   StatCard,
-  Tabs,
   useToast,
 } from "@/components/ui";
 import Icon from "@/components/icons";
@@ -288,8 +287,8 @@ export default function AdminPaymentsPage() {
           <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">
             Manage
           </p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">Payments &amp; revenue</h1>
-          <p className="mt-1 text-[var(--muted)]">
+          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">Payments &amp; revenue</h1>
+          <p className="mt-1 text-sm text-[var(--muted)]">
             Every transaction on the platform — track revenue, settle pending charges, and issue
             refunds.
           </p>
@@ -300,7 +299,7 @@ export default function AdminPaymentsPage() {
       </div>
 
       {/* ── StatCards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatCard
           label="Gross revenue"
           value={money(summary?.grossRevenue ?? 0, currency)}
@@ -370,48 +369,67 @@ export default function AdminPaymentsPage() {
 
       {/* ── Controls ── */}
       <div className="space-y-3">
-        {/* Tabs + search + sort in one area */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <Tabs
-            value={filter}
-            onChange={(v) => setFilter(v as Filter)}
-            options={[
-              { value: "all", label: "All", count: counts.all },
+        {/* Scrollable tab bar */}
+        <div className="overflow-x-auto pb-1">
+          <div className="flex p-1 rounded-xl bg-[var(--surface-2)] gap-1 w-max min-w-full">
+            {([
+              { value: "all",       label: "All",       count: counts.all },
               { value: "completed", label: "Completed", count: counts.completed },
-              { value: "pending", label: "Pending", count: counts.pending },
-              { value: "failed", label: "Failed", count: counts.failed },
-              { value: "refunded", label: "Refunded", count: counts.refunded },
-            ]}
-          />
-          <div className="flex items-center gap-2 shrink-0">
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search payments…"
-              icon={<Icon.Search size={16} />}
-              className="w-52"
-            />
-            <Select
-              value={sortKey}
-              onChange={(e) => setSortKey(e.target.value as SortKey)}
-              className="h-9 text-xs !py-0 w-[148px]"
-            >
-              <option value="newest">Newest first</option>
-              <option value="oldest">Oldest first</option>
-              <option value="amount-desc">Highest amount</option>
-              <option value="amount-asc">Lowest amount</option>
-            </Select>
+              { value: "pending",   label: "Pending",   count: counts.pending },
+              { value: "failed",    label: "Failed",    count: counts.failed },
+              { value: "refunded",  label: "Refunded",  count: counts.refunded },
+            ] as { value: Filter; label: string; count: number }[]).map((o) => (
+              <button
+                key={o.value}
+                onClick={() => setFilter(o.value)}
+                className={`px-3 h-9 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
+                  filter === o.value
+                    ? "bg-[var(--surface)] text-[var(--foreground)] shadow-sm"
+                    : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                }`}
+              >
+                {o.label}
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                  filter === o.value
+                    ? "bg-[var(--primary-soft)] text-[var(--primary)]"
+                    : "bg-[var(--surface-2)]"
+                }`}>
+                  {o.count}
+                </span>
+              </button>
+            ))}
           </div>
         </div>
 
+        {/* Search + sort */}
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search payments…"
+            icon={<Icon.Search size={16} />}
+            className="flex-1 !h-9"
+          />
+          <Select
+            value={sortKey}
+            onChange={(e) => setSortKey(e.target.value as SortKey)}
+            className="!h-9 text-xs !py-0 w-full sm:w-[148px]"
+          >
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+            <option value="amount-desc">Highest amount</option>
+            <option value="amount-asc">Lowest amount</option>
+          </Select>
+        </div>
+
         {/* Date range chips */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-xs text-[var(--muted)] shrink-0">Period:</span>
           {(["all", "today", "week", "month"] as DateRange[]).map((r) => (
             <button
               key={r}
               onClick={() => setDateRange(r)}
-              className={`h-7 px-3 rounded-full text-xs font-medium transition ${
+              className={`h-7 px-3 rounded-full text-xs font-medium transition whitespace-nowrap ${
                 dateRange === r
                   ? "bg-[var(--primary)] text-white"
                   : "bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)]"

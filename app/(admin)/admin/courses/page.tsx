@@ -143,21 +143,21 @@ export default function AdminCoursesPage() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Manage</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">Courses</h1>
-          <p className="mt-1 text-[var(--muted)]">Add, edit, and remove courses from the catalog.</p>
+          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">Courses</h1>
+          <p className="mt-1 text-sm text-[var(--muted)]">Add, edit, and remove courses from the catalog.</p>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" onClick={() => { exportCSV(filtered); toast.push({ title: "CSV exported", tone: "success" }); }}>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={() => { exportCSV(filtered); toast.push({ title: "CSV exported", tone: "success" }); }} className="flex-1 sm:flex-none justify-center">
             <Icon.Download size={15} /> Export CSV
           </Button>
-          <Button onClick={() => { setEditing(null); setMode("create"); }}>
+          <Button onClick={() => { setEditing(null); setMode("create"); }} className="flex-1 sm:flex-none justify-center">
             <Icon.Plus size={16} /> New course
           </Button>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <StatCard label="Total courses"   value={stats.total}         icon={<Icon.Book size={16} />}       tone="primary" delta="In catalog" />
         <StatCard label="Free courses"    value={stats.free}          icon={<Icon.CheckCircle size={16} />} tone="success" delta="No charge" />
         <StatCard label="Paid courses"    value={stats.paid}          icon={<Icon.DollarSign size={16} />}  tone="accent"  delta="Revenue generating" />
@@ -168,35 +168,15 @@ export default function AdminCoursesPage() {
       {/* Filters */}
       <Card>
         <CardBody className="space-y-3">
+          {/* Row 1: Search + view toggle */}
           <div className="flex gap-2 items-center">
-            <div className="flex-1 min-w-0">
-              <Input
-                icon={<Icon.Search size={15} />}
-                placeholder="Search by title, instructor, or category…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="!h-9 w-full"
-              />
-            </div>
-            <Select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="!h-9 !w-36 shrink-0">
-              <option value="all">All categories</option>
-              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </Select>
-            <Select value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)} className="!h-9 !w-28 shrink-0">
-              <option value="all">All levels</option>
-              {LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
-            </Select>
-            <Select value={priceFilter} onChange={(e) => setPriceFilter(e.target.value as "all" | "free" | "paid")} className="!h-9 !w-28 shrink-0">
-              <option value="all">All prices</option>
-              <option value="free">Free</option>
-              <option value="paid">Paid</option>
-            </Select>
-            <Select value={sortKey} onChange={(e) => setSortKey(e.target.value as SortKey)} className="!h-9 !w-32 shrink-0">
-              <option value="title">Sort: Title</option>
-              <option value="price">Sort: Price</option>
-              <option value="rating">Sort: Rating</option>
-              <option value="chapters">Sort: Chapters</option>
-            </Select>
+            <Input
+              icon={<Icon.Search size={15} />}
+              placeholder="Search by title, instructor, or category…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="!h-9 flex-1"
+            />
             {/* View toggle */}
             <div className="flex shrink-0 border border-[var(--border)] rounded-lg overflow-hidden h-9">
               <button
@@ -219,6 +199,29 @@ export default function AdminCoursesPage() {
                 </svg>
               </button>
             </div>
+          </div>
+
+          {/* Row 2: Dropdown filters */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <Select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="!h-9 w-full">
+              <option value="all">All categories</option>
+              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </Select>
+            <Select value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)} className="!h-9 w-full">
+              <option value="all">All levels</option>
+              {LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
+            </Select>
+            <Select value={priceFilter} onChange={(e) => setPriceFilter(e.target.value as "all" | "free" | "paid")} className="!h-9 w-full">
+              <option value="all">All prices</option>
+              <option value="free">Free</option>
+              <option value="paid">Paid</option>
+            </Select>
+            <Select value={sortKey} onChange={(e) => setSortKey(e.target.value as SortKey)} className="!h-9 w-full">
+              <option value="title">Sort: Title</option>
+              <option value="price">Sort: Price</option>
+              <option value="rating">Sort: Rating</option>
+              <option value="chapters">Sort: Chapters</option>
+            </Select>
           </div>
 
           {/* Active filter chips */}

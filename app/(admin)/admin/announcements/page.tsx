@@ -257,23 +257,23 @@ export default function AdminAnnouncementsPage() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Manage</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">Announcements</h1>
-          <p className="mt-1 text-[var(--muted)]">
+          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">Announcements</h1>
+          <p className="mt-1 text-sm text-[var(--muted)]">
             Broadcast messages to all users or specific groups via in-app notifications or email.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => exportCSV(filtered)}>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={() => exportCSV(filtered)} className="flex-1 sm:flex-none justify-center">
             <Icon.Download size={15} /> Export CSV
           </Button>
-          <Button onClick={() => openCompose()}>
+          <Button onClick={() => openCompose()} className="flex-1 sm:flex-none justify-center">
             <Icon.Megaphone size={16} /> New announcement
           </Button>
         </div>
       </div>
 
       {/* ── Stats ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatCard label="Total sent" value={stats.totalSent} icon={<Icon.Send size={18} />} tone="success" />
         <StatCard
           label="Total reached"

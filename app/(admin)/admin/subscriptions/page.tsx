@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Badge, Button, Card, CardBody, Input, Modal, Select, StatCard, Tabs, useToast } from "@/components/ui";
+import { Badge, Button, Card, CardBody, Input, Modal, Select, StatCard, useToast } from "@/components/ui";
 import { Donut, BarChart, LineChart } from "@/components/charts";
 import Icon from "@/components/icons";
 import { cn, formatDate } from "@/lib/utils";
@@ -293,35 +293,59 @@ export default function AdminSubscriptionsPage() {
       {/* Table */}
       <Card>
         <CardBody className="space-y-4">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Tabs
-              value={tab}
-              onChange={setTab}
-              options={[
-                { value: "all",      label: "All",      count: subs.length },
-                { value: "active",   label: "Active",   count: stats.activeCount },
-                { value: "expired",  label: "Expired",  count: stats.expiredCount },
-                { value: "canceled", label: "Cancelled",count: canceledCount },
-              ]}
-            />
-            <div className="flex gap-2 ml-auto shrink-0">
+          <div className="space-y-3">
+            {/* Scrollable tab bar */}
+            <div className="overflow-x-auto pb-1">
+              <div className="flex p-1 rounded-xl bg-[var(--surface-2)] gap-1 w-max min-w-full">
+                {([
+                  { value: "all",      label: "All",       count: subs.length },
+                  { value: "active",   label: "Active",    count: stats.activeCount },
+                  { value: "expired",  label: "Expired",   count: stats.expiredCount },
+                  { value: "canceled", label: "Cancelled", count: canceledCount },
+                ] as { value: string; label: string; count: number }[]).map((o) => (
+                  <button
+                    key={o.value}
+                    onClick={() => setTab(o.value)}
+                    className={`px-3 h-9 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
+                      tab === o.value
+                        ? "bg-[var(--surface)] text-[var(--foreground)] shadow-sm"
+                        : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                    }`}
+                  >
+                    {o.label}
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                      tab === o.value
+                        ? "bg-[var(--primary-soft)] text-[var(--primary)]"
+                        : "bg-[var(--surface-2)]"
+                    }`}>
+                      {o.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Search + filters */}
+            <div className="flex flex-col sm:flex-row gap-2">
               <Input
                 placeholder="Search by name or email…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 icon={<Icon.Search size={15} />}
-                className="!h-9 !w-48"
+                className="!h-9 flex-1"
               />
-              <Select value={planFilter} onChange={(e) => setPlanFilter(e.target.value)} className="!h-9 !w-28 shrink-0">
-                <option value="all">All plans</option>
-                <option value="pro">Pro</option>
-                <option value="team">Team</option>
-              </Select>
-              <Select value={intervalFilter} onChange={(e) => setIntervalFilter(e.target.value)} className="!h-9 !w-32 shrink-0">
-                <option value="all">All intervals</option>
-                <option value="monthly">Monthly</option>
-                <option value="annual">Annual</option>
-              </Select>
+              <div className="flex gap-2">
+                <Select value={planFilter} onChange={(e) => setPlanFilter(e.target.value)} className="!h-9 flex-1 sm:!w-28">
+                  <option value="all">All plans</option>
+                  <option value="pro">Pro</option>
+                  <option value="team">Team</option>
+                </Select>
+                <Select value={intervalFilter} onChange={(e) => setIntervalFilter(e.target.value)} className="!h-9 flex-1 sm:!w-32">
+                  <option value="all">All intervals</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="annual">Annual</option>
+                </Select>
+              </div>
             </div>
           </div>
 

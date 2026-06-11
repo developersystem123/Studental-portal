@@ -231,20 +231,20 @@ export default function AdminLearningPathsPage() {
       {/* ── Main card ── */}
       <Card>
         <CardBody className="space-y-4">
-          {/* Toolbar row 1: search · level · sort · view toggle — all in one row */}
-          <div className="flex items-center gap-2">
+          {/* Toolbar: search (full-width on mobile) + controls row */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Input
               icon={<Icon.Search size={16} />}
               placeholder="Search paths…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="flex-1 min-w-0 max-w-xs"
+              className="w-full sm:flex-1 sm:min-w-0 sm:max-w-xs"
             />
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2">
               <Select
                 value={levelFilter}
                 onChange={(e) => setLevelFilter(e.target.value)}
-                className="h-9 text-xs !py-0 w-[120px]"
+                className="!h-9 text-xs flex-1 sm:flex-none sm:w-[120px]"
               >
                 <option value="all">All levels</option>
                 {LEVELS.map((l) => (
@@ -254,7 +254,7 @@ export default function AdminLearningPathsPage() {
               <Select
                 value={sortKey}
                 onChange={(e) => setSortKey(e.target.value as SortKey)}
-                className="h-9 text-xs !py-0 w-[148px]"
+                className="!h-9 text-xs flex-1 sm:flex-none sm:w-[148px]"
               >
                 <option value="featured">Featured first</option>
                 <option value="learners">Most learners</option>
@@ -262,7 +262,7 @@ export default function AdminLearningPathsPage() {
                 <option value="title">A → Z</option>
               </Select>
               {/* View toggle */}
-              <div className="flex rounded-lg overflow-hidden border border-[var(--border)]">
+              <div className="flex shrink-0 rounded-lg overflow-hidden border border-[var(--border)]">
                 <button
                   onClick={() => setViewMode("grid")}
                   title="Grid view"

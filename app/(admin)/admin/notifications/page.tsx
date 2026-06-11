@@ -11,7 +11,6 @@ import {
   Modal,
   Select,
   StatCard,
-  Tabs,
   Textarea,
   useToast,
 } from "@/components/ui";
@@ -174,23 +173,26 @@ export default function AdminNotificationsPage() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Manage</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">Notifications</h1>
-          <p className="mt-1 text-[var(--muted)]">
+          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">Notifications</h1>
+          <p className="mt-1 text-sm text-[var(--muted)]">
             View all platform notifications. Send broadcasts to all users or specific students.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button variant="outline" onClick={() => { exportCSV(filtered); toast.push({ title: "Exported", tone: "success" }); }}>
-            <Icon.Download size={15} /> Export CSV
+            <Icon.Download size={15} />
+            <span className="hidden sm:inline">Export CSV</span>
           </Button>
           <Button onClick={() => setCompose(true)}>
-            <Icon.Send size={15} /> Send broadcast
+            <Icon.Send size={15} />
+            <span className="hidden sm:inline">Send broadcast</span>
+            <span className="sm:hidden">Broadcast</span>
           </Button>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatCard label="Total"     value={stats.total}     icon={<Icon.Bell size={18} />}        tone="primary" />
         <StatCard label="Broadcast" value={stats.broadcast} icon={<Icon.Megaphone size={18} />}   tone="accent"  delta="Sent to all users" />
         <StatCard label="Targeted"  value={stats.targeted}  icon={<Icon.User size={18} />}         tone="success" delta="User-specific" />
@@ -207,41 +209,60 @@ export default function AdminNotificationsPage() {
               key={t}
               onClick={() => setTab(active ? "all" : t)}
               className={cn(
-                "rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5",
+                "rounded-2xl border p-3 sm:p-4 text-left transition-all hover:-translate-y-0.5",
                 active
                   ? `${info.bg} border-current shadow-md`
                   : "bg-[var(--surface)] border-[var(--border)] hover:border-[var(--border-strong)]",
               )}
             >
-              <div className={cn("h-9 w-9 rounded-xl flex items-center justify-center", info.bg, info.color)}>
+              <div className={cn("h-8 w-8 sm:h-9 sm:w-9 rounded-xl flex items-center justify-center", info.bg, info.color)}>
                 {info.icon}
               </div>
-              <p className="mt-3 text-xs font-medium text-[var(--muted)]">{info.label}</p>
-              <p className="mt-0.5 text-2xl font-bold tabular-nums">{typeCounts[t] ?? 0}</p>
-              {active && <p className={cn("mt-2 text-xs font-medium flex items-center gap-1", info.color)}><Icon.Check size={11} /> Filtering</p>}
+              <p className="mt-2 sm:mt-3 text-xs font-medium text-[var(--muted)]">{info.label}</p>
+              <p className="mt-0.5 text-xl sm:text-2xl font-bold tabular-nums">{typeCounts[t] ?? 0}</p>
+              {active && <p className={cn("mt-1.5 text-xs font-medium flex items-center gap-1", info.color)}><Icon.Check size={11} /> Filtering</p>}
             </button>
           );
         })}
       </div>
 
       {/* Controls */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <Tabs
-          value={tab}
-          onChange={(v) => setTab(v as typeof tab)}
-          options={[
-            { value: "all",          label: "All",          count: notifs.length },
-            { value: "announcement", label: "Announcements",count: typeCounts.announcement ?? 0 },
-            { value: "assignment",   label: "Assignments",  count: typeCounts.assignment ?? 0 },
-            { value: "reminder",     label: "Reminders",    count: typeCounts.reminder ?? 0 },
-            { value: "achievement",  label: "Achievements", count: typeCounts.achievement ?? 0 },
-          ]}
-        />
-        <div className="flex items-center gap-2 ml-auto">
+      <div className="flex flex-col gap-3">
+        <div className="overflow-x-auto pb-1">
+          <div className="flex p-1 rounded-xl bg-[var(--surface-2)] gap-1 w-max min-w-full">
+            {([
+              { value: "all",          label: "All",           count: notifs.length },
+              { value: "announcement", label: "Announcements", count: typeCounts.announcement ?? 0 },
+              { value: "assignment",   label: "Assignments",   count: typeCounts.assignment ?? 0 },
+              { value: "reminder",     label: "Reminders",     count: typeCounts.reminder ?? 0 },
+              { value: "achievement",  label: "Achievements",  count: typeCounts.achievement ?? 0 },
+            ] as { value: typeof tab; label: string; count: number }[]).map((o) => (
+              <button
+                key={o.value}
+                onClick={() => setTab(o.value)}
+                className={cn(
+                  "px-3 h-9 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap",
+                  tab === o.value
+                    ? "bg-[var(--surface)] text-[var(--foreground)] shadow-sm"
+                    : "text-[var(--muted)] hover:text-[var(--foreground)]",
+                )}
+              >
+                {o.label}
+                <span className={cn(
+                  "text-[10px] px-1.5 py-0.5 rounded-full",
+                  tab === o.value ? "bg-[var(--primary-soft)] text-[var(--primary)]" : "bg-[var(--surface-2)]",
+                )}>
+                  {o.count}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setBroadcastOnly((v) => !v)}
             className={cn(
-              "flex items-center gap-1.5 h-9 px-3 rounded-xl border text-xs font-medium transition",
+              "flex items-center gap-1.5 h-9 px-3 rounded-xl border text-xs font-medium transition shrink-0",
               broadcastOnly
                 ? "bg-[var(--primary)] text-white border-[var(--primary)]"
                 : "border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)] hover:border-[var(--border-strong)]",
@@ -254,7 +275,7 @@ export default function AdminNotificationsPage() {
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search…"
             icon={<Icon.Search size={15} />}
-            className="!w-52"
+            className="flex-1 !min-w-[160px] sm:!w-52 sm:flex-none sm:ml-auto"
           />
         </div>
       </div>
@@ -309,8 +330,8 @@ export default function AdminNotificationsPage() {
                           </div>
                         </Td>
                         <Td>
-                          <p className="font-semibold truncate max-w-[28ch]">{n.title}</p>
-                          <p className="text-xs text-[var(--muted)] truncate max-w-[34ch] mt-0.5">{n.message}</p>
+                          <p className="font-semibold truncate max-w-[16ch] sm:max-w-[28ch]">{n.title}</p>
+                          <p className="text-xs text-[var(--muted)] truncate max-w-[20ch] sm:max-w-[34ch] mt-0.5">{n.message}</p>
                         </Td>
                         <Td className="hidden md:table-cell">
                           {n.broadcast ? (
@@ -356,8 +377,8 @@ export default function AdminNotificationsPage() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="px-4 py-3 border-t border-[var(--border)] flex items-center justify-between">
-                <p className="text-xs text-[var(--muted)]">
+              <div className="px-4 py-3 border-t border-[var(--border)] flex items-center justify-between gap-2">
+                <p className="text-xs text-[var(--muted)] shrink-0">
                   {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
                 </p>
                 <div className="flex items-center gap-1">

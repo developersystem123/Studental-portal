@@ -12,7 +12,6 @@ import {
   Modal,
   Select,
   StatCard,
-  Tabs,
   Textarea,
   useToast,
 } from "@/components/ui";
@@ -286,8 +285,8 @@ export default function AdminSupportPage() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Manage</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">Support tickets</h1>
-          <p className="mt-1 text-[var(--muted)]">
+          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">Support tickets</h1>
+          <p className="mt-1 text-sm text-[var(--muted)]">
             Respond to student requests, set priorities, and track each ticket to resolution.
           </p>
         </div>
@@ -297,7 +296,7 @@ export default function AdminSupportPage() {
       </div>
 
       {/* ── Stats ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatCard label="Open" value={counts.open} icon={<Icon.Inbox size={18} />} tone="primary" />
         <StatCard label="In progress" value={counts.in_progress} icon={<Icon.Clock size={18} />} tone="accent" />
         <StatCard label="Resolved" value={counts.resolved} icon={<Icon.CheckCircle size={18} />} tone="success" />
@@ -311,37 +310,57 @@ export default function AdminSupportPage() {
 
       {/* ── Controls ── */}
       <div className="space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <Tabs
-            value={filter}
-            onChange={(v) => setFilter(v as Filter)}
-            options={[
-              { value: "all", label: "All", count: counts.all },
-              { value: "open", label: "Open", count: counts.open },
+        {/* Scrollable tab bar */}
+        <div className="overflow-x-auto pb-1">
+          <div className="flex p-1 rounded-xl bg-[var(--surface-2)] gap-1 w-max min-w-full">
+            {([
+              { value: "all",         label: "All",         count: counts.all },
+              { value: "open",        label: "Open",        count: counts.open },
               { value: "in_progress", label: "In progress", count: counts.in_progress },
-              { value: "resolved", label: "Resolved", count: counts.resolved },
-              { value: "closed", label: "Closed", count: counts.closed },
-            ]}
-          />
-          <div className="flex items-center gap-2 shrink-0">
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search tickets…"
-              icon={<Icon.Search size={16} />}
-              className="w-52"
-            />
-            <Select
-              value={sortKey}
-              onChange={(e) => setSortKey(e.target.value as SortKey)}
-              className="h-9 text-xs !py-0 w-[148px]"
-            >
-              <option value="updated">Last updated</option>
-              <option value="newest">Newest first</option>
-              <option value="oldest">Oldest first</option>
-              <option value="priority">Priority (urgent first)</option>
-            </Select>
+              { value: "resolved",    label: "Resolved",    count: counts.resolved },
+              { value: "closed",      label: "Closed",      count: counts.closed },
+            ] as { value: Filter; label: string; count: number }[]).map((o) => (
+              <button
+                key={o.value}
+                onClick={() => setFilter(o.value)}
+                className={`px-3 h-9 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
+                  filter === o.value
+                    ? "bg-[var(--surface)] text-[var(--foreground)] shadow-sm"
+                    : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                }`}
+              >
+                {o.label}
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                  filter === o.value
+                    ? "bg-[var(--primary-soft)] text-[var(--primary)]"
+                    : "bg-[var(--surface-2)]"
+                }`}>
+                  {o.count}
+                </span>
+              </button>
+            ))}
           </div>
+        </div>
+
+        {/* Search + Sort */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search tickets…"
+            icon={<Icon.Search size={16} />}
+            className="flex-1 sm:!w-52 sm:flex-none"
+          />
+          <Select
+            value={sortKey}
+            onChange={(e) => setSortKey(e.target.value as SortKey)}
+            className="h-9 text-xs !py-0 w-full sm:w-[148px]"
+          >
+            <option value="updated">Last updated</option>
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+            <option value="priority">Priority (urgent first)</option>
+          </Select>
         </div>
 
         {/* Priority filter chips */}
