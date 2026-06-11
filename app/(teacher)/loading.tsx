@@ -1,1 +1,1 @@
-export { default } from "@/components/layout/PageSkeleton";
+export { default } from "@/components/layout/PortalLoader";

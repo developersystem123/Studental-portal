@@ -72,15 +72,15 @@ function StatPill({ label, value, sub, icon, tint, urgent }: {
   label: string; value: number; sub?: string; icon: React.ReactNode; tint: string; urgent?: boolean;
 }) {
   return (
-    <Card className="hover-lift">
-      <CardBody className="flex items-center gap-3 !py-3">
-        <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${tint}`}>
+    <Card className="hover-lift overflow-hidden">
+      <CardBody className="flex items-center gap-2 !py-3 min-w-0">
+        <div className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 ${tint}`}>
           {icon}
         </div>
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">{label}</p>
-          <p className={`text-xl font-bold leading-tight ${urgent && value > 0 ? "text-amber-600 dark:text-amber-400" : ""}`}>{value}</p>
-          {sub && <p className="text-[10px] text-[var(--muted-2)]">{sub}</p>}
+        <div className="min-w-0 flex-1 overflow-hidden">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] truncate">{label}</p>
+          <p className={`text-lg font-bold leading-tight truncate ${urgent && value > 0 ? "text-amber-600 dark:text-amber-400" : ""}`}>{value}</p>
+          {sub && <p className="text-[10px] text-[var(--muted-2)] truncate">{sub}</p>}
         </div>
       </CardBody>
     </Card>
@@ -206,19 +206,21 @@ export default function TeacherForumPage() {
       )}
 
       {/* ── Thread list card ── */}
-      <Card>
+      <Card className="overflow-hidden">
         <CardBody className="space-y-4">
           {/* Filter tabs + search */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <Tabs
-              value={filter}
-              onChange={(v) => setFilter(v as Filter)}
-              options={[
-                { value: "all",        label: "All",        count: counts.all },
-                { value: "unanswered", label: "Unanswered", count: counts.unanswered },
-                { value: "pinned",     label: "Pinned",     count: counts.pinned },
-              ]}
-            />
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 min-w-0">
+            <div className="overflow-x-auto pb-px -mx-1 px-1">
+              <Tabs
+                value={filter}
+                onChange={(v) => setFilter(v as Filter)}
+                options={[
+                  { value: "all",        label: "All",        count: counts.all },
+                  { value: "unanswered", label: "Unanswered", count: counts.unanswered },
+                  { value: "pinned",     label: "Pinned",     count: counts.pinned },
+                ]}
+              />
+            </div>
             <Input
               icon={<Icon.Search size={16} />}
               placeholder="Search threads…"
@@ -229,7 +231,7 @@ export default function TeacherForumPage() {
           </div>
 
           {/* Category chips + course filter + sort */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 min-w-0">
             {/* Category chips */}
             <div className="flex flex-wrap gap-1.5">
               {(["all", "general", "question", "announcement", "discussion"] as const).map((c) => (
@@ -252,44 +254,44 @@ export default function TeacherForumPage() {
               ))}
             </div>
 
-            {/* Spacer */}
-            <div className="flex-1" />
+            {/* Sort + course filter row on mobile */}
+            <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto sm:contents">
+              {/* Course filter */}
+              {courseOptions.length > 1 && (
+                <Select
+                  value={courseFilter}
+                  onChange={(e) => setCourseFilter(e.target.value)}
+                  className="!h-8 !text-xs flex-1 sm:flex-none sm:!w-44"
+                >
+                  <option value="all">All courses</option>
+                  {courseOptions.map((c) => (
+                    <option key={c.id} value={c.id}>{c.title}</option>
+                  ))}
+                </Select>
+              )}
 
-            {/* Course filter */}
-            {courseOptions.length > 1 && (
+              {/* Sort */}
               <Select
-                value={courseFilter}
-                onChange={(e) => setCourseFilter(e.target.value)}
-                className="!h-8 !text-xs sm:!w-44"
+                value={sort}
+                onChange={(e) => setSort(e.target.value as SortKey)}
+                className="!h-8 !text-xs flex-1 sm:flex-none sm:!w-36"
               >
-                <option value="all">All courses</option>
-                {courseOptions.map((c) => (
-                  <option key={c.id} value={c.id}>{c.title}</option>
-                ))}
+                <option value="newest">Newest first</option>
+                <option value="oldest">Oldest first</option>
+                <option value="replies">Most replies</option>
+                <option value="views">Most viewed</option>
               </Select>
-            )}
 
-            {/* Sort */}
-            <Select
-              value={sort}
-              onChange={(e) => setSort(e.target.value as SortKey)}
-              className="!h-8 !text-xs !w-36"
-            >
-              <option value="newest">Newest first</option>
-              <option value="oldest">Oldest first</option>
-              <option value="replies">Most replies</option>
-              <option value="views">Most viewed</option>
-            </Select>
-
-            {/* Clear filters */}
-            {hasFilters && (
-              <button
-                onClick={() => { setQuery(""); setCat("all"); setCourseFilter("all"); }}
-                className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] flex items-center gap-1"
-              >
-                <Icon.X size={13} /> Clear
-              </button>
-            )}
+              {/* Clear filters */}
+              {hasFilters && (
+                <button
+                  onClick={() => { setQuery(""); setCat("all"); setCourseFilter("all"); }}
+                  className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] flex items-center gap-1 shrink-0"
+                >
+                  <Icon.X size={13} /> Clear
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Thread list */}

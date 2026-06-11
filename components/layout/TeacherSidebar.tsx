@@ -176,7 +176,7 @@ function NavGroup({
                   "relative flex items-center h-10 rounded-xl text-sm font-medium transition-all duration-150",
                   collapsed ? "justify-center px-0" : "gap-3 px-3",
                   active
-                    ? "text-[var(--foreground)] font-semibold bg-[var(--surface-2)] hover:bg-[var(--surface-2)] shadow-sm ring-1 ring-[var(--primary)]/10"
+                    ? "text-[var(--primary)] font-semibold bg-[var(--primary)]/10 hover:bg-[var(--primary)]/15 shadow-sm ring-1 ring-[var(--primary)]/20"
                     : "text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)]",
                 )}
               >

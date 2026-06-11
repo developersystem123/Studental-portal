@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { TeacherSidebar } from "@/components/layout/TeacherSidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { useAuth } from "@/lib/store";
-import Icon from "@/components/icons";
+import { PortalLoader } from "@/components/layout/PortalLoader";
 import { cn } from "@/lib/utils";
 
 const LS_SIDEBAR = "eduportal:teacher-sidebar-open";
@@ -52,13 +52,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   }, []);
 
   if (!hydrated || loading || !user || user.role !== "Instructor") {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex items-center gap-2 text-[var(--muted)]">
-          <Icon.Loader size={20} /> Loading teacher portal…
-        </div>
-      </div>
-    );
+    return <PortalLoader />;
   }
 
   function handleToggle() {

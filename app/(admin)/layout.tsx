@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { AdminSidebar } from "@/components/layout/AdminSidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { useAuth } from "@/lib/store";
-import Icon from "@/components/icons";
+import { PortalLoader } from "@/components/layout/PortalLoader";
 import { cn } from "@/lib/utils";
 
 const LS_SIDEBAR = "eduportal:admin-sidebar-open";
@@ -53,40 +53,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, []);
 
   if (!hydrated || loading || !user || user.role !== "Admin") {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
-        <div className="flex flex-col items-center gap-6">
-          {/* Animated logo mark */}
-          <div className="relative h-20 w-20">
-            <div className="absolute inset-0 rounded-2xl btn-primary opacity-20 animate-ping" />
-            <div className="relative h-20 w-20 rounded-2xl btn-primary flex items-center justify-center shadow-xl shadow-violet-500/30">
-              <Icon.Settings size={36} className="text-white animate-spin" style={{ animationDuration: "3s" }} />
-            </div>
-          </div>
-
-          {/* Brand */}
-          <div className="text-center space-y-1">
-            <p className="text-xl font-bold gradient-text tracking-tight">EduPortal</p>
-            <p className="text-xs font-semibold tracking-widest text-[var(--muted-2)] uppercase">Admin Console</p>
-          </div>
-
-          {/* Progress bar */}
-          <div className="w-48 h-1 rounded-full bg-[var(--surface-2)] overflow-hidden">
-            <div className="h-full rounded-full btn-primary animate-[loading-bar_1.4s_ease-in-out_infinite]" />
-          </div>
-
-          <p className="text-xs text-[var(--muted)] animate-pulse">Loading admin console…</p>
-        </div>
-
-        <style>{`
-          @keyframes loading-bar {
-            0%   { width: 0%;   margin-left: 0%; }
-            50%  { width: 60%;  margin-left: 20%; }
-            100% { width: 0%;   margin-left: 100%; }
-          }
-        `}</style>
-      </div>
-    );
+    return <PortalLoader />;
   }
 
   function handleToggle() {

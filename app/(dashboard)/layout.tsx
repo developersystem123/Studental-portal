@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { NavigationProgress } from "@/components/layout/NavigationProgress";
 import { useAuth } from "@/lib/store";
-import Icon from "@/components/icons";
+import { PortalLoader } from "@/components/layout/PortalLoader";
 import { cn } from "@/lib/utils";
 
 const LS_SIDEBAR = "eduportal:sidebar-open";
@@ -18,7 +18,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [desktopOpen, setDesktopOpen] = useState(true);
   const [hydrated, setHydrated] = useState(false);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     setHydrated(true);
     try {
       const raw = localStorage.getItem(LS_SIDEBAR);
@@ -57,13 +57,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, []);
 
   if (!hydrated || loading || !user || user.role !== "Student") {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex items-center gap-2 text-[var(--muted)]">
-          <Icon.Loader size={20} /> Loading…
-        </div>
-      </div>
-    );
+    return <PortalLoader />;
   }
 
   function handleToggle() {

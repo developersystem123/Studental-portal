@@ -254,12 +254,12 @@ export default function TeacherPhysicalClassesPage() {
             const full = c.enrolledCount >= c.capacity;
             const spotsLeft = c.capacity - c.enrolledCount;
             return (
-              <Card key={c.id} className="flex flex-col hover:-translate-y-0.5 transition-all duration-200">
-                <CardBody className="space-y-3 flex-1 flex flex-col">
+              <Card key={c.id} className="flex flex-col hover:-translate-y-0.5 transition-all duration-200 overflow-hidden">
+                <CardBody className="space-y-3 flex-1 flex flex-col min-w-0">
                   {/* Title + status */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <h3 className="font-semibold leading-tight">{c.title}</h3>
+                  <div className="flex items-start justify-between gap-2 min-w-0">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-semibold leading-tight line-clamp-2 break-words">{c.title}</h3>
                       <p className="text-xs text-[var(--muted)] mt-0.5 truncate">{c.courseTitle}</p>
                     </div>
                     <Badge variant={STATUS_BADGE[c.status]} className="capitalize shrink-0">
@@ -269,21 +269,21 @@ export default function TeacherPhysicalClassesPage() {
 
                   {/* Details grid */}
                   <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs text-[var(--muted)]">
-                    <span className="flex items-center gap-1.5 truncate">
+                    <span className="flex items-center gap-1.5 min-w-0 overflow-hidden">
                       <Icon.Pin size={12} className="text-[var(--muted)] shrink-0" />
                       <span className="truncate">{c.campus}</span>
                     </span>
-                    <span className="flex items-center gap-1.5 truncate">
+                    <span className="flex items-center gap-1.5 min-w-0 overflow-hidden">
                       <Icon.Home size={12} className="text-[var(--muted)] shrink-0" />
-                      Room {c.room}
+                      <span className="truncate">Room {c.room}</span>
                     </span>
-                    <span className="flex items-center gap-1.5 col-span-2 truncate">
+                    <span className="flex items-center gap-1.5 col-span-2 min-w-0 overflow-hidden">
                       <Icon.Clock size={12} className="text-[var(--muted)] shrink-0" />
-                      {c.batch}
+                      <span className="truncate">{c.batch}</span>
                     </span>
-                    <span className="flex items-center gap-1.5 col-span-2 truncate">
+                    <span className="flex items-center gap-1.5 col-span-2 min-w-0 overflow-hidden">
                       <Icon.Calendar size={12} className="text-[var(--muted)] shrink-0" />
-                      {formatDate(c.startDate)} – {formatDate(c.endDate)}
+                      <span className="truncate">{formatDate(c.startDate)} – {formatDate(c.endDate)}</span>
                     </span>
                   </div>
 
@@ -324,10 +324,10 @@ export default function TeacherPhysicalClassesPage() {
                   </div>
 
                   {/* Footer */}
-                  <div className="mt-auto pt-2 border-t border-[var(--border)] flex items-center justify-end">
-                    <Link href={`/teacher/physical-classes/${c.id}`}>
-                      <Button size="sm">
-                        Roster &amp; attendance <Icon.ChevronRight size={14} />
+                  <div className="mt-auto pt-2 border-t border-[var(--border)] flex items-center justify-end min-w-0">
+                    <Link href={`/teacher/physical-classes/${c.id}`} className="min-w-0">
+                      <Button size="sm" className="w-full sm:w-auto">
+                        <span className="truncate">Roster &amp; attendance</span> <Icon.ChevronRight size={14} className="shrink-0" />
                       </Button>
                     </Link>
                   </div>

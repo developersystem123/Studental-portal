@@ -470,8 +470,8 @@ export default function TeacherOverviewPage() {
         </CardBody>
       </Card>
 
-      <div className="grid sm:grid-cols-2 gap-4">
-        <Card>
+      <div className="grid sm:grid-cols-2 gap-4 min-w-0 overflow-hidden">
+        <Card className="overflow-hidden">
           <CardBody>
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-semibold">Your courses</h2>
@@ -486,15 +486,15 @@ export default function TeacherOverviewPage() {
             ) : (
               <ul className="space-y-3">
                 {myCourses.slice(0, 5).map((c) => (
-                  <li key={c.id} className="flex items-center gap-3">
-                    <div className="h-10 w-12 sm:w-14 rounded-lg overflow-hidden border border-[var(--border)] shrink-0">
+                  <li key={c.id} className="flex items-center gap-3 min-w-0">
+                    <div className="h-10 w-10 rounded-lg overflow-hidden border border-[var(--border)] shrink-0">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={c.thumbnail} alt={c.title} className="w-full h-full object-cover" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-medium truncate">{c.title}</p>
-                        <Badge variant="default" className="shrink-0 text-[10px]">{c.level}</Badge>
+                    <div className="flex-1 min-w-0 overflow-hidden">
+                      <div className="flex items-center justify-between gap-1.5 min-w-0">
+                        <p className="text-sm font-medium truncate flex-1 min-w-0">{c.title}</p>
+                        <Badge variant="default" className="shrink-0 text-[10px] ml-auto">{c.level}</Badge>
                       </div>
                       <p className="text-xs text-[var(--muted)] mt-0.5 truncate">
                         {c.category} · {c.chapters.length} chapters

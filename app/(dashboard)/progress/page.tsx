@@ -14,11 +14,9 @@ import {
 import Icon from "@/components/icons";
 import { BarChart, Heatmap, LineChart, RadialBars } from "@/components/charts";
 import {
-  ACTIVITY_HEATMAP,
   HOURS_BY_CATEGORY,
   QUIZ_SCORE_HISTORY,
   SKILL_MASTERY,
-  STUDY_STREAK,
   STUDY_TIME_OF_DAY,
   WEEKLY_HOURS,
 } from "@/lib/mockData";
@@ -45,6 +43,8 @@ type ProgressData = {
   }[];
   recentQuizzes: { id: string; quizTitle: string; percentage: number; passed: boolean; completedAt: string | null }[];
   byCategory: Record<string, { enrolled: number; minutesLearned: number }>;
+  heatmap: { day: number; week: number; value: number }[];
+  streak: { current: number; longest: number; daysActiveThisYear: number };
 };
 
 export default function ProgressPage() {
@@ -70,7 +70,7 @@ export default function ProgressPage() {
     );
   }
 
-  const { stats, enrollments, recentQuizzes, byCategory } = data;
+  const { stats, enrollments, recentQuizzes, byCategory, heatmap, streak } = data;
   const categoryEntries = Object.entries(byCategory);
   const maxCatMinutes = Math.max(1, ...categoryEntries.map(([, v]) => v.minutesLearned));
 
@@ -145,15 +145,15 @@ export default function ProgressPage() {
           <div>
             <CardTitle>Study activity heatmap</CardTitle>
             <p className="text-xs text-[var(--muted)] mt-1">
-              Last 12 weeks · current streak {STUDY_STREAK.current}d (best {STUDY_STREAK.longest}d)
+              Last 12 weeks · current streak {streak.current}d (best {streak.longest}d)
             </p>
           </div>
-          <Badge variant="success">{STUDY_STREAK.daysActiveThisYear} active days this year</Badge>
+          <Badge variant="success">{streak.daysActiveThisYear} active days this year</Badge>
         </CardHeader>
         <CardBody>
           <div className="overflow-x-auto scrollbar-thin">
             <div className="min-w-[560px] h-44">
-              <Heatmap cells={ACTIVITY_HEATMAP} weeks={12} />
+              <Heatmap cells={heatmap} weeks={12} />
             </div>
           </div>
         </CardBody>
