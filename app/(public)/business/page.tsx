@@ -219,34 +219,36 @@ export default function BusinessPage() {
             </p>
           </div>
           <Card className="overflow-hidden">
-            <div className="grid grid-cols-3 text-sm">
-              <div className="bg-[var(--surface-2)] p-4 font-semibold text-[var(--muted)] uppercase tracking-wider text-xs">
-                Feature
-              </div>
-              <div className="bg-[var(--surface-2)] p-4 font-semibold text-center text-xs uppercase tracking-wider text-[var(--muted)]">
-                Team ($29/mo)
-              </div>
-              <div className="bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] p-4 font-semibold text-center text-xs uppercase tracking-wider text-white">
-                Business
-              </div>
-              {compare.map((row, i) => (
-                <div key={row.label} className="contents">
-                  <div
-                    className={
-                      "p-4 border-t border-[var(--border)] font-medium" +
-                      (i === compare.length - 1 ? " rounded-bl-2xl" : "")
-                    }
-                  >
-                    {row.label}
-                  </div>
-                  <div className="p-4 border-t border-[var(--border)] text-center text-[var(--muted)]">
-                    {row.team}
-                  </div>
-                  <div className="p-4 border-t border-[var(--border)] text-center font-semibold text-[var(--primary)]">
-                    {row.business}
-                  </div>
+            <div className="overflow-x-auto">
+              <div className="grid grid-cols-3 text-sm min-w-[420px]">
+                <div className="bg-[var(--surface-2)] p-4 font-semibold text-[var(--muted)] uppercase tracking-wider text-xs">
+                  Feature
                 </div>
-              ))}
+                <div className="bg-[var(--surface-2)] p-4 font-semibold text-center text-xs uppercase tracking-wider text-[var(--muted)]">
+                  Team ($29/mo)
+                </div>
+                <div className="bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] p-4 font-semibold text-center text-xs uppercase tracking-wider text-white">
+                  Business
+                </div>
+                {compare.map((row, i) => (
+                  <div key={row.label} className="contents">
+                    <div
+                      className={
+                        "p-4 border-t border-[var(--border)] font-medium" +
+                        (i === compare.length - 1 ? " rounded-bl-2xl" : "")
+                      }
+                    >
+                      {row.label}
+                    </div>
+                    <div className="p-4 border-t border-[var(--border)] text-center text-[var(--muted)]">
+                      {row.team}
+                    </div>
+                    <div className="p-4 border-t border-[var(--border)] text-center font-semibold text-[var(--primary)]">
+                      {row.business}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </Card>
         </div>

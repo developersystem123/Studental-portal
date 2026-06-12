@@ -334,7 +334,7 @@ export default function AdminOverviewPage() {
       </div>
 
       {/* ── Main chart + Completion donut ─────────────────────────────────── */}
-      <div className="grid lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2">
           <CardBody>
             <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
@@ -389,7 +389,7 @@ export default function AdminOverviewPage() {
                 <Icon.Loader size={18} className="animate-spin" /> Loading…
               </div>
             ) : activeTrendData.length > 0 ? (
-              <div className="h-[240px]">
+              <div className="h-[240px] overflow-hidden">
                 <LineChart
                   data={activeTrendData}
                   yFormatter={trendView === "revenue" ? (v) => `$${(v / 100).toFixed(0)}` : (v) => Math.round(v).toString()}
@@ -458,7 +458,7 @@ export default function AdminOverviewPage() {
       </div>
 
       {/* ── Revenue breakdown + Subscriptions ────────────────────────────── */}
-      <div className="grid lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Payment methods */}
         <Card>
           <CardBody>
@@ -473,7 +473,7 @@ export default function AdminOverviewPage() {
               <div className="flex justify-center py-8 text-[var(--muted)]"><Icon.Loader size={18} className="animate-spin" /></div>
             ) : payMethods.length > 0 ? (
               <>
-                <div className="h-[130px]">
+                <div className="h-[130px] overflow-hidden">
                   <BarChart data={payMethods} height={130} />
                 </div>
                 <div className="mt-3 pt-3 border-t border-[var(--border)] space-y-2">
@@ -582,7 +582,7 @@ export default function AdminOverviewPage() {
       </div>
 
       {/* ── Category distribution + Top courses ──────────────────────────── */}
-      <div className="grid lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
           <CardBody>
             <div className="flex items-center justify-between mb-3">
@@ -595,7 +595,7 @@ export default function AdminOverviewPage() {
             {reportsLoading ? (
               <div className="h-[220px] flex items-center justify-center text-[var(--muted)]"><Icon.Loader size={18} className="animate-spin" /></div>
             ) : (reports?.categoryMix?.length ?? 0) > 0 ? (
-              <div className="h-[220px]">
+              <div className="h-[220px] overflow-hidden">
                 <BarChart data={reports!.categoryMix} height={220} />
               </div>
             ) : (
@@ -648,7 +648,7 @@ export default function AdminOverviewPage() {
       </div>
 
       {/* ── Recent activity ───────────────────────────────────────────────── */}
-      <div className="grid lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
           <CardBody>
             <div className="flex items-center justify-between mb-4">
@@ -714,7 +714,7 @@ export default function AdminOverviewPage() {
       </div>
 
       {/* ── Platform health + Course catalog ─────────────────────────────── */}
-      <div className="grid lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Platform health */}
         <Card>
           <CardBody className="space-y-3">

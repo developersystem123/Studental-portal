@@ -288,7 +288,7 @@ export default function AdminAiPage() {
       {tab === "moderation" && (
         <div className="space-y-4">
           {/* Moderation stats */}
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
               { label: "Total flagged", value: flagged.length,       cls: "bg-[var(--primary-soft)] text-[var(--primary)]" },
               { label: "High severity", value: flagCounts.high,      cls: "bg-red-500/10 text-red-600 dark:text-red-400" },

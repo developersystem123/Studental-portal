@@ -150,7 +150,7 @@ export default function StudentPhysicalClassDetailPage() {
             </div>
             <Progress value={item.attendanceRate} className="flex-1" />
           </div>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <Tally label="Present" value={item.present} tone="text-emerald-500" />
             <Tally label="Late" value={item.late} tone="text-amber-500" />
             <Tally label="Absent" value={item.absent} tone="text-red-500" />
