@@ -40,7 +40,7 @@ const TYPE_INFO: Record<NotifType, { label: string; bg: string; color: string; i
   achievement:  { label: "Achievement",  bg: "bg-emerald-500/10",         color: "text-emerald-500",       icon: <Icon.Award size={15} /> },
 };
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 function exportCSV(items: Notif[]) {
   const header = ["ID", "Type", "Title", "Broadcast", "Recipient", "Read", "Created"];
@@ -193,10 +193,10 @@ export default function AdminNotificationsPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label="Total"     value={stats.total}     icon={<Icon.Bell size={18} />}        tone="primary" />
-        <StatCard label="Broadcast" value={stats.broadcast} icon={<Icon.Megaphone size={18} />}   tone="accent"  delta="Sent to all users" />
-        <StatCard label="Targeted"  value={stats.targeted}  icon={<Icon.User size={18} />}         tone="success" delta="User-specific" />
-        <StatCard label="Unread"    value={stats.unread}    icon={<Icon.BellRing size={18} />}     tone="warning" delta="Not yet seen" />
+        <StatCard dense label="Total"     value={stats.total}     icon={<Icon.Bell size={16} />}        tone="primary" />
+        <StatCard dense label="Broadcast" value={stats.broadcast} icon={<Icon.Megaphone size={16} />}   tone="accent"  delta="Sent to all users" />
+        <StatCard dense label="Targeted"  value={stats.targeted}  icon={<Icon.User size={16} />}         tone="success" delta="User-specific" />
+        <StatCard dense label="Unread"    value={stats.unread}    icon={<Icon.BellRing size={16} />}     tone="warning" delta="Not yet seen" />
       </div>
 
       {/* Type filter cards */}
@@ -209,18 +209,22 @@ export default function AdminNotificationsPage() {
               key={t}
               onClick={() => setTab(active ? "all" : t)}
               className={cn(
-                "rounded-2xl border p-3 sm:p-4 text-left transition-all hover:-translate-y-0.5",
+                "rounded-2xl border p-2.5 sm:p-3 text-left transition-all hover:-translate-y-0.5",
                 active
                   ? `${info.bg} border-current shadow-md`
                   : "bg-[var(--surface)] border-[var(--border)] hover:border-[var(--border-strong)]",
               )}
             >
-              <div className={cn("h-8 w-8 sm:h-9 sm:w-9 rounded-xl flex items-center justify-center", info.bg, info.color)}>
-                {info.icon}
+              <div className="flex items-center gap-2">
+                <div className={cn("h-8 w-8 sm:h-9 sm:w-9 rounded-xl flex items-center justify-center shrink-0", info.bg, info.color)}>
+                  {info.icon}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] sm:text-xs font-medium text-[var(--muted)] truncate">{info.label}</p>
+                  <p className="text-lg sm:text-xl font-bold tabular-nums leading-tight">{typeCounts[t] ?? 0}</p>
+                </div>
               </div>
-              <p className="mt-2 sm:mt-3 text-xs font-medium text-[var(--muted)]">{info.label}</p>
-              <p className="mt-0.5 text-xl sm:text-2xl font-bold tabular-nums">{typeCounts[t] ?? 0}</p>
-              {active && <p className={cn("mt-1.5 text-xs font-medium flex items-center gap-1", info.color)}><Icon.Check size={11} /> Filtering</p>}
+              {active && <p className={cn("mt-1.5 text-[10px] font-medium flex items-center gap-1", info.color)}><Icon.Check size={11} /> Filtering</p>}
             </button>
           );
         })}
@@ -363,7 +367,7 @@ export default function AdminNotificationsPage() {
                           <button
                             onClick={() => deleteNotif(n.id)}
                             disabled={deleting === n.id}
-                            className="h-8 w-8 flex items-center justify-center rounded-lg text-[var(--muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                            className="h-8 w-8 flex items-center justify-center rounded-lg text-[var(--muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition opacity-100 sm:opacity-0 sm:group-hover:opacity-100 disabled:opacity-50"
                           >
                             {deleting === n.id ? <Icon.Loader size={14} className="animate-spin" /> : <Icon.Trash size={14} />}
                           </button>

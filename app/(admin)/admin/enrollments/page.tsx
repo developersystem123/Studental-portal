@@ -357,20 +357,22 @@ export default function AdminEnrollmentsPage() {
               </div>
 
               {/* Pagination */}
-              <div className="flex items-center justify-between gap-4 pt-1 flex-wrap">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
                 <p className="text-xs text-[var(--muted)]">
                   Showing <span className="font-semibold text-[var(--foreground)]">{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)}</span> of{" "}
                   <span className="font-semibold text-[var(--foreground)]">{filtered.length}</span> enrollments
                 </p>
-                <div className="flex items-center gap-1">
-                  <Button
-                    size="sm" variant="outline"
-                    disabled={page === 1}
-                    onClick={() => setPage(1)}
-                    title="First page"
-                  >
-                    <Icon.ChevronLeft size={14} /><Icon.ChevronLeft size={14} className="-ml-2" />
-                  </Button>
+                <div className="flex items-center justify-center sm:justify-end gap-1 flex-wrap">
+                  <span className="hidden sm:contents">
+                    <Button
+                      size="sm" variant="outline"
+                      disabled={page === 1}
+                      onClick={() => setPage(1)}
+                      title="First page"
+                    >
+                      <Icon.ChevronLeft size={14} /><Icon.ChevronLeft size={14} className="-ml-2" />
+                    </Button>
+                  </span>
                   <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
                     <Icon.ChevronLeft size={14} /> Prev
                   </Button>
@@ -407,14 +409,16 @@ export default function AdminEnrollmentsPage() {
                   <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => setPage((p) => p + 1)}>
                     Next <Icon.ChevronRight size={14} />
                   </Button>
-                  <Button
-                    size="sm" variant="outline"
-                    disabled={page === totalPages}
-                    onClick={() => setPage(totalPages)}
-                    title="Last page"
-                  >
-                    <Icon.ChevronRight size={14} /><Icon.ChevronRight size={14} className="-ml-2" />
-                  </Button>
+                  <span className="hidden sm:contents">
+                    <Button
+                      size="sm" variant="outline"
+                      disabled={page === totalPages}
+                      onClick={() => setPage(totalPages)}
+                      title="Last page"
+                    >
+                      <Icon.ChevronRight size={14} /><Icon.ChevronRight size={14} className="-ml-2" />
+                    </Button>
+                  </span>
                 </div>
               </div>
             </>

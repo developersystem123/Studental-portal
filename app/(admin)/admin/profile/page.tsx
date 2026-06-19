@@ -3,16 +3,16 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card, CardBody, Modal } from "@/components/ui";
+import { Badge, Button, Modal } from "@/components/ui";
 import Icon from "@/components/icons";
 import { SignedOutPopup } from "@/components/layout/SignedOutPopup";
 import { useAdmin, useAuth, useData } from "@/lib/store";
 import {
   ChangePasswordCard,
+  CollapsibleCard,
   PersonalInfoCard,
   ProfileCompletionCard,
   ProfileHero,
-  SectionHeader,
 } from "@/components/profile/sections";
 import { cn } from "@/lib/utils";
 
@@ -111,7 +111,7 @@ export default function AdminProfilePage() {
       />
 
       {/* ── System overview stat cards ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {STAT_CARDS.map(({ label, value, icon, color, bg, border, href }) => (
           <Link
             key={label}
@@ -147,80 +147,71 @@ export default function AdminProfilePage() {
       <ChangePasswordCard />
 
       {/* ── Console shortcuts ── */}
-      <Card>
-        <CardBody className="space-y-4">
-          <SectionHeader
-            icon={<Icon.ListChecks size={18} />}
-            title="Console shortcuts"
-            description="Jump back to the workspaces you use most."
-          />
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {CONSOLE_LINKS.map(({ href, icon, title, description }) => (
-              <QuickLink key={href} href={href} icon={icon} title={title} description={description} />
-            ))}
-          </div>
-        </CardBody>
-      </Card>
+      <CollapsibleCard
+        icon={<Icon.ListChecks size={18} />}
+        title="Console shortcuts"
+        description="Jump back to the workspaces you use most."
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {CONSOLE_LINKS.map(({ href, icon, title, description }) => (
+            <QuickLink key={href} href={href} icon={icon} title={title} description={description} />
+          ))}
+        </div>
+      </CollapsibleCard>
 
       {/* ── Platform health + Session — 2-column row ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         {/* Platform at a glance */}
-        <Card>
-          <CardBody className="space-y-4">
-            <SectionHeader
-              icon={<Icon.BarChart3 size={18} />}
-              title="Platform at a glance"
-              description="Live summary of activity across the platform."
+        <CollapsibleCard
+          icon={<Icon.BarChart3 size={18} />}
+          title="Platform at a glance"
+          description="Live summary of activity across the platform."
+        >
+          <div className="grid grid-cols-1 gap-3">
+            <MetricRow
+              label="Completion rate"
+              value={
+                stats.enrollments > 0
+                  ? `${Math.round((stats.certificates / stats.enrollments) * 100)}%`
+                  : "—"
+              }
+              sub={`${stats.certificates} certificates / ${stats.enrollments} enrollments`}
+              icon={<Icon.TrendingUp size={15} />}
+              color="text-emerald-500"
             />
-            <div className="grid grid-cols-1 gap-3">
-              <MetricRow
-                label="Completion rate"
-                value={
-                  stats.enrollments > 0
-                    ? `${Math.round((stats.certificates / stats.enrollments) * 100)}%`
-                    : "—"
-                }
-                sub={`${stats.certificates} certificates / ${stats.enrollments} enrollments`}
-                icon={<Icon.TrendingUp size={15} />}
-                color="text-emerald-500"
-              />
-              <MetricRow
-                label="Pending applications"
-                value={String(stats.pendingApplications)}
-                sub={stats.pendingApplications === 0 ? "All reviewed" : "Awaiting review"}
-                icon={<Icon.Clock size={15} />}
-                color={stats.pendingApplications > 0 ? "text-amber-500" : "text-emerald-500"}
-              />
-            </div>
-          </CardBody>
-        </Card>
+            <MetricRow
+              label="Pending applications"
+              value={String(stats.pendingApplications)}
+              sub={stats.pendingApplications === 0 ? "All reviewed" : "Awaiting review"}
+              icon={<Icon.Clock size={15} />}
+              color={stats.pendingApplications > 0 ? "text-amber-500" : "text-emerald-500"}
+            />
+          </div>
+        </CollapsibleCard>
 
         {/* Session / sign-out */}
-        <Card className="border-[var(--danger)]/30">
-          <CardBody className="space-y-5">
-            <SectionHeader
-              icon={<Icon.Logout size={18} />}
-              title="Session"
-              description="End your session on this device."
-              tone="danger"
-            />
-            <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[var(--danger)]/20 p-4">
-              <div className="min-w-0">
-                <p className="text-sm font-medium">Sign out</p>
-                <p className="mt-0.5 text-xs text-[var(--muted)]">
-                  Admin accounts can&apos;t be self-deleted to keep the system manageable. Reset everything from{" "}
-                  <Link href="/admin/settings" className="text-[var(--primary)] hover:underline">
-                    Settings
-                  </Link>{" "}
-                  if you really need a clean slate.
-                </p>
-              </div>
-              <Button variant="danger" onClick={() => setConfirmLogout(true)}>
-                <Icon.Logout size={16} /> Sign out
-              </Button>
+        <CollapsibleCard
+          icon={<Icon.Logout size={18} />}
+          title="Session"
+          description="End your session on this device."
+          tone="danger"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[var(--danger)]/20 p-4">
+            <div className="min-w-0">
+              <p className="text-sm font-medium">Sign out</p>
+              <p className="mt-0.5 text-xs text-[var(--muted)]">
+                Admin accounts can&apos;t be self-deleted to keep the system manageable. Reset everything from{" "}
+                <Link href="/admin/settings" className="text-[var(--primary)] hover:underline">
+                  Settings
+                </Link>{" "}
+                if you really need a clean slate.
+              </p>
             </div>
-          </CardBody>
-        </Card>
+            <Button variant="danger" onClick={() => setConfirmLogout(true)}>
+              <Icon.Logout size={16} /> Sign out
+            </Button>
+          </div>
+        </CollapsibleCard>
       </div>
 
       <Modal open={confirmLogout} onClose={() => setConfirmLogout(false)} title="Sign out?" size="sm">

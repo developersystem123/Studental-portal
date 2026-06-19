@@ -239,7 +239,7 @@ export default function AdminApplicationsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatCard label="Total"    value={counts.all}      icon={<Icon.Tag size={16} />}         tone="primary" delta="All applications" />
         <StatCard label="Pending"  value={counts.pending}  icon={<Icon.Clock size={16} />}       tone="warning" delta="Awaiting review" />
         <StatCard label="Approved" value={counts.approved} icon={<Icon.CheckCircle size={16} />} tone="success" delta="Placed in batch" />
@@ -249,26 +249,28 @@ export default function AdminApplicationsPage() {
       <Card>
         <CardBody className="space-y-4">
           {/* Filters — one row */}
-          <div className="flex items-center gap-2">
-            <Tabs
-              value={filter}
-              onChange={(v) => { setFilter(v as Filter); }}
-              options={[
-                { value: "all",      label: "All",      count: counts.all },
-                { value: "pending",  label: "Pending",  count: counts.pending },
-                { value: "approved", label: "Approved", count: counts.approved },
-                { value: "rejected", label: "Rejected", count: counts.rejected },
-              ]}
-            />
-            <div className="flex gap-2 ml-auto shrink-0">
+          <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
+            <div className="-mx-1 px-1 overflow-x-auto">
+              <Tabs
+                value={filter}
+                onChange={(v) => { setFilter(v as Filter); }}
+                options={[
+                  { value: "all",      label: "All",      count: counts.all },
+                  { value: "pending",  label: "Pending",  count: counts.pending },
+                  { value: "approved", label: "Approved", count: counts.approved },
+                  { value: "rejected", label: "Rejected", count: counts.rejected },
+                ]}
+              />
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2 lg:ml-auto lg:shrink-0">
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search name, email, CNIC…"
                 icon={<Icon.Search size={15} />}
-                className="!h-9 !w-52"
+                className="!h-9 w-full sm:!w-52"
               />
-              <Select value={courseFilter} onChange={(e) => setCourseFilter(e.target.value)} className="!h-9 !w-40 shrink-0">
+              <Select value={courseFilter} onChange={(e) => setCourseFilter(e.target.value)} className="!h-9 w-full sm:!w-40 sm:shrink-0">
                 <option value="all">All courses</option>
                 {courseOptions.map(([id, title]) => (
                   <option key={id} value={id}>{title.length > 28 ? title.slice(0, 26) + "…" : title}</option>
@@ -279,9 +281,9 @@ export default function AdminApplicationsPage() {
 
           {/* Bulk action bar */}
           {selected.size > 0 && (
-            <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-[var(--primary-soft)] border border-[var(--primary)]/20">
+            <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-[var(--primary-soft)] border border-[var(--primary)]/20 flex-wrap">
               <span className="text-sm font-semibold text-[var(--primary)]">{selected.size} selected</span>
-              <div className="flex gap-2 ml-auto">
+              <div className="flex gap-2 ml-auto flex-wrap">
                 <Button size="sm" onClick={() => setBulkAction("approved")}>
                   <Icon.Check size={13} /> Approve all
                 </Button>

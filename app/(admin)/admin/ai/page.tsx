@@ -181,18 +181,20 @@ export default function AdminAiPage() {
           <h1 className="mt-1 text-3xl font-bold tracking-tight">AI Management</h1>
           <p className="mt-1 text-[var(--muted)]">Monitor AI usage, moderate flagged content, and configure platform settings.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col items-stretch sm:items-end gap-2">
           {tab === "moderation" && flagged.length > 0 && (
-            <Button variant="outline" size="sm" onClick={() => exportLogsCSV(flagged, toast)}>
+            <Button variant="outline" size="sm" className="justify-center" onClick={() => exportLogsCSV(flagged, toast)}>
               <Icon.Download size={14} /> Export logs
             </Button>
           )}
-          <Tabs value={tab} onChange={setTab} options={[
-            { value: "overview",    label: "Overview"    },
-            { value: "moderation",  label: "Moderation", count: flagCounts.high > 0 ? flagCounts.high : undefined },
-            { value: "models",      label: "Models"      },
-            { value: "config",      label: "Config"      },
-          ]} />
+          <div className="overflow-x-auto max-w-full">
+            <Tabs value={tab} onChange={setTab} options={[
+              { value: "overview",    label: "Overview"    },
+              { value: "moderation",  label: "Moderation", count: flagCounts.high > 0 ? flagCounts.high : undefined },
+              { value: "models",      label: "Models"      },
+              { value: "config",      label: "Config"      },
+            ]} />
+          </div>
         </div>
       </div>
 
@@ -217,9 +219,9 @@ export default function AdminAiPage() {
               <Card key={s.label}>
                 <CardBody className="flex items-center gap-3 !py-3">
                   <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${s.tone}`}><s.icon size={16} /></div>
-                  <div>
-                    <p className="text-[11px] text-[var(--muted)]">{s.label}</p>
-                    <p className="text-lg font-bold">{s.value}</p>
+                  <div className="min-w-0">
+                    <p className="text-[11px] text-[var(--muted)] truncate">{s.label}</p>
+                    <p className="text-lg font-bold truncate">{s.value}</p>
                   </div>
                 </CardBody>
               </Card>
@@ -307,15 +309,17 @@ export default function AdminAiPage() {
           </div>
 
           {/* Filter + actions */}
-          <div className="flex items-center gap-3">
-            <Tabs value={sevFilter} onChange={(v) => setSevFilter(v as typeof sevFilter)} options={[
-              { value: "all",    label: "All",    count: flagCounts.all    },
-              { value: "high",   label: "High",   count: flagCounts.high   },
-              { value: "medium", label: "Medium", count: flagCounts.medium },
-              { value: "low",    label: "Low",    count: flagCounts.low    },
-            ]} />
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+            <div className="overflow-x-auto max-w-full">
+              <Tabs value={sevFilter} onChange={(v) => setSevFilter(v as typeof sevFilter)} options={[
+                { value: "all",    label: "All",    count: flagCounts.all    },
+                { value: "high",   label: "High",   count: flagCounts.high   },
+                { value: "medium", label: "Medium", count: flagCounts.medium },
+                { value: "low",    label: "Low",    count: flagCounts.low    },
+              ]} />
+            </div>
             {flagged.length > 0 && (
-              <Button variant="outline" size="sm" className="ml-auto" onClick={() => { setFlagged([]); toast.push({ title: "All flags dismissed", tone: "info" }); }}>
+              <Button variant="outline" size="sm" className="sm:ml-auto shrink-0" onClick={() => { setFlagged([]); toast.push({ title: "All flags dismissed", tone: "info" }); }}>
                 Dismiss all
               </Button>
             )}
@@ -482,7 +486,7 @@ export default function AdminAiPage() {
 
       {/* ── CONFIG ── */}
       {tab === "config" && (
-        <div className="space-y-4 max-w-2xl">
+        <div className="space-y-4">
           {/* Feature toggles */}
           <Card>
             <CardBody className="space-y-4">
@@ -531,6 +535,7 @@ export default function AdminAiPage() {
             </CardBody>
           </Card>
 
+          <div className="grid lg:grid-cols-2 gap-4 items-start">
           {/* Rate limits */}
           <Card>
             <CardBody className="space-y-4">
@@ -574,6 +579,7 @@ export default function AdminAiPage() {
               ))}
             </CardBody>
           </Card>
+          </div>
         </div>
       )}
     </div>

@@ -591,12 +591,14 @@ export function StatCard({
   delta,
   icon,
   tone = "primary",
+  dense = false,
 }: {
   label: string;
   value: string | number;
   delta?: string;
   icon: React.ReactNode;
   tone?: "primary" | "accent" | "success" | "warning";
+  dense?: boolean;
 }) {
   const tones: Record<string, { iconBg: string; iconText: string; glow: string; delta: string }> = {
     primary: {
@@ -627,9 +629,13 @@ export function StatCard({
   const t = tones[tone];
   return (
     <Card className={cn("overflow-hidden group transition-all duration-200 hover:-translate-y-0.5", t.glow)}>
-      <CardBody className="flex items-start gap-2 sm:gap-4 p-3 sm:p-4">
+      <CardBody className={cn(
+        "flex items-center gap-2 sm:gap-3",
+        dense ? "p-2.5 sm:p-3" : "items-start gap-2 sm:gap-4 p-3 sm:p-4",
+      )}>
         <div className={cn(
-          "h-9 w-9 sm:h-12 sm:w-12 rounded-xl flex items-center justify-center shrink-0 shadow-sm border border-[var(--border)]",
+          "rounded-xl flex items-center justify-center shrink-0 shadow-sm border border-[var(--border)]",
+          dense ? "h-8 w-8 sm:h-9 sm:w-9" : "h-9 w-9 sm:h-12 sm:w-12",
           t.iconBg,
           t.iconText,
         )}>
@@ -637,9 +643,16 @@ export function StatCard({
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-[10px] sm:text-xs font-medium text-[var(--muted)] uppercase tracking-wide truncate">{label}</p>
-          <p className="text-base sm:text-2xl font-bold mt-0.5 tracking-tight truncate">{value}</p>
+          <p className={cn(
+            "font-bold tracking-tight truncate leading-tight",
+            dense ? "text-base sm:text-xl" : "text-base sm:text-2xl mt-0.5",
+          )}>{value}</p>
           {delta && (
-            <p className={cn("text-[10px] sm:text-xs mt-1 sm:mt-1.5 flex items-center gap-1 font-medium leading-tight", t.delta)}>
+            <p className={cn(
+              "flex items-center gap-1 font-medium leading-tight",
+              dense ? "text-[10px] mt-0.5" : "text-[10px] sm:text-xs mt-1 sm:mt-1.5",
+              t.delta,
+            )}>
               <Icon.TrendingUp size={10} />
               {delta}
             </p>

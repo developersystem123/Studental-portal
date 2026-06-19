@@ -211,7 +211,7 @@ export default function AdminForumPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <StatCard label="Total posts"    value={stats.total}     icon={<Icon.MessageSquare size={16} />} tone="primary" delta="All posts" />
         <StatCard label="Pinned"         value={stats.pinned}    icon={<Icon.Pin size={16} />}           tone="warning" delta="Highlighted" />
         <StatCard label="Total replies"  value={stats.replies}   icon={<Icon.MessageSquare size={16} />} tone="accent"  delta="Community responses" />
@@ -395,7 +395,7 @@ export default function AdminForumPage() {
                       <div className="flex items-center gap-1 shrink-0">
                         <button
                           onClick={() => setDetail(p)}
-                          className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--primary)] hover:bg-[var(--primary-soft)] transition opacity-0 group-hover:opacity-100"
+                          className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--primary)] hover:bg-[var(--primary-soft)] transition opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                           title="View post"
                         >
                           <Icon.Eye size={14} />
@@ -407,7 +407,7 @@ export default function AdminForumPage() {
                             "p-1.5 rounded-lg transition",
                             p.pinned
                               ? "text-amber-500 bg-amber-500/10 hover:bg-amber-500/20"
-                              : "text-[var(--muted)] hover:text-amber-500 hover:bg-amber-500/10 opacity-0 group-hover:opacity-100",
+                              : "text-[var(--muted)] hover:text-amber-500 hover:bg-amber-500/10 opacity-100 sm:opacity-0 sm:group-hover:opacity-100",
                           )}
                           title={p.pinned ? "Unpin" : "Pin"}
                         >
@@ -415,7 +415,7 @@ export default function AdminForumPage() {
                         </button>
                         <button
                           onClick={() => setDeleting(p)}
-                          className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition opacity-0 group-hover:opacity-100"
+                          className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                           title="Delete"
                         >
                           <Icon.Trash size={14} />

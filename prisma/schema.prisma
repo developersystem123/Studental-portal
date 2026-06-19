@@ -881,6 +881,25 @@ model AdminAnnouncement {
   @@index([createdAt])
 }
 
+// -------- Admin: Message Templates --------
+// Reusable email / SMS templates that admins manage centrally. Bodies (and
+// subjects) support {{variable}} placeholders substituted at send time.
+
+model MessageTemplate {
+  id        String   @id @default(cuid())
+  key       String   @unique // stable slug, e.g. "welcome_email"
+  name      String
+  channel   String   @default("email") // email | sms | both
+  subject   String? // email subject line (ignored for sms-only)
+  body      String   @db.Text
+  variables String[] @default([]) // e.g. ["name","courseTitle"]
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([channel])
+}
+
 // -------- Teacher: Gradebook --------
 // A weighted gradebook: each course has columns (Homework, Final, …) and each
 // student gets a score per column.

@@ -220,21 +220,21 @@ export default function AdminOverviewPage() {
     <div className="space-y-6 fade-in">
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white p-6 sm:p-8 card-shadow">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white p-5 sm:p-6 card-shadow">
         <AdminHeroDecor />
-        <div className="relative flex items-start justify-between gap-6 flex-wrap">
-          <div>
+        <div className="relative flex items-start justify-between gap-4 sm:gap-6">
+          <div className="min-w-0">
             <span className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full bg-white/15 backdrop-blur border border-white/20 uppercase tracking-wider font-semibold">
               <Icon.Settings size={11} /> Admin console
             </span>
-            <h1 className="mt-3 text-3xl sm:text-4xl font-bold tracking-tight">
+            <h1 className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight">
               Welcome back, {user?.name?.split(" ")[0] ?? "Admin"}
             </h1>
-            <p className="mt-2 text-white/85 max-w-xl">
+            <p className="mt-1.5 text-sm text-white/85 max-w-xl">
               Live snapshot of your platform — students, revenue, subscriptions, and support queues in one view.
             </p>
             {/* Hero mini-stats */}
-            <div className="mt-4 flex flex-wrap gap-3">
+            <div className="mt-3 flex flex-wrap gap-3">
               {[
                 { label: "Students",    value: stats.students },
                 { label: "Enrollments", value: stats.enrollments },
@@ -323,8 +323,10 @@ export default function AdminOverviewPage() {
                   <p className="text-2xl font-bold tracking-tight">{c.value}</p>
                   <p className="text-[11px] font-medium text-[var(--foreground)] leading-tight">{c.label}</p>
                   <div className="flex items-end justify-between gap-1 pt-0.5">
-                    <p className="text-[10px] text-[var(--muted-2)] leading-tight">{c.hint}</p>
-                    {c.series && c.series.length >= 2 && <Sparkline data={c.series} width={52} height={22} />}
+                    <p className="min-w-0 truncate text-[10px] text-[var(--muted-2)] leading-tight">{c.hint}</p>
+                    {c.series && c.series.length >= 2 && (
+                      <span className="shrink-0"><Sparkline data={c.series} width={52} height={22} /></span>
+                    )}
                   </div>
                 </CardBody>
               </Card>
@@ -583,8 +585,8 @@ export default function AdminOverviewPage() {
 
       {/* ── Category distribution + Top courses ──────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card>
-          <CardBody>
+        <Card className="flex flex-col">
+          <CardBody className="flex-1 flex flex-col">
             <div className="flex items-center justify-between mb-3">
               <div>
                 <h2 className="font-semibold">Top categories</h2>
@@ -593,13 +595,15 @@ export default function AdminOverviewPage() {
               <Icon.PieChart size={16} className="text-[var(--muted-2)]" />
             </div>
             {reportsLoading ? (
-              <div className="h-[220px] flex items-center justify-center text-[var(--muted)]"><Icon.Loader size={18} className="animate-spin" /></div>
+              <div className="flex-1 min-h-[220px] flex items-center justify-center text-[var(--muted)]"><Icon.Loader size={18} className="animate-spin" /></div>
             ) : (reports?.categoryMix?.length ?? 0) > 0 ? (
-              <div className="h-[220px] overflow-hidden">
-                <BarChart data={reports!.categoryMix} height={220} />
+              <div className="flex-1 min-h-[220px] overflow-hidden">
+                <BarChart data={reports!.categoryMix} height={420} />
               </div>
             ) : (
-              <ChartEmpty label="No enrollments yet." />
+              <div className="flex-1 min-h-[220px] flex items-center justify-center">
+                <ChartEmpty label="No enrollments yet." />
+              </div>
             )}
           </CardBody>
         </Card>
@@ -762,7 +766,7 @@ export default function AdminOverviewPage() {
               </div>
               <Link href="/admin/courses" className="text-xs text-[var(--primary)] hover:underline font-medium">Manage all</Link>
             </div>
-            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2">
               {courses.slice(0, 6).map((c) => (
                 <Link key={c.id} href="/admin/courses" className="group">
                   <div className="aspect-video rounded-lg overflow-hidden border border-[var(--border)]">

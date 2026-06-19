@@ -265,17 +265,19 @@ export default function AdminPhysicalClassesPage() {
       )}
 
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <Tabs
-          value={filter}
-          onChange={(v) => setFilter(v as Filter)}
-          options={[
-            { value: "all", label: "All", count: counts.all },
-            { value: "upcoming", label: "Upcoming", count: counts.upcoming },
-            { value: "ongoing", label: "Ongoing", count: counts.ongoing },
-            { value: "completed", label: "Completed", count: counts.completed },
-            { value: "cancelled", label: "Cancelled", count: counts.cancelled },
-          ]}
-        />
+        <div className="-mx-1 px-1 overflow-x-auto min-w-0">
+          <Tabs
+            value={filter}
+            onChange={(v) => setFilter(v as Filter)}
+            options={[
+              { value: "all", label: "All", count: counts.all },
+              { value: "upcoming", label: "Upcoming", count: counts.upcoming },
+              { value: "ongoing", label: "Ongoing", count: counts.ongoing },
+              { value: "completed", label: "Completed", count: counts.completed },
+              { value: "cancelled", label: "Cancelled", count: counts.cancelled },
+            ]}
+          />
+        </div>
         <div className="md:w-80">
           <Input
             value={query}
@@ -320,10 +322,10 @@ export default function AdminPhysicalClassesPage() {
               <thead className="bg-[var(--surface-2)] text-[var(--muted)] text-xs uppercase tracking-wider">
                 <tr>
                   <Th>Batch</Th>
-                  <Th>Instructor</Th>
-                  <Th>Campus / Room</Th>
-                  <Th>Schedule</Th>
-                  <Th>Seats</Th>
+                  <Th className="hidden md:table-cell">Instructor</Th>
+                  <Th className="hidden lg:table-cell">Campus / Room</Th>
+                  <Th className="hidden lg:table-cell">Schedule</Th>
+                  <Th className="hidden sm:table-cell">Seats</Th>
                   <Th>Status</Th>
                   <Th className="text-right">Actions</Th>
                 </tr>
@@ -337,17 +339,20 @@ export default function AdminPhysicalClassesPage() {
                       className="border-t border-[var(--border)] hover:bg-[var(--surface-2)]/50"
                     >
                       <Td>
-                        <div className="font-medium">{c.title}</div>
+                        <div className="font-medium truncate max-w-[24ch]">{c.title}</div>
                         <div className="text-xs text-[var(--muted)] truncate max-w-[22ch]">
                           {c.courseTitle}
                         </div>
+                        <div className="text-xs text-[var(--muted)] md:hidden truncate max-w-[24ch]">
+                          {c.instructorName}
+                        </div>
                       </Td>
-                      <Td>{c.instructorName}</Td>
-                      <Td>
+                      <Td className="hidden md:table-cell">{c.instructorName}</Td>
+                      <Td className="hidden lg:table-cell">
                         <div>{c.campus}</div>
                         <div className="text-xs text-[var(--muted)]">Room {c.room}</div>
                       </Td>
-                      <Td>
+                      <Td className="hidden lg:table-cell">
                         <div className="text-xs">{c.batch}</div>
                         <div className="text-xs text-[var(--muted)]">
                           {c.daysOfWeek.join(", ")}
@@ -356,7 +361,7 @@ export default function AdminPhysicalClassesPage() {
                           {formatDate(c.startDate)} – {formatDate(c.endDate)}
                         </div>
                       </Td>
-                      <Td>
+                      <Td className="hidden sm:table-cell">
                         <span className={full ? "text-amber-500 font-medium" : ""}>
                           {c.enrolledCount} / {c.capacity}
                         </span>

@@ -247,7 +247,7 @@ export default function AdminCouponsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <StatCard label="Total coupons" value={stats.total}     icon={<Icon.Tag size={16} />}       tone="primary" delta="All created" />
         <StatCard label="Active"        value={stats.active}    icon={<Icon.CheckCircle size={16} />} tone="success" delta="Ready to use" />
         <StatCard label="Total uses"    value={stats.totalUses} icon={<Icon.TrendingUp size={16} />}  tone="accent"  delta="Times redeemed" />
@@ -258,25 +258,27 @@ export default function AdminCouponsPage() {
       <Card>
         <CardBody className="space-y-4">
           {/* Filters — one row */}
-          <div className="flex items-center gap-2">
-            <Tabs
-              value={filter}
-              onChange={(v) => setFilter(v as Filter)}
-              options={[
-                { value: "all",      label: "All",      count: counts.all },
-                { value: "active",   label: "Active",   count: counts.active },
-                { value: "expired",  label: "Expired",  count: counts.expired },
-                { value: "used-up",  label: "Used up",  count: counts["used-up"] },
-                { value: "inactive", label: "Inactive", count: counts.inactive },
-              ]}
-            />
-            <div className="flex gap-2 ml-auto shrink-0">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-2">
+            <div className="overflow-x-auto -mx-1 px-1">
+              <Tabs
+                value={filter}
+                onChange={(v) => setFilter(v as Filter)}
+                options={[
+                  { value: "all",      label: "All",      count: counts.all },
+                  { value: "active",   label: "Active",   count: counts.active },
+                  { value: "expired",  label: "Expired",  count: counts.expired },
+                  { value: "used-up",  label: "Used up",  count: counts["used-up"] },
+                  { value: "inactive", label: "Inactive", count: counts.inactive },
+                ]}
+              />
+            </div>
+            <div className="flex gap-2 lg:ml-auto lg:shrink-0">
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value.toUpperCase())}
                 placeholder="Search code…"
                 icon={<Icon.Search size={15} />}
-                className="!h-9 !w-44"
+                className="!h-9 flex-1 lg:flex-none lg:!w-44"
               />
               <Select
                 value={`${sortKey}-${sortDir}`}
@@ -368,7 +370,7 @@ export default function AdminCouponsPage() {
                               <code className="font-mono font-bold text-sm tracking-wider bg-[var(--surface-2)] border border-[var(--border)] px-2.5 py-1 rounded-lg">
                                 {c.code}
                               </code>
-                              <button onClick={() => copyCode(c.code)} className="p-1 rounded text-[var(--muted)] hover:text-[var(--primary)] transition opacity-0 group-hover:opacity-100" title="Copy">
+                              <button onClick={() => copyCode(c.code)} className="p-1 rounded text-[var(--muted)] hover:text-[var(--primary)] transition opacity-100 sm:opacity-0 sm:group-hover:opacity-100" title="Copy">
                                 <Icon.Copy size={13} />
                               </button>
                             </div>
@@ -426,7 +428,7 @@ export default function AdminCouponsPage() {
                           <td className="px-4 py-3 text-right">
                             <button
                               onClick={() => setDeleting(c)}
-                              className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition opacity-0 group-hover:opacity-100"
+                              className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                               title="Delete"
                             >
                               <Icon.Trash size={14} />

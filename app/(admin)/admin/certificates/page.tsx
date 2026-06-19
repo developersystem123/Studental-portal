@@ -466,10 +466,12 @@ export default function AdminCertificatesPage() {
                   Showing <span className="font-semibold text-[var(--foreground)]">{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)}</span> of{" "}
                   <span className="font-semibold text-[var(--foreground)]">{filtered.length}</span> certificates
                 </p>
-                <div className="flex items-center gap-1">
-                  <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage(1)} title="First">
-                    <Icon.ChevronLeft size={13} /><Icon.ChevronLeft size={13} className="-ml-2" />
-                  </Button>
+                <div className="flex items-center gap-1 flex-wrap justify-center sm:justify-end">
+                  <span className="hidden sm:contents">
+                    <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage(1)} title="First">
+                      <Icon.ChevronLeft size={13} /><Icon.ChevronLeft size={13} className="-ml-2" />
+                    </Button>
+                  </span>
                   <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
                     <Icon.ChevronLeft size={13} /> Prev
                   </Button>
@@ -499,9 +501,11 @@ export default function AdminCertificatesPage() {
                   <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => setPage((p) => p + 1)}>
                     Next <Icon.ChevronRight size={13} />
                   </Button>
-                  <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => setPage(totalPages)} title="Last">
-                    <Icon.ChevronRight size={13} /><Icon.ChevronRight size={13} className="-ml-2" />
-                  </Button>
+                  <span className="hidden sm:contents">
+                    <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => setPage(totalPages)} title="Last">
+                      <Icon.ChevronRight size={13} /><Icon.ChevronRight size={13} className="-ml-2" />
+                    </Button>
+                  </span>
                 </div>
               </div>
             </>

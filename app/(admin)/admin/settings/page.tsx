@@ -196,6 +196,25 @@ export default function AdminSettingsPage() {
     } catch {}
   }, [prefs, accent, hydrated]);
 
+  // Scrollspy — highlight the nav item for the section currently in view.
+  React.useEffect(() => {
+    const ids = ["profile", "system", "appearance", "security", "notifications", "privacy", "accessibility", "danger"];
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+        if (visible) setActiveSection(visible.target.id);
+      },
+      { rootMargin: "-96px 0px -65% 0px", threshold: 0 },
+    );
+    ids.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+    return () => observer.disconnect();
+  }, []);
+
   function setPref<K extends keyof Prefs>(k: K, v: Prefs[K]) {
     setPrefs((p) => ({ ...p, [k]: v }));
     toast.push({ title: "Preference saved", tone: "success" });
@@ -264,12 +283,18 @@ export default function AdminSettingsPage() {
   return (
     <div className="fade-in">
       {/* Header */}
-      <div className="mb-8">
-        <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold mb-1">Account</p>
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-            <p className="mt-1 text-[var(--muted)]">Manage your account, security, appearance, and platform data.</p>
+      <div className="mb-8 relative overflow-hidden rounded-2xl border border-[var(--border)] bg-gradient-to-br from-[var(--primary-soft)]/60 via-[var(--surface)] to-[var(--surface)] p-6">
+        <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-[var(--primary)]/10 blur-3xl pointer-events-none" />
+        <div className="relative flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex items-start gap-4">
+            <div className="hidden sm:flex h-12 w-12 rounded-2xl bg-[var(--primary)] text-white items-center justify-center shrink-0 shadow-lg shadow-[var(--primary)]/20">
+              <Icon.Settings size={22} />
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold mb-1">Account</p>
+              <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+              <p className="mt-1 text-[var(--muted)]">Manage your account, security, appearance, and platform data.</p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="primary">
@@ -283,27 +308,65 @@ export default function AdminSettingsPage() {
         </div>
       </div>
 
+      {/* Section nav — horizontal scroll on mobile/tablet, sidebar on large screens */}
+      <nav className="lg:hidden -mx-1 mb-4 flex gap-1 overflow-x-auto pb-1">
+        {navItems.map((item) => (
+          <a
+            key={item.id}
+            href={`#${item.id}`}
+            onClick={() => setActiveSection(item.id)}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap shrink-0",
+              activeSection === item.id
+                ? "bg-[var(--primary-soft)] text-[var(--primary)]"
+                : item.danger
+                ? "text-[var(--danger)] hover:bg-red-500/10"
+                : "text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]",
+            )}
+          >
+            <span className={item.danger ? "text-[var(--danger)]" : ""}>{item.icon}</span>
+            {item.label}
+          </a>
+        ))}
+      </nav>
+
       <div className="flex gap-6 items-start">
         {/* Sidebar nav */}
-        <aside className="hidden lg:flex flex-col gap-1 w-48 shrink-0 sticky top-24">
-          {navItems.map((item) => (
-            <a
-              key={item.id}
-              href={`#${item.id}`}
-              onClick={() => setActiveSection(item.id)}
-              className={cn(
-                "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                activeSection === item.id
-                  ? "bg-[var(--primary-soft)] text-[var(--primary)]"
-                  : item.danger
-                  ? "text-[var(--danger)] hover:bg-red-500/10"
-                  : "text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]",
-              )}
-            >
-              <span className={item.danger ? "text-[var(--danger)]" : ""}>{item.icon}</span>
-              {item.label}
-            </a>
-          ))}
+        <aside className="hidden lg:block w-52 shrink-0 sticky top-24">
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] card-shadow p-2">
+            <p className="px-3 pt-2 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted-2)]">On this page</p>
+            <nav className="flex flex-col gap-0.5">
+              {navItems.map((item) => {
+                const active = activeSection === item.id;
+                return (
+                  <a
+                    key={item.id}
+                    href={`#${item.id}`}
+                    onClick={() => setActiveSection(item.id)}
+                    className={cn(
+                      "group relative flex items-center gap-2.5 pl-3.5 pr-3 py-2 rounded-xl text-sm font-medium transition-all",
+                      active
+                        ? item.danger
+                          ? "bg-red-500/10 text-[var(--danger)]"
+                          : "bg-[var(--primary-soft)] text-[var(--primary)]"
+                        : item.danger
+                        ? "text-[var(--danger)] hover:bg-red-500/10"
+                        : "text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 rounded-full transition-all",
+                        active ? (item.danger ? "bg-[var(--danger)]" : "bg-[var(--primary)]") : "bg-transparent group-hover:bg-[var(--border-strong)]",
+                      )}
+                    />
+                    <span className={cn("transition-transform group-hover:scale-110", item.danger && "text-[var(--danger)]")}>{item.icon}</span>
+                    {item.label}
+                  </a>
+                );
+              })}
+            </nav>
+          </div>
         </aside>
 
         {/* Main content */}
@@ -870,27 +933,37 @@ function CollapsibleSection({
   const [open, setOpen] = React.useState(defaultOpen);
   const iconCls =
     tone === "danger"
-      ? "bg-red-500/10 text-[var(--danger)]"
-      : "bg-[var(--primary-soft)] text-[var(--primary)]";
+      ? "bg-red-500/10 text-[var(--danger)] ring-1 ring-[var(--danger)]/20"
+      : "bg-[var(--primary-soft)] text-[var(--primary)] ring-1 ring-[var(--primary)]/15";
 
   return (
-    <Card id={id} className={cn("scroll-mt-24", cardClassName)}>
+    <Card id={id} className={cn("scroll-mt-24 overflow-hidden hover:shadow-md", cardClassName)}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-[var(--surface-2)]/60 transition-colors rounded-2xl"
+        className={cn(
+          "w-full flex items-center gap-3 px-5 py-4 text-left transition-colors group",
+          open ? "bg-[var(--surface-2)]/40" : "hover:bg-[var(--surface-2)]/60",
+        )}
       >
-        <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center shrink-0", iconCls)}>
+        <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105", iconCls)}>
           {icon}
         </div>
         <div className="flex-1 min-w-0">
           <p className={cn("font-semibold", tone === "danger" && "text-[var(--danger)]")}>{title}</p>
           {description && <p className="text-xs text-[var(--muted)] mt-0.5">{description}</p>}
         </div>
-        <Icon.ChevronDown
-          size={16}
-          className={cn("text-[var(--muted)] transition-transform duration-200 shrink-0", open && "rotate-180")}
-        />
+        <span
+          className={cn(
+            "h-7 w-7 rounded-lg flex items-center justify-center shrink-0 transition-all",
+            open ? "bg-[var(--surface-2)] text-[var(--text)]" : "text-[var(--muted)] group-hover:bg-[var(--surface-2)]",
+          )}
+        >
+          <Icon.ChevronDown
+            size={16}
+            className={cn("transition-transform duration-200", open && "rotate-180")}
+          />
+        </span>
       </button>
       {open && (
         <div className="border-t border-[var(--border)] p-5 space-y-4">

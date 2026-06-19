@@ -182,7 +182,7 @@ export default function AdminReportsPage() {
           {section === "overview" && (
             <>
               {/* KPI Cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <StatCard
                   label="Gross revenue" value={money(totals?.revenue ?? 0, currency)}
                   icon={<Icon.DollarSign size={18} />} tone="success"
@@ -206,7 +206,7 @@ export default function AdminReportsPage() {
               </div>
 
               {/* Secondary KPIs */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
                   { label: "Net revenue",  value: money(netRevenue, currency),      tone: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400", icon: Icon.TrendingUp },
                   { label: "Students",     value: (totals?.students ?? 0).toLocaleString(), tone: "bg-sky-500/10 text-sky-600 dark:text-sky-400", icon: Icon.User },
@@ -228,7 +228,7 @@ export default function AdminReportsPage() {
               </div>
 
               {/* Enrollment + completion */}
-              <div className="grid lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <Card className="lg:col-span-2">
                   <CardBody>
                     <div className="flex items-start justify-between gap-3 mb-3">
@@ -291,7 +291,7 @@ export default function AdminReportsPage() {
           {/* ── REVENUE ── */}
           {section === "revenue" && (
             <>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <StatCard label="Gross revenue" value={money(totals?.revenue ?? 0, currency)}    icon={<Icon.DollarSign size={18} />} tone="success" delta={`${totals?.transactions ?? 0} transactions`} />
                 <StatCard label="Refunded"       value={money(totals?.refunded ?? 0, currency)}  icon={<Icon.AlertCircle size={18} />} tone="warning" delta="Total refunded" />
                 <StatCard label="Net revenue"    value={money(netRevenue, currency)}              icon={<Icon.TrendingUp size={18} />} tone="primary" delta="After refunds" />
@@ -300,7 +300,7 @@ export default function AdminReportsPage() {
                   icon={<Icon.CreditCard size={18} />} tone="accent" delta="Per transaction" />
               </div>
 
-              <div className="grid lg:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <Card>
                   <CardBody>
                     <div className="flex items-start justify-between gap-3 mb-3">
@@ -380,14 +380,14 @@ export default function AdminReportsPage() {
           {/* ── LEARNING ── */}
           {section === "learning" && (
             <>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <StatCard label="Enrollments"    value={totals?.enrollments ?? 0}        icon={<Icon.ListChecks size={18} />} tone="primary" delta="All-time" />
                 <StatCard label="Completions"    value={totals?.completions ?? 0}        icon={<Icon.CheckCircle size={18} />} tone="success" delta={`${totals?.completionRate ?? 0}% rate`} />
                 <StatCard label="Certificates"   value={totals?.certificates ?? 0}       icon={<Icon.Award size={18} />} tone="warning" delta="Issued" />
                 <StatCard label="New signups"    value={monthly.reduce((s, m) => s + m.signups, 0)} icon={<Icon.User size={18} />} tone="accent" delta={`In ${range} months`} />
               </div>
 
-              <div className="grid lg:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <Card>
                   <CardBody>
                     <h2 className="font-semibold">Completions per month</h2>
@@ -408,7 +408,7 @@ export default function AdminReportsPage() {
                 </Card>
               </div>
 
-              <div className="grid lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <Card className="lg:col-span-2">
                   <CardBody>
                     <h2 className="font-semibold">Enrollment vs completion trend</h2>
@@ -448,7 +448,7 @@ export default function AdminReportsPage() {
           {/* ── TOP COURSES ── */}
           {section === "courses" && (
             <>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <StatCard label="Total courses"  value={totals?.courses ?? 0}   icon={<Icon.Book size={18} />}       tone="primary" delta="In catalog" />
                 <StatCard label="Top revenue"    value={data?.topCourses?.[0] ? money(data.topCourses[0].revenue, currency) : "—"} icon={<Icon.DollarSign size={18} />} tone="success" delta={data?.topCourses?.[0]?.title?.slice(0, 20) ?? ""} />
                 <StatCard label="Top enrolled"   value={data?.topCourses?.[0]?.enrollments ?? 0} icon={<Icon.Users size={18} />} tone="accent" delta="Most popular course" />

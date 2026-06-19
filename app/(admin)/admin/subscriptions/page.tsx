@@ -218,7 +218,7 @@ export default function AdminSubscriptionsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <StatCard label="MRR"          value={money(stats.mrr)}        icon={<Icon.DollarSign size={16} />} tone="success" delta="Monthly recurring" />
         <StatCard label="ARR"          value={money(stats.arr)}        icon={<Icon.TrendingUp size={16} />} tone="primary" delta="Annual run rate" />
         <StatCard label="Active subs"  value={stats.activeCount}       icon={<Icon.Crown size={16} />}      tone="accent"  delta={`${stats.total} total`} />
@@ -440,7 +440,7 @@ export default function AdminSubscriptionsPage() {
                             <div className="flex items-center justify-end gap-1">
                               <button
                                 onClick={() => setDetailSub(s)}
-                                className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--primary)] hover:bg-[var(--primary-soft)] transition opacity-0 group-hover:opacity-100"
+                                className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--primary)] hover:bg-[var(--primary-soft)] transition opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                                 title="View details"
                               >
                                 <Icon.Eye size={14} />
@@ -448,7 +448,7 @@ export default function AdminSubscriptionsPage() {
                               {s.status === "active" && (
                                 <button
                                   onClick={() => setCancelTarget(s)}
-                                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-red-600 dark:text-red-400 bg-red-500/10 hover:bg-red-500/20 transition opacity-0 group-hover:opacity-100"
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-red-600 dark:text-red-400 bg-red-500/10 hover:bg-red-500/20 transition opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                                 >
                                   <Icon.X size={11} /> Cancel
                                 </button>
@@ -456,7 +456,7 @@ export default function AdminSubscriptionsPage() {
                               {s.status === "canceled" && (
                                 <button
                                   onClick={() => reactivate(s)}
-                                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 transition opacity-0 group-hover:opacity-100"
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 transition opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                                 >
                                   <Icon.CheckCircle size={11} /> Reactivate
                                 </button>

@@ -28,6 +28,7 @@ const operations = [
   { href: "/admin/support", label: "Support", icon: Icon.MessageSquare },
   { href: "/admin/reports", label: "Reports", icon: Icon.BarChart3 },
   { href: "/admin/announcements", label: "Announcements", icon: Icon.Megaphone },
+  { href: "/admin/templates", label: "Templates", icon: Icon.FilePen },
   { href: "/admin/ai", label: "AI Management", icon: Icon.Sparkles },
 ];
 

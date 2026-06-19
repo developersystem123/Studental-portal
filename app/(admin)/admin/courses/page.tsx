@@ -279,11 +279,11 @@ export default function AdminCoursesPage() {
                   <thead>
                     <tr className="border-b border-[var(--border)] bg-[var(--surface-2)]">
                       <th className="text-left px-4 py-3 font-semibold text-[var(--muted)] text-xs uppercase tracking-wider">Course</th>
-                      <th className="text-left px-4 py-3 font-semibold text-[var(--muted)] text-xs uppercase tracking-wider">Category</th>
-                      <th className="text-left px-4 py-3 font-semibold text-[var(--muted)] text-xs uppercase tracking-wider">Level</th>
+                      <th className="text-left px-4 py-3 font-semibold text-[var(--muted)] text-xs uppercase tracking-wider hidden sm:table-cell">Category</th>
+                      <th className="text-left px-4 py-3 font-semibold text-[var(--muted)] text-xs uppercase tracking-wider hidden lg:table-cell">Level</th>
                       <th className="text-left px-4 py-3 font-semibold text-[var(--muted)] text-xs uppercase tracking-wider">Price</th>
-                      <th className="text-left px-4 py-3 font-semibold text-[var(--muted)] text-xs uppercase tracking-wider">Rating</th>
-                      <th className="text-left px-4 py-3 font-semibold text-[var(--muted)] text-xs uppercase tracking-wider">Duration</th>
+                      <th className="text-left px-4 py-3 font-semibold text-[var(--muted)] text-xs uppercase tracking-wider hidden md:table-cell">Rating</th>
+                      <th className="text-left px-4 py-3 font-semibold text-[var(--muted)] text-xs uppercase tracking-wider hidden lg:table-cell">Duration</th>
                       <th className="px-4 py-3" />
                     </tr>
                   </thead>
@@ -300,12 +300,12 @@ export default function AdminCoursesPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 hidden sm:table-cell">
                           <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-full", CATEGORY_COLORS[c.category])}>
                             {c.category}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-[var(--muted)] text-xs">{c.level}</td>
+                        <td className="px-4 py-3 text-[var(--muted)] text-xs hidden lg:table-cell">{c.level}</td>
                         <td className="px-4 py-3">
                           {c.price === 0 ? (
                             <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">Free</span>
@@ -316,14 +316,14 @@ export default function AdminCoursesPage() {
                             </div>
                           )}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 hidden md:table-cell">
                           <span className="flex items-center gap-1 text-xs font-medium">
                             <Icon.Star size={12} className="text-amber-500" /> {c.rating}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-[var(--muted)] text-xs">{formatHours(c.durationMinutes)}</td>
+                        <td className="px-4 py-3 text-[var(--muted)] text-xs hidden lg:table-cell">{formatHours(c.durationMinutes)}</td>
                         <td className="px-4 py-3 text-right">
-                          <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition">
+                          <div className="flex items-center justify-end gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition">
                             <button onClick={() => { setEditing(c); setMode("edit"); }} className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--primary)] hover:bg-[var(--primary-soft)] transition" title="Edit">
                               <Icon.FilePen size={14} />
                             </button>

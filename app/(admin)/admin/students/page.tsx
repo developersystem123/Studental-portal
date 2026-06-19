@@ -160,9 +160,9 @@ export default function AdminStudentsPage() {
               placeholder="Search by name or email…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="sm:max-w-xs"
+              className="w-full sm:flex-1 sm:max-w-xs"
             />
-            <div className="flex items-center gap-2">
+            <div className="flex flex-nowrap items-center gap-2 overflow-x-auto sm:shrink-0">
               <span className="text-xs text-[var(--muted)] shrink-0">Sort by:</span>
               {(["name", "enrolled", "completed"] as SortKey[]).map((k) => (
                 <button

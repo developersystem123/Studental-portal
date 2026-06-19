@@ -177,7 +177,7 @@ export default function AdminPhysicalClassDetailPage() {
       </div>
 
       <Card>
-        <CardHeader className="flex items-center justify-between gap-3 flex-wrap !pb-3">
+        <CardHeader className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between flex-wrap !pb-3">
           <CardTitle>Roster ({roster.length})</CardTitle>
           {roster.length > 0 && (
             <Input
@@ -185,7 +185,7 @@ export default function AdminPhysicalClassDetailPage() {
               placeholder="Search students…"
               value={rosterQuery}
               onChange={(e) => setRosterQuery(e.target.value)}
-              className="w-56"
+              className="w-full sm:w-56"
             />
           )}
         </CardHeader>

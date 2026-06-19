@@ -154,7 +154,7 @@ export default function AdminTeachersPage() {
       </div>
 
       {/* ── Stats ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatCard
           label="Total teachers"
           value={stats.total}
@@ -191,9 +191,9 @@ export default function AdminTeachersPage() {
               placeholder="Search by name or email…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full sm:max-w-xs"
+              className="w-full sm:flex-1 sm:max-w-xs"
             />
-            <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex items-center gap-1.5 flex-nowrap overflow-x-auto sm:shrink-0">
               <span className="text-xs text-[var(--muted)] shrink-0 mr-0.5">Sort:</span>
               {SORTS.map(({ key, label }) => (
                 <button

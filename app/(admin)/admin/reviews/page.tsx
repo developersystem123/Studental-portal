@@ -192,8 +192,8 @@ export default function AdminReviewsPage() {
   return (
     <div className="space-y-6 fade-in">
       {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
           <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">
             Manage
           </p>
@@ -203,7 +203,7 @@ export default function AdminReviewsPage() {
             toward a course&apos;s public rating.
           </p>
         </div>
-        <Button variant="outline" onClick={() => exportCSV(filtered)}>
+        <Button variant="outline" onClick={() => exportCSV(filtered)} className="shrink-0">
           <Icon.Download size={15} /> Export CSV
         </Button>
       </div>
@@ -583,11 +583,11 @@ function Pagination({
   const end = Math.min(page * PAGE_SIZE, total);
 
   return (
-    <div className="flex items-center justify-between py-1">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 py-1">
       <p className="text-xs text-[var(--muted)]">
         Showing {start}–{end} of {total} review{total !== 1 ? "s" : ""}
       </p>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 flex-wrap justify-center">
         <button
           onClick={() => onChange(page - 1)}
           disabled={page === 1}

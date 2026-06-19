@@ -950,6 +950,64 @@ async function main() {
     console.log("  ✓ 3 physical classes (+ 1 enrollment, attendance, 2 applications)");
   }
 
+  // -------- Message templates (email / SMS) --------
+  // Self-contained & rerunnable: clear then recreate.
+  await prisma.messageTemplate.deleteMany();
+  await prisma.messageTemplate.createMany({
+    data: [
+      {
+        key: "welcome_email",
+        name: "Welcome email",
+        channel: "email",
+        subject: "Welcome to EduPortal, {{name}}!",
+        body:
+          "Hi {{name}},\n\nWelcome aboard! Your account is ready and thousands of courses are waiting for you.\n\nStart learning: {{link}}\n\n— The EduPortal Team",
+        variables: ["name", "link"],
+        enabled: true,
+      },
+      {
+        key: "enrollment_confirmation",
+        name: "Enrollment confirmation",
+        channel: "both",
+        subject: "You're enrolled in {{courseTitle}}",
+        body:
+          "Hi {{name}},\n\nYou've successfully enrolled in {{courseTitle}}. Jump back in any time at {{link}}.\n\nHappy learning!",
+        variables: ["name", "courseTitle", "link"],
+        enabled: true,
+      },
+      {
+        key: "payment_receipt",
+        name: "Payment receipt",
+        channel: "email",
+        subject: "Your receipt — {{amount}}",
+        body:
+          "Hi {{name}},\n\nWe've received your payment of {{amount}} on {{date}}. Thank you!\n\nView your invoice: {{link}}",
+        variables: ["name", "amount", "date", "link"],
+        enabled: true,
+      },
+      {
+        key: "class_reminder_sms",
+        name: "Live class reminder (SMS)",
+        channel: "sms",
+        subject: null,
+        body: "Reminder: your live class \"{{courseTitle}}\" starts soon. Join: {{link}}",
+        variables: ["courseTitle", "link"],
+        enabled: true,
+      },
+      {
+        key: "password_reset",
+        name: "Password reset",
+        channel: "email",
+        subject: "Reset your EduPortal password",
+        body:
+          "Hi {{name}},\n\nWe received a request to reset your password. Use the link below — it expires in 30 minutes.\n\n{{link}}\n\nIf you didn't request this, you can safely ignore this email.",
+        variables: ["name", "link"],
+        enabled: false,
+      },
+    ],
+  });
+  console.log("  ✓ 5 message templates");
+
   console.log("\nSeed complete.");
   console.log("Demo logins:");
   for (const u of DEMO_USERS) {

@@ -605,7 +605,7 @@ export default function AdminPaymentsPage() {
             </div>
 
             {/* Details grid */}
-            <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
               {[
                 { label: "User", value: managing.userName },
                 { label: "Email", value: managing.userEmail },

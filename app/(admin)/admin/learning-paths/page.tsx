@@ -238,13 +238,13 @@ export default function AdminLearningPathsPage() {
               placeholder="Search paths…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full sm:flex-1 sm:min-w-0 sm:max-w-xs"
+              className="w-full sm:flex-1 sm:min-w-0"
             />
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 sm:shrink-0">
               <Select
                 value={levelFilter}
                 onChange={(e) => setLevelFilter(e.target.value)}
-                className="!h-9 text-xs flex-1 sm:flex-none sm:w-[120px]"
+                className="!h-9 text-xs flex-1 min-w-0 sm:flex-none sm:w-[120px]"
               >
                 <option value="all">All levels</option>
                 {LEVELS.map((l) => (
@@ -254,7 +254,7 @@ export default function AdminLearningPathsPage() {
               <Select
                 value={sortKey}
                 onChange={(e) => setSortKey(e.target.value as SortKey)}
-                className="!h-9 text-xs flex-1 sm:flex-none sm:w-[148px]"
+                className="!h-9 text-xs flex-1 min-w-0 sm:flex-none sm:w-[148px]"
               >
                 <option value="featured">Featured first</option>
                 <option value="learners">Most learners</option>

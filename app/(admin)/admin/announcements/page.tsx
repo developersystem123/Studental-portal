@@ -291,6 +291,7 @@ export default function AdminAnnouncementsPage() {
           <Tabs
             value={filter}
             onChange={(v) => setFilter(v as AnnStatus | "all")}
+            className="overflow-x-auto sm:overflow-visible"
             options={[
               { value: "all", label: "All", count: counts.all },
               { value: "sent", label: "Sent", count: counts.sent },
@@ -303,7 +304,7 @@ export default function AdminAnnouncementsPage() {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search announcements…"
             icon={<Icon.Search size={16} />}
-            className="w-64 shrink-0"
+            className="w-full sm:w-64 sm:shrink-0"
           />
         </div>
 
@@ -407,7 +408,7 @@ export default function AdminAnnouncementsPage() {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-1 shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => setViewing(ann)}
                         title="Preview"
@@ -577,7 +578,7 @@ export default function AdminAnnouncementsPage() {
           )}
 
           {/* Actions */}
-          <div className="flex gap-2 pt-2 border-t border-[var(--border)]">
+          <div className="flex flex-col-reverse sm:flex-row gap-2 pt-2 border-t border-[var(--border)]">
             <Button variant="ghost" onClick={() => setComposeOpen(false)} disabled={sending}>
               Cancel
             </Button>

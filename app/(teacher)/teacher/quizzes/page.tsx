@@ -934,7 +934,7 @@ function QuizEditor({
 
   return (
     <Modal open={open} onClose={onClose} title={initial ? "Edit quiz" : "New quiz"} size="xl">
-      <div className="p-5 space-y-5 max-h-[80vh] overflow-y-auto scrollbar-thin">
+      <div className="p-5 space-y-5">
         {/* Meta */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="sm:col-span-2">

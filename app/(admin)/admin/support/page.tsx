@@ -611,7 +611,7 @@ export default function AdminSupportPage() {
                   <p className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wider">
                     Manage ticket
                   </p>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <p className="text-xs font-medium mb-1.5">Status</p>
                       <Select
