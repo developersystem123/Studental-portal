@@ -199,10 +199,24 @@ export default function AiChatPage() {
   }
 
   function newChat() {
+    // If the active session is already empty, don't create a duplicate —
+    // just clear state and focus the input.
+    if (active && active.messages.length === 0) {
+      setSidebarOpen(false);
+      setShowEmoji(false);
+      setDraft("");
+      setCourseId("");
+      setTimeout(() => textareaRef.current?.focus(), 50);
+      return;
+    }
     const s = freshSession();
     setSessions((p) => [s, ...p]);
     setActiveId(s.id);
     setSidebarOpen(false);
+    setShowEmoji(false);
+    setDraft("");
+    setCourseId("");
+    setTimeout(() => textareaRef.current?.focus(), 80);
   }
 
   function deleteSession(id: string) {
@@ -394,8 +408,8 @@ export default function AiChatPage() {
                 <div
                   role="button"
                   tabIndex={0}
-                  onClick={() => { setActiveId(s.id); setSidebarOpen(false); }}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { setActiveId(s.id); setSidebarOpen(false); } }}
+                  onClick={() => { setActiveId(s.id); setSidebarOpen(false); setDraft(""); setShowEmoji(false); setCourseId(s.courseId ?? ""); }}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { setActiveId(s.id); setSidebarOpen(false); setDraft(""); setShowEmoji(false); setCourseId(s.courseId ?? ""); } }}
                   className={cn(
                     "w-full text-left px-4 py-3 hover:bg-[var(--surface-2)] flex items-start gap-2 group transition-colors cursor-pointer",
                     s.id === activeId && "bg-[var(--primary-soft)]",

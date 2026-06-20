@@ -217,16 +217,16 @@ ${references.length ? `<div class="refs"><h2>References</h2><ol>${references.map
   return (
     <div className="space-y-6">
       {/* Hero header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] p-6 text-white">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] p-4 sm:p-6 text-white">
         <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/10" />
         <div className="absolute right-16 bottom-0 h-20 w-20 rounded-full bg-white/5" />
-        <div className="relative flex items-center gap-4">
-          <div className="h-14 w-14 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center shrink-0">
-            <Icon.FilePen size={26} />
+        <div className="relative flex items-center gap-3">
+          <div className="h-11 w-11 sm:h-14 sm:w-14 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center shrink-0">
+            <Icon.FilePen size={22} />
           </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">AI Assignment Helper</h1>
-            <p className="text-sm text-white/80 mt-0.5">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-3xl font-bold leading-tight">AI Assignment Helper</h1>
+            <p className="text-xs sm:text-sm text-white/80 mt-0.5">
               Outline → Draft → Polish → Export. Full AI-assisted writing workflow.
             </p>
           </div>

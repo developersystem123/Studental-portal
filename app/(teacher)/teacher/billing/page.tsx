@@ -143,7 +143,7 @@ export default function TeacherBillingPage() {
             pendingPayout: json.pendingPayout ?? prev.pendingPayout,
             thisMonthEarnings: json.thisMonthEarnings ?? prev.thisMonthEarnings,
             studentsEnrolled: json.studentsEnrolled ?? prev.studentsEnrolled,
-            chartData: json.chartData ?? prev.chartData,
+            chartData: (json.chartData?.length > 0) ? json.chartData : prev.chartData,
             payouts: json.payouts ?? prev.payouts,
           }));
         }
@@ -230,9 +230,10 @@ export default function TeacherBillingPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 fade-in">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold">Billing</h1>
+        <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Account</p>
+        <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">Billing</h1>
         <p className="text-sm text-[var(--muted)] mt-1">
           Manage your subscription plan and view earnings payouts.
         </p>

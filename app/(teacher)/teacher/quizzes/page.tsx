@@ -592,8 +592,8 @@ function QuizCard({
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg bg-[var(--surface-2)] p-2.5 text-center">
-      <p className="text-[10px] uppercase tracking-wider text-[var(--muted-2)] font-semibold">
+    <div className="rounded-lg bg-surface-2 p-2 text-center">
+      <p className="text-[9px] uppercase tracking-wide text-muted font-semibold truncate">
         {label}
       </p>
       <p className="text-sm font-bold mt-0.5">{value}</p>
@@ -797,6 +797,9 @@ const newQuestion = (): Question => ({
   answerIndex: 0,
 });
 
+const DURATION_PRESETS = [5, 10, 15, 20, 30, 45, 60];
+const PASS_PRESETS = [50, 60, 70, 80];
+
 function QuizEditor({
   open,
   initial,
@@ -869,10 +872,7 @@ function QuizEditor({
       qs.map((q, idx) => {
         if (idx !== qi || q.options.length <= 2) return q;
         const newOpts = q.options.filter((_, x) => x !== oi);
-        const newAnswer =
-          q.answerIndex >= oi
-            ? Math.max(0, q.answerIndex - 1)
-            : q.answerIndex;
+        const newAnswer = q.answerIndex >= oi ? Math.max(0, q.answerIndex - 1) : q.answerIndex;
         return { ...q, options: newOpts, answerIndex: newAnswer };
       }),
     );
@@ -924,212 +924,353 @@ function QuizEditor({
     }
     toast.push({
       title: initial ? "Quiz updated" : "Quiz published",
-      description: initial
-        ? "Your changes have been saved."
-        : "Students enrolled in this course can now take the quiz.",
+      description: initial ? "Your changes have been saved." : "Students enrolled in this course can now take the quiz.",
       tone: "success",
     });
     onSaved();
   }
 
+  const passNum = Number(meta.passingScore);
+  const passColor = passNum >= 70 ? "text-emerald-600" : passNum >= 50 ? "text-amber-600" : "text-red-500";
+
   return (
     <Modal open={open} onClose={onClose} title={initial ? "Edit quiz" : "New quiz"} size="xl">
-      <div className="p-5 space-y-5">
-        {/* Meta */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="sm:col-span-2">
-            <Label>Title</Label>
-            <Input
-              value={meta.title}
-              onChange={(e) => setMeta({ ...meta, title: e.target.value })}
-              placeholder="e.g. Week 3 — Closures & Scope"
-              maxLength={140}
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <Label>Description</Label>
-            <Textarea
-              rows={2}
-              value={meta.description}
-              onChange={(e) => setMeta({ ...meta, description: e.target.value })}
-              placeholder="Brief description of what this quiz covers…"
-            />
-          </div>
-          <div>
-            <Label>Course</Label>
-            <Select
-              value={meta.courseId}
-              onChange={(e) => setMeta({ ...meta, courseId: e.target.value })}
-              disabled={!!initial}
-            >
-              <option value="">Select a course…</option>
-              {courses.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.title}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div>
-            <Label>Duration (minutes)</Label>
-            <Input
-              type="number"
-              min={1}
-              max={180}
-              value={meta.durationMinutes}
-              onChange={(e) => setMeta({ ...meta, durationMinutes: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label>Passing score (%)</Label>
-            <Input
-              type="number"
-              min={0}
-              max={100}
-              value={meta.passingScore}
-              onChange={(e) => setMeta({ ...meta, passingScore: e.target.value })}
-            />
-          </div>
-        </div>
+      {/* Accent bar */}
+      <div className="h-1.5 w-full bg-gradient-to-r from-[var(--primary)] via-violet-400 to-sky-400" />
 
-        {/* Questions */}
-        <div className="border-t border-[var(--border)] pt-4">
-          <div className="flex items-center justify-between mb-3">
-            <p className="font-semibold">
-              Questions{" "}
-              <span className="text-sm font-normal text-[var(--muted)]">
-                ({questions.length})
-              </span>
-            </p>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setQuestions((qs) => [...qs, newQuestion()])}
-            >
-              <Icon.Plus size={14} /> Add question
-            </Button>
-          </div>
+      <div className="overflow-y-auto max-h-[80vh] scrollbar-thin">
+        <div className="p-4 sm:p-6 space-y-6">
 
+          {/* ── Section 1: Quiz details ── */}
           <div className="space-y-4">
-            {questions.map((q, qi) => (
-              <div
-                key={q.id ?? qi}
-                className="rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden"
+            <p className="text-[11px] uppercase tracking-widest font-bold text-[var(--muted-2)] flex items-center gap-1.5">
+              <Icon.ListChecks size={12} /> Quiz details
+            </p>
+
+            {/* Title */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-1.5">
+                  <Icon.Edit size={14} className="text-[var(--muted)]" />
+                  Title
+                  <span className="text-[var(--danger)] ml-0.5">*</span>
+                </label>
+                <span className={`text-[11px] tabular-nums ${meta.title.length > 120 ? "text-amber-500" : "text-[var(--muted-2)]"}`}>
+                  {meta.title.length}/140
+                </span>
+              </div>
+              <Input
+                value={meta.title}
+                onChange={(e) => setMeta({ ...meta, title: e.target.value })}
+                placeholder="e.g. Week 3 — Closures & Scope"
+                maxLength={140}
+              />
+            </div>
+
+            {/* Description */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-1.5">
+                <Icon.FilePen size={14} className="text-[var(--muted)]" />
+                Description
+              </label>
+              <Textarea
+                rows={2}
+                value={meta.description}
+                onChange={(e) => setMeta({ ...meta, description: e.target.value })}
+                placeholder="Brief description of what this quiz covers…"
+              />
+            </div>
+          </div>
+
+          <div className="h-px bg-[var(--border)]" />
+
+          {/* ── Section 2: Settings ── */}
+          <div className="space-y-4">
+            <p className="text-[11px] uppercase tracking-widest font-bold text-[var(--muted-2)] flex items-center gap-1.5">
+              <Icon.Settings size={12} /> Settings
+            </p>
+
+            {/* Course */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-1.5">
+                <Icon.Book size={14} className="text-[var(--muted)]" />
+                Course
+                <span className="text-[var(--danger)] ml-0.5">*</span>
+              </label>
+              <Select
+                value={meta.courseId}
+                onChange={(e) => setMeta({ ...meta, courseId: e.target.value })}
+                disabled={!!initial}
               >
-                {/* Question header */}
-                <div className="flex items-center gap-2 px-3 py-2 bg-[var(--surface-2)] border-b border-[var(--border)]">
-                  <span className="h-6 w-6 rounded-full bg-[var(--primary-soft)] text-[var(--primary)] text-xs font-bold flex items-center justify-center shrink-0">
-                    {qi + 1}
-                  </span>
-                  <div className="flex-1" />
-                  {/* Reorder */}
-                  <button
-                    type="button"
-                    onClick={() => moveQuestion(qi, qi - 1)}
-                    disabled={qi === 0}
-                    className="h-6 w-6 rounded flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface)] disabled:opacity-30 transition"
-                    title="Move up"
-                  >
-                    <Icon.ArrowUp size={13} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => moveQuestion(qi, qi + 1)}
-                    disabled={qi === questions.length - 1}
-                    className="h-6 w-6 rounded flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface)] disabled:opacity-30 transition"
-                    title="Move down"
-                    style={{ transform: "rotate(180deg)" }}
-                  >
-                    <Icon.ArrowUp size={13} />
-                  </button>
-                  {/* Remove question */}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setQuestions((qs) => qs.filter((_, x) => x !== qi))
-                    }
-                    className="h-6 w-6 rounded flex items-center justify-center text-[var(--danger)] hover:bg-red-500/10 transition"
-                    title="Remove question"
-                  >
-                    <Icon.Trash size={13} />
-                  </button>
-                </div>
+                <option value="">Select a course…</option>
+                {courses.map((c) => (
+                  <option key={c.id} value={c.id}>{c.title}</option>
+                ))}
+              </Select>
+            </div>
 
-                {/* Question body */}
-                <div className="p-3 space-y-3">
-                  <Input
-                    value={q.prompt}
-                    onChange={(e) => updateQ(qi, { prompt: e.target.value })}
-                    placeholder="Type your question here…"
-                  />
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {q.options.map((opt, oi) => (
-                      <div key={oi} className="relative">
-                        <label
-                          className={cn(
-                            "flex items-center gap-2 rounded-lg border p-2 pr-8 transition cursor-pointer",
-                            q.answerIndex === oi
-                              ? "border-[var(--primary)] bg-[var(--primary-soft)]/40"
-                              : "border-[var(--border)] hover:border-[var(--border-strong)]",
-                          )}
-                        >
-                          <input
-                            type="radio"
-                            name={`ans-${q.id ?? qi}`}
-                            checked={q.answerIndex === oi}
-                            onChange={() => updateQ(qi, { answerIndex: oi })}
-                            className="h-4 w-4 shrink-0 accent-[var(--primary)]"
-                          />
-                          <span className="text-xs font-bold text-[var(--muted)] w-4 shrink-0">
-                            {String.fromCharCode(65 + oi)}
-                          </span>
-                          <input
-                            className="flex-1 bg-transparent text-sm focus:outline-none min-w-0"
-                            value={opt}
-                            onChange={(e) => updateOpt(qi, oi, e.target.value)}
-                            placeholder={`Option ${String.fromCharCode(65 + oi)}`}
-                          />
-                        </label>
-                        {/* Remove option button */}
-                        {q.options.length > 2 && (
-                          <button
-                            type="button"
-                            onClick={() => removeOption(qi, oi)}
-                            className="absolute right-1.5 top-1/2 -translate-y-1/2 h-5 w-5 rounded flex items-center justify-center text-[var(--muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition"
-                            title="Remove option"
-                          >
-                            <Icon.X size={11} />
-                          </button>
-                        )}
-                      </div>
-                    ))}
+            {/* Duration */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-1.5">
+                <Icon.Clock size={14} className="text-[var(--muted)]" />
+                Duration
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {DURATION_PRESETS.map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setMeta({ ...meta, durationMinutes: String(d) })}
+                    className={cn(
+                      "px-3 h-8 rounded-lg text-xs font-semibold border transition-all",
+                      meta.durationMinutes === String(d)
+                        ? "border-[var(--primary)] bg-[var(--primary-soft)] text-[var(--primary)]"
+                        : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted)] hover:border-[var(--border-strong)]",
+                    )}
+                  >
+                    {d} min
+                  </button>
+                ))}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-[var(--muted)]">or</span>
+                  <div className="relative w-24">
+                    <Input
+                      type="number"
+                      min={1}
+                      max={180}
+                      value={meta.durationMinutes}
+                      onChange={(e) => setMeta({ ...meta, durationMinutes: e.target.value })}
+                      className="!h-8 !text-xs pr-8"
+                    />
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-[var(--muted)] pointer-events-none">min</span>
                   </div>
-
-                  {/* Add option */}
-                  {q.options.length < 6 && (
-                    <button
-                      type="button"
-                      onClick={() => addOption(qi)}
-                      className="text-xs text-[var(--primary)] hover:underline flex items-center gap-1"
-                    >
-                      <Icon.Plus size={12} /> Add option
-                    </button>
-                  )}
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
 
-        {/* Footer */}
-        <div className="flex justify-end gap-2 pt-2 border-t border-[var(--border)]">
-          <Button variant="outline" onClick={onClose} disabled={saving}>
-            Cancel
-          </Button>
-          <Button onClick={save} disabled={!valid} loading={saving}>
-            <Icon.Save size={14} /> {initial ? "Save changes" : "Create quiz"}
-          </Button>
+            {/* Passing score */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-[var(--foreground)] flex items-center justify-between gap-1.5">
+                <span className="flex items-center gap-1.5">
+                  <Icon.Award size={14} className="text-[var(--muted)]" />
+                  Passing score
+                </span>
+                <span className={cn("text-sm font-bold tabular-nums", passColor)}>
+                  {meta.passingScore}%
+                </span>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {PASS_PRESETS.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setMeta({ ...meta, passingScore: String(p) })}
+                    className={cn(
+                      "px-3 h-8 rounded-lg text-xs font-semibold border transition-all",
+                      meta.passingScore === String(p)
+                        ? "border-[var(--primary)] bg-[var(--primary-soft)] text-[var(--primary)]"
+                        : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted)] hover:border-[var(--border-strong)]",
+                    )}
+                  >
+                    {p}%
+                  </button>
+                ))}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-[var(--muted)]">or</span>
+                  <div className="relative w-24">
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={meta.passingScore}
+                      onChange={(e) => setMeta({ ...meta, passingScore: e.target.value })}
+                      className="!h-8 !text-xs pr-6"
+                    />
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-[var(--muted)] pointer-events-none">%</span>
+                  </div>
+                </div>
+              </div>
+              {/* Passing score bar */}
+              <div className="h-1.5 rounded-full bg-[var(--surface-2)] overflow-hidden">
+                <div
+                  className={cn("h-full rounded-full transition-all duration-300", passNum >= 70 ? "bg-emerald-500" : passNum >= 50 ? "bg-amber-400" : "bg-red-400")}
+                  style={{ width: `${Math.min(100, passNum)}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="h-px bg-[var(--border)]" />
+
+          {/* ── Section 3: Questions ── */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] uppercase tracking-widest font-bold text-[var(--muted-2)] flex items-center gap-1.5">
+                <Icon.CheckCircle size={12} /> Questions
+                <span className="ml-1 px-1.5 py-0.5 rounded-full bg-[var(--primary-soft)] text-[var(--primary)] text-[10px] font-bold normal-case tracking-normal">
+                  {questions.length}
+                </span>
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setQuestions((qs) => [...qs, newQuestion()])}
+              >
+                <Icon.Plus size={14} /> Add question
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              {questions.map((q, qi) => (
+                <div
+                  key={q.id ?? qi}
+                  className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm"
+                >
+                  {/* Question header */}
+                  <div className="flex items-center gap-3 px-4 py-2.5 bg-gradient-to-r from-[var(--surface-2)] to-transparent border-b border-[var(--border)]">
+                    <span className="h-6 w-6 rounded-full bg-[var(--primary)] text-white text-[11px] font-bold flex items-center justify-center shrink-0 shadow-sm">
+                      {qi + 1}
+                    </span>
+                    <span className="text-xs font-semibold text-[var(--muted)] flex-1">
+                      {q.prompt.trim() ? q.prompt.slice(0, 55) + (q.prompt.length > 55 ? "…" : "") : "New question"}
+                    </span>
+                    <div className="flex items-center gap-0.5">
+                      <button
+                        type="button"
+                        onClick={() => moveQuestion(qi, qi - 1)}
+                        disabled={qi === 0}
+                        className="h-6 w-6 rounded-lg flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface)] disabled:opacity-30 transition"
+                        title="Move up"
+                      >
+                        <Icon.ArrowUp size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveQuestion(qi, qi + 1)}
+                        disabled={qi === questions.length - 1}
+                        className="h-6 w-6 rounded-lg flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface)] disabled:opacity-30 transition"
+                        title="Move down"
+                        style={{ transform: "rotate(180deg)" }}
+                      >
+                        <Icon.ArrowUp size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setQuestions((qs) => qs.filter((_, x) => x !== qi))}
+                        className="h-6 w-6 rounded-lg flex items-center justify-center text-[var(--danger)] hover:bg-red-500/10 transition ml-1"
+                        title="Remove question"
+                      >
+                        <Icon.Trash size={13} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Question body */}
+                  <div className="p-4 space-y-3">
+                    <Input
+                      value={q.prompt}
+                      onChange={(e) => updateQ(qi, { prompt: e.target.value })}
+                      placeholder="Type your question here…"
+                    />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {q.options.map((opt, oi) => {
+                        const isAnswer = q.answerIndex === oi;
+                        return (
+                          <div key={oi} className="relative group">
+                            <label
+                              className={cn(
+                                "flex items-center gap-2.5 rounded-xl border-2 p-2.5 pr-8 transition-all cursor-pointer",
+                                isAnswer
+                                  ? "border-emerald-500 bg-emerald-500/8 shadow-sm"
+                                  : "border-[var(--border)] hover:border-[var(--border-strong)] bg-[var(--surface-2)]",
+                              )}
+                            >
+                              <input
+                                type="radio"
+                                name={`ans-${q.id ?? qi}`}
+                                checked={isAnswer}
+                                onChange={() => updateQ(qi, { answerIndex: oi })}
+                                className="h-4 w-4 shrink-0 accent-emerald-500"
+                              />
+                              <span className={cn(
+                                "h-5 w-5 rounded-md text-[10px] font-bold flex items-center justify-center shrink-0",
+                                isAnswer ? "bg-emerald-500 text-white" : "bg-[var(--surface)] text-[var(--muted)] border border-[var(--border)]",
+                              )}>
+                                {String.fromCharCode(65 + oi)}
+                              </span>
+                              <input
+                                className="flex-1 bg-transparent text-sm focus:outline-none min-w-0 placeholder:text-[var(--muted-2)]"
+                                value={opt}
+                                onChange={(e) => updateOpt(qi, oi, e.target.value)}
+                                placeholder={`Option ${String.fromCharCode(65 + oi)}`}
+                              />
+                            </label>
+                            {q.options.length > 2 && (
+                              <button
+                                type="button"
+                                onClick={() => removeOption(qi, oi)}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 h-5 w-5 rounded-md flex items-center justify-center text-[var(--muted)] opacity-0 group-hover:opacity-100 hover:text-[var(--danger)] hover:bg-red-500/10 transition-all"
+                                title="Remove option"
+                              >
+                                <Icon.X size={11} />
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      {q.options.length < 6 ? (
+                        <button
+                          type="button"
+                          onClick={() => addOption(qi)}
+                          className="text-xs text-[var(--primary)] hover:underline flex items-center gap-1 font-medium"
+                        >
+                          <Icon.Plus size={12} /> Add option
+                        </button>
+                      ) : (
+                        <span className="text-xs text-[var(--muted-2)]">Max 6 options</span>
+                      )}
+                      {q.answerIndex !== undefined && q.options[q.answerIndex]?.trim() && (
+                        <span className="text-[11px] text-emerald-600 flex items-center gap-1 font-medium">
+                          <Icon.CheckCircle size={11} /> Correct: {String.fromCharCode(65 + q.answerIndex)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Add question CTA */}
+            <button
+              type="button"
+              onClick={() => setQuestions((qs) => [...qs, newQuestion()])}
+              className="w-full h-11 rounded-xl border-2 border-dashed border-[var(--border)] text-sm text-[var(--muted)] hover:border-[var(--primary)] hover:text-[var(--primary)] hover:bg-[var(--primary-soft)]/30 flex items-center justify-center gap-2 transition-all"
+            >
+              <Icon.Plus size={15} /> Add another question
+            </button>
+          </div>
+
+          {/* Footer */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-2 border-t border-border">
+            <p className="text-xs text-muted">
+              {questions.length} question{questions.length !== 1 ? "s" : ""} · {meta.durationMinutes} min · Pass at {meta.passingScore}%
+            </p>
+            <div className="flex gap-2 self-end sm:self-auto shrink-0">
+              <Button variant="outline" onClick={onClose} disabled={saving}>
+                Cancel
+              </Button>
+              <Button onClick={save} disabled={!valid} loading={saving}>
+                <Icon.Save size={14} />
+                <span className="hidden sm:inline">{initial ? "Save changes" : "Create quiz"}</span>
+                <span className="sm:hidden">{initial ? "Save" : "Create"}</span>
+              </Button>
+            </div>
+          </div>
+
         </div>
       </div>
     </Modal>

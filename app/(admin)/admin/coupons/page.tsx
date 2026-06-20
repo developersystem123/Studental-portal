@@ -485,79 +485,139 @@ export default function AdminCouponsPage() {
       </Card>
 
       {/* Create modal */}
-      <Modal open={formOpen} onClose={() => setFormOpen(false)} size="md" title="New coupon">
-        <div className="p-5 space-y-4">
-          {/* Code field + auto-generate */}
-          <div>
-            <Label>Coupon code</Label>
-            <div className="flex gap-2">
-              <Input
-                value={code}
-                onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
-                placeholder="e.g. SAVE20"
-                maxLength={20}
-                className="flex-1 font-mono tracking-wider"
-              />
-              <Button variant="outline" type="button" onClick={() => setCode(generateCode())} title="Generate random code">
-                <Icon.Sparkles size={14} /> Generate
-              </Button>
+      <Modal
+        open={formOpen}
+        onClose={() => setFormOpen(false)}
+        size="md"
+        title="New coupon"
+      >
+        <div>
+          {/* Live preview header */}
+          <div className="px-5 sm:px-6 py-4 flex items-center gap-4 border-b border-[var(--border)] bg-[var(--surface-2)]/50">
+            <div className={cn(
+              "h-14 w-14 rounded-2xl text-white flex items-center justify-center shrink-0 shadow-md transition-all duration-300 bg-gradient-to-br",
+              type === "percent"
+                ? "from-[var(--primary)] to-emerald-400 shadow-green-500/20"
+                : "from-sky-500 to-blue-400 shadow-sky-500/20",
+            )}>
+              <Icon.Tag size={24} />
             </div>
-            <p className="text-xs text-[var(--muted)] mt-1">Only uppercase letters and numbers. Min 3 characters.</p>
+            <div className="min-w-0 flex-1">
+              <p className={cn("font-bold font-mono tracking-widest truncate", code ? "text-base text-[var(--foreground)]" : "text-sm text-[var(--muted)]")}>
+                {code || "COUPON CODE"}
+              </p>
+              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                {value && Number(value) > 0 ? (
+                  <span className={cn(
+                    "text-[11px] font-bold px-2.5 py-0.5 rounded-full",
+                    type === "percent"
+                      ? "bg-[var(--primary-soft)] text-[var(--primary)]"
+                      : "bg-sky-500/15 text-sky-600 dark:text-sky-400",
+                  )}>
+                    {type === "percent" ? `${value}% off` : `$${value} off`}
+                  </span>
+                ) : (
+                  <span className="text-[11px] text-[var(--muted)]">Set discount below</span>
+                )}
+                {maxUses && <span className="text-[10px] text-[var(--muted)]">· {maxUses} max uses</span>}
+                {expiresAt && <span className="text-[10px] text-[var(--muted)]">· Expires {expiresAt}</span>}
+                {!maxUses && !expiresAt && value && Number(value) > 0 && (
+                  <span className="text-[10px] text-[var(--muted)]">· Unlimited · No expiry</span>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* Type + value */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="p-5 sm:p-6 space-y-5">
+            {/* Code + Generate */}
             <div>
-              <Label>Type</Label>
-              <Select value={type} onChange={(e) => setType(e.target.value as "percent" | "fixed")}>
-                <option value="percent">Percentage off</option>
-                <option value="fixed">Fixed amount off ($)</option>
-              </Select>
+              <Label>Coupon code</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
+                  placeholder="e.g. SAVE20"
+                  maxLength={20}
+                  className="flex-1 font-mono tracking-wider"
+                  icon={<Icon.Tag size={16} />}
+                />
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={() => setCode(generateCode())}
+                  className="shrink-0"
+                >
+                  <Icon.Sparkles size={14} /> Generate
+                </Button>
+              </div>
+              <p className="text-[11px] text-[var(--muted)] mt-1.5">
+                Only uppercase letters and numbers. Min 3 characters.
+              </p>
             </div>
-            <div>
-              <Label>{type === "percent" ? "Percent (%)" : "Amount ($)"}</Label>
-              <Input
-                type="number" min={1} max={type === "percent" ? 100 : undefined}
-                value={value} onChange={(e) => setValue(e.target.value)}
-              />
-            </div>
-          </div>
 
-          {/* Preview */}
-          {code.length >= 3 && value && Number(value) > 0 && (
-            <div className="p-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center shrink-0">
-                <Icon.Tag size={18} />
+            {/* Discount type + value */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Discount type</Label>
+                <Select value={type} onChange={(e) => setType(e.target.value as "percent" | "fixed")}>
+                  <option value="percent">Percentage off (%)</option>
+                  <option value="fixed">Fixed amount ($)</option>
+                </Select>
               </div>
               <div>
-                <p className="text-xs text-[var(--muted)]">Preview</p>
-                <p className="font-bold font-mono tracking-wider">{code}</p>
-              </div>
-              <div className="ml-auto text-right">
-                <p className="text-lg font-extrabold text-[var(--primary)]">
-                  {type === "percent" ? `${value}% off` : `$${value} off`}
-                </p>
-                <p className="text-[10px] text-[var(--muted)]">{type === "percent" ? "Percentage" : "Fixed"} discount</p>
+                <Label>{type === "percent" ? "Percent (%)" : "Amount ($)"}</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={type === "percent" ? 100 : undefined}
+                  value={value}
+                  onChange={(e) => setValue(e.target.value)}
+                  icon={type === "fixed" ? <Icon.DollarSign size={16} /> : undefined}
+                />
               </div>
             </div>
-          )}
 
-          {/* Limits */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Max uses <span className="text-[var(--muted)] font-normal">(optional)</span></Label>
-              <Input type="number" min={1} value={maxUses} onChange={(e) => setMaxUses(e.target.value)} placeholder="Unlimited" />
+            {/* Limits */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>
+                  Max uses <span className="text-[var(--muted-2)] font-normal">(optional)</span>
+                </Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={maxUses}
+                  onChange={(e) => setMaxUses(e.target.value)}
+                  placeholder="Unlimited"
+                  icon={<Icon.Users size={16} />}
+                />
+              </div>
+              <div>
+                <Label>
+                  Expiry date <span className="text-[var(--muted-2)] font-normal">(optional)</span>
+                </Label>
+                <Input
+                  type="date"
+                  value={expiresAt}
+                  onChange={(e) => setExpiresAt(e.target.value)}
+                />
+              </div>
             </div>
-            <div>
-              <Label>Expiry date <span className="text-[var(--muted)] font-normal">(optional)</span></Label>
-              <Input type="date" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} />
-            </div>
+
+            {!maxUses && !expiresAt && (
+              <p className="text-[11px] text-[var(--muted)] -mt-1 flex items-center gap-1.5">
+                <Icon.AlertCircle size={12} />
+                No limit — students can use this code indefinitely.
+              </p>
+            )}
           </div>
 
-          <div className="flex justify-end gap-2 pt-2 border-t border-[var(--border)]">
-            <Button variant="outline" onClick={() => setFormOpen(false)} disabled={saving}>Cancel</Button>
-            <Button onClick={create} loading={saving} disabled={code.length < 3}>
-              <Icon.Tag size={15} /> Create coupon
+          <div className="px-5 sm:px-6 pb-5 pt-4 flex flex-col-reverse sm:flex-row justify-end gap-2 border-t border-[var(--border)]">
+            <Button variant="outline" onClick={() => setFormOpen(false)} disabled={saving} className="w-full sm:w-auto">
+              Cancel
+            </Button>
+            <Button onClick={create} loading={saving} disabled={code.length < 3} className="w-full sm:w-auto">
+              <Icon.CheckCircle size={15} /> Create coupon
             </Button>
           </div>
         </div>

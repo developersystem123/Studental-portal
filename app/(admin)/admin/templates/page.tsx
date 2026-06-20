@@ -381,123 +381,200 @@ export default function AdminTemplatesPage() {
 
       {/* ── Create / Edit Modal ── */}
       <Modal open={formOpen} onClose={() => setFormOpen(false)} size="lg" title={editingId ? "Edit template" : "New template"}>
-        <div className="p-5 space-y-4">
-          {/* Key + Name */}
+
+        {/* ── Section 1: Identity ──────────────────────────────────────── */}
+        <div className="px-5 pt-4 pb-5 space-y-4">
+          <TplSectionLabel icon={<Icon.Tag size={13} />} label="Identity" />
+
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="tpl-key">Key</Label>
               <Input
                 id="tpl-key"
+                icon={<Icon.Lock size={14} />}
                 placeholder="e.g. welcome_email"
                 value={form.key}
                 disabled={!!editingId}
                 onChange={(e) => setForm((f) => ({ ...f, key: e.target.value.toLowerCase().replace(/[^a-z0-9_\s]/g, "") }))}
               />
-              <p className="text-[11px] text-[var(--muted)] mt-1">
-                {editingId ? "The key can't be changed after creation." : "Stable identifier used in code. Lowercase, no spaces."}
+              <p className={cn("text-[11px] mt-1.5 flex items-center gap-1", editingId ? "text-amber-500" : "text-muted")}>
+                {editingId
+                  ? <><Icon.AlertCircle size={11} /> Key can&apos;t be changed after creation.</>
+                  : "Stable identifier used in code. Lowercase, no spaces."}
               </p>
             </div>
             <div>
               <Label htmlFor="tpl-name">Name</Label>
               <Input
                 id="tpl-name"
+                icon={<Icon.FilePen size={14} />}
                 placeholder="e.g. Welcome email"
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               />
             </div>
           </div>
+        </div>
 
-          {/* Channel */}
+        <div className="h-px bg-border" />
+
+        {/* ── Section 2: Channel & subject ─────────────────────────────── */}
+        <div className="px-5 py-5 space-y-4">
+          <TplSectionLabel icon={<Icon.Send size={13} />} label="Channel & delivery" />
+
+          {/* Channel pill picker */}
           <div>
-            <Label htmlFor="tpl-channel">Channel</Label>
-            <Select id="tpl-channel" value={form.channel} onChange={(e) => setForm((f) => ({ ...f, channel: e.target.value as Channel }))}>
-              <option value="email">Email only</option>
-              <option value="sms">SMS only</option>
-              <option value="both">Email + SMS</option>
-            </Select>
+            <Label>Channel</Label>
+            <div className="flex gap-2 mt-1.5">
+              {(["email", "sms", "both"] as Channel[]).map((ch) => {
+                const meta = CHANNEL_META[ch];
+                const active = form.channel === ch;
+                return (
+                  <button
+                    key={ch}
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, channel: ch }))}
+                    className={cn(
+                      "flex-1 flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border text-xs font-semibold transition-all duration-150",
+                      active
+                        ? "bg-primary text-white border-primary shadow-sm"
+                        : "bg-surface-2 text-muted border-border hover:border-(--primary)/40 hover:text-foreground",
+                    )}
+                  >
+                    <span className={cn("flex items-center justify-center w-7 h-7 rounded-lg transition-colors",
+                      active ? "bg-white/20" : meta.cls,
+                    )}>
+                      {ch === "email" ? <Icon.Mail size={14} /> : ch === "sms" ? <Icon.MessageSquare size={14} /> : <Icon.Send size={14} />}
+                    </span>
+                    {meta.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Subject (hidden for SMS-only) */}
+          {/* Email subject — conditional */}
           {form.channel !== "sms" && (
             <div className="fade-in">
               <Label htmlFor="tpl-subject">Email subject</Label>
               <Input
                 id="tpl-subject"
+                icon={<Icon.Mail size={14} />}
                 placeholder="e.g. Welcome to EduPortal, {{name}}!"
                 value={form.subject}
                 onChange={(e) => setForm((f) => ({ ...f, subject: e.target.value }))}
               />
             </div>
           )}
+        </div>
 
-          {/* Body */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <Label htmlFor="tpl-body">Message body</Label>
-              <span className="text-[11px] text-[var(--muted)]">{form.body.length} chars</span>
-            </div>
-            <Textarea
-              id="tpl-body"
-              placeholder={"Hi {{name}},\n\nYour course {{courseTitle}} is ready…"}
-              value={form.body}
-              onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
-              rows={6}
-            />
-            <div className="flex items-center gap-1.5 flex-wrap mt-2">
-              <span className="text-[11px] text-[var(--muted)] shrink-0">Insert:</span>
-              {["name", "email", "courseTitle", "amount", "date", "link"].map((v) => (
-                <button key={v} type="button" onClick={() => insertVariable(v)}
-                  className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--primary)] hover:bg-[var(--primary-soft)] transition">
-                  {`{{${v}}}`}
-                </button>
-              ))}
-            </div>
+        <div className="h-px bg-border" />
+
+        {/* ── Section 3: Message body ───────────────────────────────────── */}
+        <div className="px-5 py-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <TplSectionLabel icon={<Icon.MessageSquare size={13} />} label="Message body" />
+            <span className={cn(
+              "text-[11px] font-semibold px-2 py-0.5 rounded-full transition-colors",
+              form.body.length > 0
+                ? "bg-primary-soft text-primary"
+                : "text-muted",
+            )}>
+              {form.body.length} chars
+            </span>
           </div>
 
-          {/* Detected variables */}
+          <Textarea
+            id="tpl-body"
+            placeholder={"Hi {{name}},\n\nYour course {{courseTitle}} is ready…"}
+            value={form.body}
+            onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
+            rows={5}
+          />
+
+          {/* Variable insert chips */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[11px] text-muted font-medium shrink-0 mr-0.5">Insert:</span>
+            {["name", "email", "courseTitle", "amount", "date", "link"].map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => insertVariable(v)}
+                className="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-primary-soft text-primary hover:bg-primary hover:text-white border border-(--primary)/20 transition-all duration-150"
+              >
+                {`{{${v}}}`}
+              </button>
+            ))}
+          </div>
+
+          {/* Detected vars banner */}
           {liveVars.length > 0 && (
-            <div className="flex items-start gap-2 text-xs text-[var(--muted)]">
-              <Icon.AlertCircle size={13} className="shrink-0 mt-0.5" />
-              <span>Detected variables: {liveVars.map((v) => <code key={v} className="font-mono mr-1">{`{{${v}}}`}</code>)}</span>
+            <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-amber-500/8 border border-amber-500/20">
+              <Icon.AlertCircle size={13} className="text-amber-500 shrink-0 mt-0.5" />
+              <span className="text-[11px] text-amber-700 dark:text-amber-400">
+                <span className="font-semibold">Variables detected:</span>{" "}
+                {liveVars.map((v, i) => (
+                  <span key={v}>
+                    <code className="font-mono">{`{{${v}}}`}</code>
+                    {i < liveVars.length - 1 && ", "}
+                  </span>
+                ))}
+              </span>
             </div>
           )}
 
           {/* Live preview */}
           {(form.subject || form.body) && (
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
-              <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] font-semibold mb-2 flex items-center gap-1.5">
-                <Icon.Eye size={11} /> Preview
-              </p>
-              {form.channel !== "sms" && form.subject && (
-                <p className="font-semibold text-sm">{renderPreview(form.subject)}</p>
-              )}
-              {form.body && (
-                <p className="text-sm text-[var(--muted)] mt-1 whitespace-pre-wrap leading-relaxed">{renderPreview(form.body)}</p>
-              )}
+            <div className="rounded-xl border border-border bg-surface-2 overflow-hidden">
+              <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-surface">
+                <Icon.Eye size={12} className="text-muted" />
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">Preview</span>
+                <span className="ml-auto">
+                  <Badge variant={CHANNEL_META[form.channel].badge}>
+                    {CHANNEL_META[form.channel].label}
+                  </Badge>
+                </span>
+              </div>
+              <div className="px-4 py-3 space-y-1.5">
+                {form.channel !== "sms" && form.subject && (
+                  <p className="font-semibold text-sm">{renderPreview(form.subject)}</p>
+                )}
+                {form.body && (
+                  <p className="text-sm text-muted whitespace-pre-wrap leading-relaxed">
+                    {renderPreview(form.body)}
+                  </p>
+                )}
+              </div>
             </div>
           )}
+        </div>
 
+        {/* ── Footer: toggle + actions ──────────────────────────────────── */}
+        <div className="px-5 pb-5 flex items-center gap-4 border-t border-border pt-4">
           {/* Enabled toggle */}
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setForm((f) => ({ ...f, enabled: !f.enabled }))}
-              className={cn(
-                "relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors",
-                form.enabled ? "bg-[var(--primary)]" : "bg-[var(--surface-2)]",
-              )}
-            >
-              <span className={cn("inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform", form.enabled ? "translate-x-4" : "translate-x-0")} />
-            </button>
-            <span className="text-sm font-medium">Enabled</span>
-          </div>
+          <button
+            type="button"
+            onClick={() => setForm((f) => ({ ...f, enabled: !f.enabled }))}
+            className="flex items-center gap-2.5 shrink-0"
+          >
+            <span className={cn(
+              "relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors",
+              form.enabled ? "bg-primary" : "bg-surface-2 border-border",
+            )}>
+              <span className={cn(
+                "inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform",
+                form.enabled ? "translate-x-4" : "translate-x-0",
+              )} />
+            </span>
+            <span className={cn("text-sm font-medium", form.enabled ? "text-primary" : "text-muted")}>
+              {form.enabled ? "Enabled" : "Disabled"}
+            </span>
+          </button>
 
-          {/* Actions */}
-          <div className="flex flex-col-reverse sm:flex-row gap-2 pt-2 border-t border-[var(--border)]">
-            <Button variant="ghost" onClick={() => setFormOpen(false)} disabled={saving}>Cancel</Button>
-            <Button className="flex-1" loading={saving} onClick={save}>
-              <Icon.Save size={14} /> {editingId ? "Save changes" : "Create template"}
+          <div className="flex gap-2 ml-auto">
+            <Button variant="outline" onClick={() => setFormOpen(false)} disabled={saving}>Cancel</Button>
+            <Button loading={saving} onClick={save}>
+              {editingId ? <><Icon.Check size={14} /> Save changes</> : <><Icon.Plus size={14} /> Create template</>}
             </Button>
           </div>
         </div>
@@ -559,6 +636,15 @@ export default function AdminTemplatesPage() {
           </div>
         </div>
       </Modal>
+    </div>
+  );
+}
+
+function TplSectionLabel({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="flex items-center justify-center w-5 h-5 rounded-md bg-primary-soft text-primary">{icon}</span>
+      <span className="text-xs font-semibold uppercase tracking-wider text-muted">{label}</span>
     </div>
   );
 }

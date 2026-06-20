@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { StudentMobileNav } from "@/components/layout/StudentMobileNav";
 import { Topbar } from "@/components/layout/Topbar";
 import { NavigationProgress } from "@/components/layout/NavigationProgress";
+import { LockScreen } from "@/components/layout/LockScreen";
 import { useAuth } from "@/lib/store";
 import { PortalLoader } from "@/components/layout/PortalLoader";
 import { cn } from "@/lib/utils";
@@ -17,6 +19,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [mobileOpen, setMobileOpen] = useState(false);
   const [desktopOpen, setDesktopOpen] = useState(true);
   const [hydrated, setHydrated] = useState(false);
+  const [locked, setLocked] = useState(false);
 
   useEffect(() => {
     setHydrated(true);
@@ -95,11 +98,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       )}
 
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <Topbar onToggleSidebar={handleToggle} sidebarOpen={desktopOpen} />
-        <main className="flex-1 overflow-y-auto scrollbar-fade">
-          <div className="max-w-9xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 page-enter">{children}</div>
+        <Topbar onToggleSidebar={handleToggle} sidebarOpen={desktopOpen} onLockScreen={() => setLocked(true)} />
+        <main className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-fade">
+          <div className="max-w-9xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 pb-20 lg:pb-8 page-enter">{children}</div>
         </main>
       </div>
+
+      <StudentMobileNav onOpenMenu={() => setMobileOpen(true)} hasSubscription={!!user.plan} />
+      {locked && (
+        <LockScreen onUnlock={() => setLocked(false)} onLogout={() => setLocked(false)} />
+      )}
     </div>
   );
 }

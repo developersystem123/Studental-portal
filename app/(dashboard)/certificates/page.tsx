@@ -65,29 +65,40 @@ export default function CertificatesPage() {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
     const grade = scoreGrade(score);
     const html = `<!doctype html>
-<html><head><meta charset="utf-8"><title>${courseName} – Certificate</title>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${courseName} – Certificate</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@400;500;600&display=swap');
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Inter', sans-serif; background: #f0fdf4; display: flex; min-height: 100vh; align-items: center; justify-content: center; padding: 32px; }
-  .cert { width: 820px; background: white; border-radius: 24px; overflow: hidden; box-shadow: 0 32px 80px rgba(0,0,0,.12); }
-  .cert-top { background: linear-gradient(135deg, #16a34a, #4ade80); padding: 40px 48px 32px; color: white; position: relative; overflow: hidden; }
+  body { font-family: 'Inter', sans-serif; background: #f0fdf4; display: flex; min-height: 100vh; align-items: center; justify-content: center; padding: 24px 16px; }
+  .cert { width: 100%; max-width: 820px; background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.12); }
+  .cert-top { background: linear-gradient(135deg, #16a34a, #4ade80); padding: 32px 32px 28px; color: white; position: relative; overflow: hidden; }
   .cert-top::before { content:''; position:absolute; top:-40px; right:-40px; width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,.1); }
   .cert-top::after { content:''; position:absolute; bottom:-60px; left:200px; width:160px; height:160px; border-radius:50%; background:rgba(255,255,255,.07); }
-  .badge-label { font-size:11px; letter-spacing:5px; text-transform:uppercase; opacity:.85; margin-bottom:8px; }
-  .cert-title { font-family: 'Playfair Display', serif; font-size: 38px; font-weight: 700; }
-  .cert-body { padding: 40px 48px 48px; }
-  .awarded-to { font-size: 13px; color: #6b7280; letter-spacing: 1px; text-transform: uppercase; }
-  .student-name { font-family: 'Playfair Display', serif; font-size: 36px; color: #111; margin: 6px 0 20px; border-bottom: 2px solid #dcfce7; padding-bottom: 12px; }
-  .desc { color: #374151; font-size: 15px; line-height: 1.7; max-width: 560px; }
-  .score-pill { display: inline-flex; align-items: center; gap: 6px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 999px; padding: 4px 14px; font-size: 14px; font-weight: 600; color: #16a34a; margin: 20px 0 0; }
-  .footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 40px; padding-top: 24px; border-top: 1px solid #f3f4f6; }
+  .badge-label { font-size:11px; letter-spacing:4px; text-transform:uppercase; opacity:.85; margin-bottom:6px; }
+  .cert-title { font-family: 'Playfair Display', serif; font-size: clamp(24px, 5vw, 38px); font-weight: 700; }
+  .cert-body { padding: 28px 32px 36px; }
+  .awarded-to { font-size: 12px; color: #6b7280; letter-spacing: 1px; text-transform: uppercase; }
+  .student-name { font-family: 'Playfair Display', serif; font-size: clamp(22px, 5vw, 36px); color: #111; margin: 6px 0 16px; border-bottom: 2px solid #dcfce7; padding-bottom: 10px; word-break: break-word; }
+  .desc { color: #374151; font-size: clamp(13px, 2.5vw, 15px); line-height: 1.7; }
+  .score-pill { display: inline-flex; align-items: center; gap: 6px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 999px; padding: 4px 14px; font-size: 13px; font-weight: 600; color: #16a34a; margin: 16px 0 0; }
+  .footer { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px; margin-top: 28px; padding-top: 20px; border-top: 1px solid #f3f4f6; }
   .sig-block { display: flex; flex-direction: column; gap: 4px; }
-  .sig-name { font-weight: 600; font-size: 15px; }
-  .sig-role { font-size: 12px; color: #9ca3af; }
-  .seal { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #16a34a, #4ade80); color: white; display:flex; flex-direction: column; align-items:center; justify-content:center; font-size: 10px; font-weight: 700; letter-spacing: 1px; text-align: center; line-height: 1.4; }
-  .verify { font-size: 11px; color: #9ca3af; text-align: right; }
-  .verify code { display: block; font-family: monospace; font-size: 13px; color: #374151; font-weight: 600; margin-top: 2px; }
+  .sig-name { font-weight: 600; font-size: 14px; }
+  .sig-role { font-size: 11px; color: #9ca3af; }
+  .seal { width: 68px; height: 68px; border-radius: 50%; background: linear-gradient(135deg, #16a34a, #4ade80); color: white; display:flex; flex-direction: column; align-items:center; justify-content:center; font-size: 9px; font-weight: 700; letter-spacing: 1px; text-align: center; line-height: 1.4; flex-shrink: 0; }
+  .verify { font-size: 10px; color: #9ca3af; text-align: right; word-break: break-all; max-width: 220px; }
+  .verify code { display: block; font-family: monospace; font-size: 12px; color: #374151; font-weight: 600; margin-top: 2px; }
+  @media (max-width: 480px) {
+    body { padding: 16px 12px; align-items: flex-start; }
+    .cert-top { padding: 24px 20px 20px; }
+    .cert-body { padding: 20px 20px 28px; }
+    .footer { flex-direction: column; align-items: flex-start; }
+    .verify { text-align: left; max-width: 100%; }
+  }
+  @media print {
+    body { padding: 0; background: white; }
+    .cert { box-shadow: none; border-radius: 0; max-width: 100%; }
+  }
 </style></head><body>
 <div class="cert">
   <div class="cert-top">

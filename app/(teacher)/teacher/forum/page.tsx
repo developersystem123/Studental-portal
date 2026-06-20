@@ -442,77 +442,174 @@ function ComposerModal({
     onCreated();
   }
 
+  const CATS: { value: Category; label: string; desc: string; icon: React.ReactNode; chip: string; activeBorder: string }[] = [
+    {
+      value: "discussion", label: "Discussion", desc: "Open conversation",
+      icon: <Icon.MessageSquare size={15} />,
+      chip: "text-violet-600 dark:text-violet-400",
+      activeBorder: "border-violet-400 bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300",
+    },
+    {
+      value: "announcement", label: "Announcement", desc: "Important notice",
+      icon: <Icon.Bell size={15} />,
+      chip: "text-[var(--primary)]",
+      activeBorder: "border-primary bg-[var(--primary-soft)] text-primary",
+    },
+    {
+      value: "question", label: "Question", desc: "Ask for help",
+      icon: <Icon.Help size={15} />,
+      chip: "text-amber-600 dark:text-amber-400",
+      activeBorder: "border-amber-400 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300",
+    },
+    {
+      value: "general", label: "General", desc: "Everything else",
+      icon: <Icon.Globe size={15} />,
+      chip: "text-sky-600 dark:text-sky-400",
+      activeBorder: "border-sky-400 bg-sky-50 dark:bg-sky-500/10 text-sky-700 dark:text-sky-300",
+    },
+  ];
+
+  const activeCat = CATS.find((c) => c.value === form.category)!;
+  const courseTitle = courses.find((c) => c.id === form.courseId)?.title ?? "";
+
   return (
     <Modal open={open} onClose={onClose} title="New forum thread" size="lg">
-      <div className="p-5 space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="sm:col-span-2">
-            <div className="flex items-center justify-between mb-1">
-              <Label>Title</Label>
-              <span className="text-[10px] text-[var(--muted-2)]">{form.title.length}/140</span>
+      {/* Accent bar */}
+      <div className="h-1.5 w-full bg-gradient-to-r from-primary to-emerald-400" />
+
+      <div className="overflow-y-auto max-h-[80vh] scrollbar-thin">
+        <div className="p-6 space-y-6">
+
+          {/* ── Live preview card ── */}
+          <div className="flex items-center gap-4 rounded-2xl px-4 py-3.5 bg-gradient-to-r from-primary to-emerald-400 text-white shadow-md">
+            <div className="h-11 w-11 rounded-xl bg-white/20 flex items-center justify-center shrink-0 backdrop-blur-sm">
+              <Icon.MessageSquare size={20} className="text-white" />
             </div>
-            <Input
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              placeholder="e.g. Week 4 — common questions"
-              maxLength={140}
-            />
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-sm truncate">{form.title.trim() || "Thread title…"}</p>
+              <p className="text-xs text-white/80 truncate mt-0.5">
+                {activeCat.label} · {courseTitle || "No course selected"}
+              </p>
+            </div>
+            <span className="shrink-0 px-2.5 py-1 rounded-full bg-white/20 text-white text-[11px] font-semibold backdrop-blur-sm">
+              {activeCat.label}
+            </span>
           </div>
-          <div>
-            <Label>Course</Label>
-            <Select
-              value={form.courseId}
-              onChange={(e) => setForm({ ...form, courseId: e.target.value })}
-            >
-              <option value="">Select a course…</option>
-              {courses.map((c) => (
-                <option key={c.id} value={c.id}>{c.title}</option>
-              ))}
-            </Select>
-          </div>
-          <div>
-            <Label>Category</Label>
-            <Select
-              value={form.category}
-              onChange={(e) => setForm({ ...form, category: e.target.value as Category })}
-            >
-              <option value="discussion">Discussion</option>
-              <option value="announcement">Announcement</option>
-              <option value="question">Question</option>
-              <option value="general">General</option>
-            </Select>
-          </div>
-        </div>
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <Label>Body</Label>
-            <span className="text-[10px] text-[var(--muted-2)]">{form.body.length} chars</span>
-          </div>
-          <Textarea
-            rows={5}
-            value={form.body}
-            onChange={(e) => setForm({ ...form, body: e.target.value })}
-            placeholder="Write the thread content here…"
-          />
-        </div>
 
-        {/* Category preview */}
-        <div className="flex items-center gap-2 rounded-lg bg-[var(--surface-2)] px-3 py-2 text-xs text-[var(--muted)]">
-          <CategoryChip cat={form.category} />
-          <span className="text-[var(--muted-2)]">will appear in {form.category} category</span>
-        </div>
+          {/* ── Section 1: Thread ── */}
+          <div className="space-y-4">
+            <p className="text-[11px] uppercase tracking-widest font-bold text-muted flex items-center gap-1.5">
+              <Icon.Edit size={12} /> Thread
+            </p>
 
-        {err && (
-          <p className="text-sm text-[var(--danger)] bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg flex items-center gap-2">
-            <Icon.AlertCircle size={14} className="shrink-0" /> {err}
-          </p>
-        )}
+            {/* Title */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                  <Icon.Edit size={14} className="text-muted" />
+                  Title <span className="text-[var(--danger)]">*</span>
+                </label>
+                <span className={`text-[11px] tabular-nums ${form.title.length > 120 ? "text-amber-500" : "text-muted"}`}>
+                  {form.title.length}/140
+                </span>
+              </div>
+              <Input
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                placeholder="e.g. Week 4 — common questions"
+                maxLength={140}
+              />
+            </div>
 
-        <div className="flex justify-end gap-2 pt-1 border-t border-[var(--border)]">
-          <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
-          <Button onClick={submit} loading={saving}>
-            <Icon.Send size={14} /> Post thread
-          </Button>
+            {/* Category picker */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                <Icon.Tag size={14} className="text-muted" />
+                Category
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {CATS.map(({ value, label, desc, icon, activeBorder }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setForm({ ...form, category: value })}
+                    className={`flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl border-2 transition-all ${
+                      form.category === value
+                        ? activeBorder
+                        : "border-[var(--border)] bg-surface-2 text-muted hover:border-[var(--border-strong)]"
+                    }`}
+                  >
+                    <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+                      form.category === value ? "bg-white/40 dark:bg-black/20" : "bg-[var(--surface)]"
+                    }`}>
+                      {icon}
+                    </span>
+                    <span className="text-[11px] font-bold leading-tight">{label}</span>
+                    <span className="text-[10px] opacity-70 leading-tight">{desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="h-px bg-[var(--border)]" />
+
+          {/* ── Section 2: Content ── */}
+          <div className="space-y-4">
+            <p className="text-[11px] uppercase tracking-widest font-bold text-muted flex items-center gap-1.5">
+              <Icon.FilePen size={12} /> Content
+            </p>
+
+            {/* Course */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                <Icon.Book size={14} className="text-muted" />
+                Course <span className="text-[var(--danger)]">*</span>
+              </label>
+              <Select
+                value={form.courseId}
+                onChange={(e) => setForm({ ...form, courseId: e.target.value })}
+              >
+                <option value="">Select a course…</option>
+                {courses.map((c) => (
+                  <option key={c.id} value={c.id}>{c.title}</option>
+                ))}
+              </Select>
+            </div>
+
+            {/* Body */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                  <Icon.FilePen size={14} className="text-muted" />
+                  Body <span className="text-[var(--danger)]">*</span>
+                </label>
+                <span className="text-[11px] tabular-nums text-muted">{form.body.length} chars</span>
+              </div>
+              <Textarea
+                rows={5}
+                value={form.body}
+                onChange={(e) => setForm({ ...form, body: e.target.value })}
+                placeholder="Write the thread content here…"
+              />
+            </div>
+          </div>
+
+          {/* Error */}
+          {err && (
+            <p className="text-sm text-[var(--danger)] bg-red-500/10 border border-red-500/20 px-3 py-2.5 rounded-xl flex items-center gap-2">
+              <Icon.AlertCircle size={14} className="shrink-0" /> {err}
+            </p>
+          )}
+
+          {/* ── Footer ── */}
+          <div className="flex justify-end gap-2 pt-2 border-t border-[var(--border)]">
+            <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
+            <Button onClick={submit} loading={saving} disabled={!form.title.trim() || !form.body.trim()}>
+              <Icon.Send size={14} /> Post thread
+            </Button>
+          </div>
+
         </div>
       </div>
     </Modal>

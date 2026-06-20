@@ -8,7 +8,7 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "EduPortal — AI-powered Student Learning",
+  title: "EduPortal ",
   description: "Learn, practice, and get help from AI — all in one beautiful place.",
 };
 

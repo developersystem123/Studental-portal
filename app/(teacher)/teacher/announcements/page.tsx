@@ -521,134 +521,255 @@ export default function TeacherAnnouncementsPage() {
         onClose={() => setFormOpen(false)}
         size="lg"
         title={editing ? "Edit announcement" : "New announcement"}
-        description={
-          editing
-            ? "Update the details below."
-            : "Post an update to a class or all your students."
-        }
       >
-        <div className="space-y-4">
-          {/* Title */}
-          <div>
-            <div className="flex items-baseline justify-between mb-1">
-              <Label>Title</Label>
-              <span
-                className={`text-[11px] ${form.title.length > 100 ? "text-amber-500" : "text-[var(--muted)]"}`}
-              >
-                {form.title.length}/120
-              </span>
-            </div>
-            <Input
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              maxLength={120}
-              placeholder="Short, descriptive title…"
-            />
-          </div>
+        {/* Accent bar — shifts colour by priority */}
+        <div className={`h-1.5 w-full bg-gradient-to-r ${
+          form.priority === "urgent"
+            ? "from-red-500 to-rose-400"
+            : form.priority === "important"
+              ? "from-amber-500 to-yellow-400"
+              : "from-primary to-emerald-400"
+        }`} />
 
-          {/* Body */}
-          <div>
-            <div className="flex items-baseline justify-between mb-1">
-              <Label>Message</Label>
-              <span
-                className={`text-[11px] ${form.body.length > 900 ? "text-amber-500" : "text-[var(--muted)]"}`}
-              >
-                {form.body.length} chars
-              </span>
-            </div>
-            <Textarea
-              rows={5}
-              value={form.body}
-              onChange={(e) => setForm({ ...form, body: e.target.value })}
-              placeholder="Write your announcement here…"
-            />
-          </div>
+        <div className="overflow-y-auto max-h-[80vh] scrollbar-thin">
+          <div className="p-4 sm:p-6 space-y-6">
 
-          {/* Audience + priority */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label>Audience</Label>
-              <Select
-                value={form.courseId}
-                onChange={(e) => setForm({ ...form, courseId: e.target.value })}
-              >
-                <option value="all">All my students</option>
-                {courses.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.title}
-                  </option>
-                ))}
-              </Select>
-              <p className="text-[11px] text-[var(--muted)] mt-1">
-                Reaches{" "}
-                <span className="font-semibold text-[var(--foreground)]">
-                  {broadcastTargetCount}
-                </span>{" "}
-                student{broadcastTargetCount !== 1 ? "s" : ""}
+            {/* ── Live preview card ── */}
+            <div className={`flex items-center gap-4 rounded-2xl px-4 py-3.5 text-white shadow-md bg-gradient-to-r ${
+              form.priority === "urgent"
+                ? "from-red-500 to-rose-400"
+                : form.priority === "important"
+                  ? "from-amber-500 to-yellow-400"
+                  : "from-primary to-emerald-400"
+            }`}>
+              <div className="h-11 w-11 rounded-xl bg-white/20 flex items-center justify-center shrink-0 backdrop-blur-sm">
+                <Icon.Megaphone size={20} className="text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-sm truncate">{form.title.trim() || "Announcement title…"}</p>
+                <p className="text-xs text-white/80 truncate mt-0.5">
+                  {form.courseId === "all"
+                    ? `All students · ${broadcastTargetCount} recipient${broadcastTargetCount !== 1 ? "s" : ""}`
+                    : `${courses.find((c) => c.id === form.courseId)?.title ?? ""} · ${broadcastTargetCount} student${broadcastTargetCount !== 1 ? "s" : ""}`
+                  }
+                </p>
+              </div>
+              <div className="flex flex-col items-end gap-1 shrink-0">
+                <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-white text-[11px] font-bold uppercase tracking-wide">
+                  {PRIORITY_META[form.priority].label}
+                </span>
+                {form.pinned && (
+                  <span className="flex items-center gap-1 text-[10px] text-white/80">
+                    <Icon.Pin size={10} /> Pinned
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* ── Section 1: Announcement ── */}
+            <div className="space-y-4">
+              <p className="text-[11px] uppercase tracking-widest font-bold text-muted flex items-center gap-1.5">
+                <Icon.Megaphone size={12} /> Announcement
               </p>
-            </div>
-            <div>
-              <Label>Priority</Label>
-              <Select
-                value={form.priority}
-                onChange={(e) => setForm({ ...form, priority: e.target.value as Priority })}
-              >
-                <option value="normal">Normal</option>
-                <option value="important">Important</option>
-                <option value="urgent">Urgent</option>
-              </Select>
-            </div>
-          </div>
 
-          {/* Priority notice */}
-          {form.priority !== "normal" && (
-            <div
-              className={`text-xs px-3 py-2 rounded-lg border flex items-center gap-2 ${
-                form.priority === "urgent"
-                  ? "bg-red-500/5 border-red-500/20 text-red-600 dark:text-red-400"
-                  : "bg-amber-500/5 border-amber-500/20 text-amber-600 dark:text-amber-400"
-              }`}
-            >
-              <Icon.AlertCircle size={13} />
-              {form.priority === "urgent"
-                ? "Students will see an urgent red badge — use for time-sensitive issues."
-                : "Students will see an important amber badge on this post."}
+              {/* Title */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                    <Icon.Edit size={14} className="text-muted" />
+                    Title <span className="text-[var(--danger)]">*</span>
+                  </label>
+                  <span className={`text-[11px] tabular-nums ${form.title.length > 100 ? "text-amber-500" : "text-muted"}`}>
+                    {form.title.length}/120
+                  </span>
+                </div>
+                <Input
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  maxLength={120}
+                  placeholder="Short, descriptive title…"
+                />
+              </div>
+
+              {/* Body */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                    <Icon.FilePen size={14} className="text-muted" />
+                    Message <span className="text-[var(--danger)]">*</span>
+                  </label>
+                  <span className={`text-[11px] tabular-nums ${form.body.length > 900 ? "text-amber-500" : "text-muted"}`}>
+                    {form.body.length} chars
+                  </span>
+                </div>
+                <Textarea
+                  rows={5}
+                  value={form.body}
+                  onChange={(e) => setForm({ ...form, body: e.target.value })}
+                  placeholder="Write your announcement here…"
+                />
+              </div>
             </div>
-          )}
 
-          <Checkbox
-            checked={form.pinned}
-            onChange={(v) => setForm({ ...form, pinned: v })}
-            label="Pin to the top of announcements"
-          />
+            <div className="h-px bg-[var(--border)]" />
 
-          {/* Footer */}
-          <div className="flex justify-between gap-2 pt-2 border-t border-[var(--border)]">
-            {editing ? (
+            {/* ── Section 2: Delivery ── */}
+            <div className="space-y-4">
+              <p className="text-[11px] uppercase tracking-widest font-bold text-muted flex items-center gap-1.5">
+                <Icon.Send size={12} /> Delivery
+              </p>
+
+              {/* Audience */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                  <Icon.Users size={14} className="text-muted" />
+                  Audience
+                </label>
+                <Select
+                  value={form.courseId}
+                  onChange={(e) => setForm({ ...form, courseId: e.target.value })}
+                >
+                  <option value="all">All my students</option>
+                  {courses.map((c) => (
+                    <option key={c.id} value={c.id}>{c.title}</option>
+                  ))}
+                </Select>
+                <p className="text-[11px] text-muted flex items-center gap-1">
+                  <Icon.Users size={11} />
+                  Reaches{" "}
+                  <span className="font-bold text-foreground mx-0.5">{broadcastTargetCount}</span>
+                  {" "}student{broadcastTargetCount !== 1 ? "s" : ""}
+                </p>
+              </div>
+
+              {/* Priority picker */}
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                  <Icon.AlertCircle size={14} className="text-muted" />
+                  Priority
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(
+                    [
+                      {
+                        value: "normal" as Priority,
+                        label: "Normal",
+                        desc: "Standard update",
+                        icon: <Icon.Bell size={15} />,
+                        active: "border-sky-400 bg-sky-50 dark:bg-sky-500/10 text-sky-700 dark:text-sky-300",
+                        iconBg: "bg-sky-100 dark:bg-sky-500/20",
+                      },
+                      {
+                        value: "important" as Priority,
+                        label: "Important",
+                        desc: "Amber badge",
+                        icon: <Icon.AlertCircle size={15} />,
+                        active: "border-amber-400 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300",
+                        iconBg: "bg-amber-100 dark:bg-amber-500/20",
+                      },
+                      {
+                        value: "urgent" as Priority,
+                        label: "Urgent",
+                        desc: "Red alert badge",
+                        icon: <Icon.AlertCircle size={15} />,
+                        active: "border-red-400 bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300",
+                        iconBg: "bg-red-100 dark:bg-red-500/20",
+                      },
+                    ]
+                  ).map(({ value, label, desc, icon, active, iconBg }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setForm({ ...form, priority: value })}
+                      className={`flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl border-2 transition-all ${
+                        form.priority === value
+                          ? active
+                          : "border-[var(--border)] bg-surface-2 text-muted hover:border-[var(--border-strong)]"
+                      }`}
+                    >
+                      <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+                        form.priority === value ? iconBg : "bg-[var(--surface)]"
+                      }`}>
+                        {icon}
+                      </span>
+                      <span className="text-[11px] font-bold leading-tight">{label}</span>
+                      <span className="text-[10px] opacity-70 leading-tight">{desc}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Priority contextual hint */}
+                {form.priority !== "normal" && (
+                  <div className={`text-xs px-3 py-2 rounded-xl border flex items-center gap-2 ${
+                    form.priority === "urgent"
+                      ? "bg-red-500/5 border-red-500/20 text-red-600 dark:text-red-400"
+                      : "bg-amber-500/5 border-amber-500/20 text-amber-600 dark:text-amber-400"
+                  }`}>
+                    <Icon.AlertCircle size={13} className="shrink-0" />
+                    {form.priority === "urgent"
+                      ? "Students will see a red urgent badge — reserve for time-sensitive issues."
+                      : "Students will see an amber important badge on this post."}
+                  </div>
+                )}
+              </div>
+
+              {/* Pin toggle */}
               <button
-                onClick={() => {
-                  setFormOpen(false);
-                  setDeleteTarget(editing);
-                }}
-                className="flex items-center gap-1.5 text-sm text-red-500 hover:bg-red-500/10 px-3 py-1.5 rounded-lg transition-colors"
+                type="button"
+                onClick={() => setForm({ ...form, pinned: !form.pinned })}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all text-left ${
+                  form.pinned
+                    ? "border-primary bg-[var(--primary-soft)] text-primary"
+                    : "border-[var(--border)] bg-surface-2 text-muted hover:border-[var(--border-strong)]"
+                }`}
               >
-                <Icon.Trash size={14} /> Delete
+                <span className={`flex h-8 w-8 items-center justify-center rounded-lg shrink-0 ${
+                  form.pinned ? "bg-[var(--primary-soft)]" : "bg-[var(--surface)]"
+                }`}>
+                  <Icon.Pin size={15} />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Pin to top</p>
+                  <p className="text-[11px] text-muted">Always shown at the top of announcements</p>
+                </div>
+                <div className={`ml-auto h-5 w-9 rounded-full transition-colors shrink-0 ${
+                  form.pinned ? "bg-primary" : "bg-[var(--border)]"
+                }`}>
+                  <div className={`h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                    form.pinned ? "translate-x-4" : "translate-x-0"
+                  }`} />
+                </div>
               </button>
-            ) : (
-              <span />
-            )}
-            <div className="flex gap-2 ml-auto">
-              <Button variant="outline" onClick={() => setFormOpen(false)} disabled={saving}>
-                Cancel
-              </Button>
-              <Button
-                onClick={submit}
-                loading={saving}
-                disabled={!form.title.trim() || !form.body.trim()}
-              >
-                <Icon.Send size={14} /> {editing ? "Save changes" : "Post announcement"}
-              </Button>
             </div>
+
+            {/* ── Footer ── */}
+            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border">
+              {editing && (
+                <Button
+                  type="button"
+                  variant="danger"
+                  size="sm"
+                  onClick={() => { setFormOpen(false); setDeleteTarget(editing); }}
+                >
+                  <Icon.Trash size={14} /> Delete
+                </Button>
+              )}
+              <div className="flex gap-2 ml-auto">
+                <Button variant="outline" onClick={() => setFormOpen(false)} disabled={saving}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={submit}
+                  loading={saving}
+                  disabled={!form.title.trim() || !form.body.trim()}
+                >
+                  <Icon.Send size={14} />
+                  <span className="hidden sm:inline">{editing ? "Save changes" : "Post announcement"}</span>
+                  <span className="sm:hidden">{editing ? "Save" : "Post"}</span>
+                </Button>
+              </div>
+            </div>
+
           </div>
         </div>
       </Modal>

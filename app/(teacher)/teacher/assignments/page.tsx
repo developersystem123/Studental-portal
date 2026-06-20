@@ -509,6 +509,30 @@ function defaultDue() {
   return d.toISOString().slice(0, 10);
 }
 
+const STATUS_OPTIONS: { value: Status; label: string; desc: string; color: string; icon: React.ReactNode }[] = [
+  {
+    value: "draft",
+    label: "Draft",
+    desc: "Hidden from students",
+    color: "border-amber-400 bg-amber-500/10 text-amber-600",
+    icon: <Icon.Edit size={14} />,
+  },
+  {
+    value: "open",
+    label: "Open",
+    desc: "Accepting submissions",
+    color: "border-emerald-500 bg-emerald-500/10 text-emerald-600",
+    icon: <Icon.PlayCircle size={14} />,
+  },
+  {
+    value: "closed",
+    label: "Closed",
+    desc: "No new submissions",
+    color: "border-[var(--border-strong)] bg-[var(--surface-2)] text-[var(--muted)]",
+    icon: <Icon.X size={14} />,
+  },
+];
+
 function AssignmentModal({
   open,
   initial,
@@ -595,67 +619,166 @@ function AssignmentModal({
     }
   }
 
+  const titleLen = form.title.length;
+
   return (
     <Modal open={open} onClose={onClose} title={initial ? "Edit assignment" : "New assignment"} size="lg">
-      <div className="p-5 space-y-4">
-        <div>
-          <Label>Title</Label>
-          <Input
-            value={form.title}
-            onChange={(e) => setForm({ ...form, title: e.target.value })}
-            placeholder="e.g. Final Project: Build a Todo App"
-            maxLength={140}
-          />
+      {/* Decorative banner */}
+      <div className="h-1.5 w-full bg-gradient-to-r from-[var(--primary)] via-emerald-400 to-sky-400" />
+
+      <div className="p-4 sm:p-6 space-y-6">
+
+        {/* ── Section 1: Basic info ── */}
+        <div className="space-y-4">
+          <p className="text-[11px] uppercase tracking-widest font-bold text-[var(--muted-2)] flex items-center gap-1.5">
+            <Icon.FilePen size={12} /> Assignment details
+          </p>
+
+          {/* Title */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-1.5">
+                <Icon.Edit size={14} className="text-[var(--muted)]" />
+                Title
+                <span className="text-[var(--danger)] ml-0.5">*</span>
+              </label>
+              <span className={`text-[11px] tabular-nums ${titleLen > 120 ? "text-amber-500" : "text-[var(--muted-2)]"}`}>
+                {titleLen}/140
+              </span>
+            </div>
+            <Input
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              placeholder="e.g. Final Project: Build a Todo App"
+              maxLength={140}
+            />
+          </div>
+
+          {/* Instructions */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-1.5">
+              <Icon.FilePen size={14} className="text-[var(--muted)]" />
+              Instructions
+            </label>
+            <Textarea
+              rows={4}
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              placeholder="Describe what students should submit, any requirements, resources, or grading criteria…"
+            />
+          </div>
         </div>
-        <div>
-          <Label>Instructions</Label>
-          <Textarea
-            rows={5}
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-            placeholder="What should students submit?"
-          />
+
+        <div className="h-px bg-[var(--border)]" />
+
+        {/* ── Section 2: Settings ── */}
+        <div className="space-y-4">
+          <p className="text-[11px] uppercase tracking-widest font-bold text-[var(--muted-2)] flex items-center gap-1.5">
+            <Icon.Settings size={12} /> Settings
+          </p>
+
+          {/* Course + Points + Due date */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-1.5">
+                <Icon.Book size={14} className="text-[var(--muted)]" />
+                Course
+                <span className="text-[var(--danger)] ml-0.5">*</span>
+              </label>
+              <Select value={form.courseId} onChange={(e) => setForm({ ...form, courseId: e.target.value })}>
+                <option value="">Select a course…</option>
+                {courses.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-1.5">
+                <Icon.Award size={14} className="text-[var(--muted)]" />
+                Points
+              </label>
+              <div className="relative">
+                <Input
+                  type="number"
+                  min={1}
+                  value={form.points}
+                  onChange={(e) => setForm({ ...form, points: e.target.value })}
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--muted)] pointer-events-none">pts</span>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-1.5">
+                <Icon.Calendar size={14} className="text-[var(--muted)]" />
+                Due date
+              </label>
+              <Input
+                type="date"
+                value={form.dueDate}
+                onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
+              />
+            </div>
+          </div>
+
+          {/* Status picker */}
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-1.5">
+              <Icon.CheckCircle size={14} className="text-[var(--muted)]" />
+              Visibility status
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {STATUS_OPTIONS.map((opt) => {
+                const active = form.status === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setForm({ ...form, status: opt.value })}
+                    className={`flex flex-col items-center gap-1 px-2 py-2.5 rounded-xl border-2 text-center transition-all ${
+                      active
+                        ? opt.color + " shadow-sm"
+                        : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted)] hover:border-[var(--border-strong)]"
+                    }`}
+                  >
+                    <span className={`flex h-7 w-7 items-center justify-center rounded-full ${active ? "bg-white/30" : "bg-[var(--surface)]"}`}>
+                      {opt.icon}
+                    </span>
+                    <span className="text-xs font-semibold leading-tight">{opt.label}</span>
+                    <span className="text-[10px] leading-tight opacity-80">{opt.desc}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <Label>Course</Label>
-            <Select value={form.courseId} onChange={(e) => setForm({ ...form, courseId: e.target.value })}>
-              <option value="">Select a course…</option>
-              {courses.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
-            </Select>
-          </div>
-          <div>
-            <Label>Status</Label>
-            <Select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as Status })}>
-              <option value="draft">Draft (not visible)</option>
-              <option value="open">Open (accepting submissions)</option>
-              <option value="closed">Closed</option>
-            </Select>
-          </div>
-          <div>
-            <Label>Points</Label>
-            <Input type="number" min={1} value={form.points} onChange={(e) => setForm({ ...form, points: e.target.value })} />
-          </div>
-          <div>
-            <Label>Due date</Label>
-            <Input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} />
-          </div>
-        </div>
+
+        {/* Error */}
         {err && (
-          <p className="text-sm text-[var(--danger)] bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg">{err}</p>
+          <div className="flex items-center gap-2.5 text-sm text-[var(--danger)] bg-red-500/10 border border-red-500/20 px-3 py-2.5 rounded-xl">
+            <Icon.AlertCircle size={15} className="shrink-0" />
+            {err}
+          </div>
         )}
-        <div className="flex flex-wrap justify-between gap-2 pt-2 border-t border-[var(--border)]">
-          {initial ? (
-            <Button variant="danger" onClick={remove}>
+
+        {/* Footer */}
+        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border">
+          {initial && (
+            <Button variant="danger" size="sm" onClick={remove}>
               <Icon.Trash size={14} /> Delete
             </Button>
-          ) : (
-            <span />
           )}
           <div className="flex gap-2 ml-auto">
-            <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
-            <Button onClick={submit} loading={saving} disabled={!form.title.trim() || !form.courseId}>
-              <Icon.Save size={14} /> {initial ? "Save" : "Create"}
+            <Button variant="outline" onClick={onClose} disabled={saving}>
+              Cancel
+            </Button>
+            <Button
+              onClick={submit}
+              loading={saving}
+              disabled={!form.title.trim() || !form.courseId}
+            >
+              <Icon.Save size={14} />
+              <span className="hidden sm:inline">{initial ? "Save changes" : "Create assignment"}</span>
+              <span className="sm:hidden">{initial ? "Save" : "Create"}</span>
             </Button>
           </div>
         </div>

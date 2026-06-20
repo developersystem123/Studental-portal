@@ -17,7 +17,7 @@ import {
 } from "@/components/ui";
 import Icon from "@/components/icons";
 import { useData } from "@/lib/store";
-import { formatDate, formatTime } from "@/lib/utils";
+import { cn, formatDate, formatTime } from "@/lib/utils";
 
 type LiveStatus = "upcoming" | "live" | "ended" | "cancelled";
 
@@ -606,9 +606,50 @@ export default function AdminLiveClassesPage() {
         size="lg"
         title={editing ? "Edit live class" : "Schedule live class"}
       >
-        <div className="p-5 space-y-4">
+        {/* ── Live preview header ── */}
+        <div className="px-5 sm:px-6 py-4 flex items-center gap-4 border-b border-[var(--border)] bg-[var(--surface-2)]/50">
+          <div className={cn(
+            "relative h-14 w-14 rounded-2xl text-white flex items-center justify-center shrink-0 shadow-md transition-all duration-300 bg-gradient-to-br",
+            form.status === "live"      ? "from-rose-500 to-red-400 shadow-rose-500/20"
+              : form.status === "ended"    ? "from-slate-400 to-gray-500 shadow-gray-500/20"
+              : form.status === "cancelled" ? "from-amber-500 to-orange-400 shadow-amber-500/20"
+              : "from-sky-500 to-blue-400 shadow-sky-500/20"
+          )}>
+            <Icon.Video size={24} />
+            {form.status === "live" && (
+              <span className="absolute -top-1 -right-1 h-3.5 w-3.5 bg-rose-500 rounded-full border-2 border-white dark:border-[var(--surface)] animate-pulse" />
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className={cn("font-semibold truncate", form.title ? "text-[var(--foreground)]" : "text-[var(--muted)] text-sm italic")}>
+              {form.title || "Session title…"}
+            </p>
+            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+              {form.courseId ? (
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-500/15 text-violet-600 dark:text-violet-400 flex items-center gap-1">
+                  <Icon.Book size={9} /> {courses.find((c) => c.id === form.courseId)?.title ?? "Course"}
+                </span>
+              ) : (
+                <span className="text-[10px] text-[var(--muted)]">Select a course below</span>
+              )}
+              {form.scheduledAt && (
+                <span className="text-[10px] text-[var(--primary)] flex items-center gap-1">
+                  <Icon.Clock size={9} /> {formatDate(form.scheduledAt)} · {formatTime(new Date(form.scheduledAt))}
+                </span>
+              )}
+            </div>
+          </div>
+          <Badge variant={STATUS_BADGE[form.status]} className="shrink-0 capitalize hidden sm:inline-flex">
+            {form.status}
+          </Badge>
+        </div>
+
+        {/* ── Section 1: Session details ── */}
+        <div className="px-5 pt-5 pb-5 space-y-4">
+          <LiveSectionLabel icon={<Icon.Video size={13} />} label="Session details" />
+
           <div className="grid sm:grid-cols-2 gap-4">
-            <div className="sm:col-span-2">
+            <div>
               <Label>Course</Label>
               <Select
                 value={form.courseId}
@@ -616,39 +657,84 @@ export default function AdminLiveClassesPage() {
               >
                 <option value="">Select a course…</option>
                 {courses.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.title}
-                  </option>
+                  <option key={c.id} value={c.id}>{c.title}</option>
                 ))}
               </Select>
             </div>
-            <div className="sm:col-span-2">
-              <Label>Session title</Label>
-              <Input
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                placeholder="e.g. Live Q&A — Week 3"
-                maxLength={120}
-              />
+            <div>
+              <Label>Status</Label>
+              <Select
+                value={form.status}
+                onChange={(e) => setForm({ ...form, status: e.target.value as LiveStatus })}
+              >
+                {STATUSES.map((s) => (
+                  <option key={s} value={s}>{s[0].toUpperCase() + s.slice(1)}</option>
+                ))}
+              </Select>
             </div>
-            <div className="sm:col-span-2">
-              <Label>Description</Label>
-              <Textarea
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder="What this session covers…"
-                rows={3}
-              />
+          </div>
+
+          <div>
+            <Label>Session title</Label>
+            <Input
+              icon={<Icon.FilePen size={14} />}
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              placeholder="e.g. Live Q&A — Week 3"
+              maxLength={120}
+            />
+          </div>
+
+          <div>
+            <Label>
+              Description{" "}
+              <span className="text-[var(--muted-2)] font-normal">(optional)</span>
+            </Label>
+            <Textarea
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              placeholder="What this session covers — topics, prerequisites, what to prepare…"
+              rows={2}
+            />
+          </div>
+        </div>
+
+        <div className="h-px bg-[var(--border)]" />
+
+        {/* ── Section 2: Meeting link ── */}
+        <div className="px-5 py-5 space-y-3">
+          <LiveSectionLabel icon={<Icon.Globe size={13} />} label="Meeting link" />
+
+          <Input
+            icon={<Icon.Video size={14} />}
+            value={form.meetingUrl}
+            onChange={(e) => setForm({ ...form, meetingUrl: e.target.value })}
+            placeholder="https://meet.google.com/abc-defg-hij"
+          />
+
+          {/^https?:\/\/\S{4,}$/.test(form.meetingUrl) ? (
+            <div className="flex items-center gap-2.5 bg-emerald-500/8 border border-emerald-500/20 rounded-xl px-3 py-2.5">
+              <Icon.CheckCircle size={14} className="text-emerald-500 shrink-0" />
+              <span className="text-xs text-emerald-700 dark:text-emerald-400 truncate flex-1 font-medium">
+                {form.meetingUrl}
+              </span>
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-500 shrink-0 font-semibold">Valid URL</span>
             </div>
-            <div className="sm:col-span-2">
-              <Label>Meeting URL</Label>
-              <Input
-                value={form.meetingUrl}
-                onChange={(e) => setForm({ ...form, meetingUrl: e.target.value })}
-                placeholder="https://meet.example.com/abc"
-                icon={<Icon.Video size={15} />}
-              />
+          ) : form.meetingUrl.length > 8 ? (
+            <div className="flex items-center gap-2.5 bg-red-500/8 border border-red-500/20 rounded-xl px-3 py-2.5">
+              <Icon.AlertCircle size={14} className="text-[var(--danger)] shrink-0" />
+              <span className="text-xs text-[var(--danger)]">Enter a valid https:// URL</span>
             </div>
+          ) : null}
+        </div>
+
+        <div className="h-px bg-[var(--border)]" />
+
+        {/* ── Section 3: Timing & capacity ── */}
+        <div className="px-5 py-5 space-y-4">
+          <LiveSectionLabel icon={<Icon.Clock size={13} />} label="Timing & capacity" />
+
+          <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <Label>Date &amp; time</Label>
               <Input
@@ -658,47 +744,99 @@ export default function AdminLiveClassesPage() {
               />
             </div>
             <div>
-              <Label>Duration (minutes)</Label>
-              <Input
-                type="number"
-                min={5}
-                max={600}
-                value={form.durationMinutes}
-                onChange={(e) => setForm({ ...form, durationMinutes: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label>Status</Label>
-              <Select
-                value={form.status}
-                onChange={(e) => setForm({ ...form, status: e.target.value as LiveStatus })}
-              >
-                {STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {s[0].toUpperCase() + s.slice(1)}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div>
-              <Label>Max attendees (optional)</Label>
+              <Label>
+                Max attendees{" "}
+                <span className="text-[var(--muted-2)] font-normal">(optional)</span>
+              </Label>
               <Input
                 type="number"
                 min={1}
+                icon={<Icon.Users size={14} />}
                 value={form.maxAttendees}
                 onChange={(e) => setForm({ ...form, maxAttendees: e.target.value })}
                 placeholder="Unlimited"
               />
             </div>
           </div>
-          <div className="flex justify-end gap-2 pt-2 border-t border-[var(--border)]">
-            <Button variant="outline" onClick={() => setFormOpen(false)} disabled={saving}>
-              Cancel
-            </Button>
-            <Button onClick={submit} loading={saving} disabled={!formValid}>
-              <Icon.Save size={16} /> {editing ? "Save changes" : "Schedule"}
-            </Button>
+
+          {/* Duration with presets */}
+          <div>
+            <Label>Duration (minutes)</Label>
+            <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+              <Input
+                type="number"
+                min={5}
+                max={600}
+                step={5}
+                value={form.durationMinutes}
+                onChange={(e) => setForm({ ...form, durationMinutes: e.target.value })}
+                className="w-28 shrink-0"
+              />
+              <div className="flex gap-1.5 flex-wrap">
+                {[30, 45, 60, 90, 120].map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setForm({ ...form, durationMinutes: String(d) })}
+                    className={cn(
+                      "h-8 px-3 rounded-lg text-xs font-semibold border transition-all duration-150",
+                      form.durationMinutes === String(d)
+                        ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-sm"
+                        : "bg-[var(--surface-2)] text-[var(--muted)] border-[var(--border)] hover:border-[var(--primary)]/40 hover:text-[var(--foreground)]"
+                    )}
+                  >
+                    {d < 60 ? `${d}m` : `${d / 60}h`}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
+
+          {/* Session summary cards */}
+          {form.scheduledAt && (
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                {
+                  icon: <Icon.Calendar size={14} />,
+                  label: "Date",
+                  value: formatDate(form.scheduledAt),
+                },
+                {
+                  icon: <Icon.Clock size={14} />,
+                  label: "Time",
+                  value: formatTime(new Date(form.scheduledAt)),
+                },
+                {
+                  icon: <Icon.Clock size={14} />,
+                  label: "Duration",
+                  value: Number(form.durationMinutes) >= 60
+                    ? `${Number(form.durationMinutes) / 60}h`
+                    : `${form.durationMinutes} min`,
+                },
+              ].map((item) => (
+                <div key={item.label} className="flex items-start gap-2.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] px-3 py-2.5">
+                  <span className="text-[var(--primary)] mt-0.5 shrink-0">{item.icon}</span>
+                  <div className="min-w-0">
+                    <p className="text-[10px] text-[var(--muted)] font-medium uppercase tracking-wide">{item.label}</p>
+                    <p className="text-xs font-semibold truncate mt-0.5">{item.value}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── Footer ── */}
+        <div className="px-5 sm:px-6 pb-5 pt-4 border-t border-[var(--border)] flex flex-col-reverse sm:flex-row gap-2">
+          <p className="text-xs text-[var(--muted)] self-center hidden sm:block sm:mr-auto">
+            {editing ? "Students will see changes immediately." : "Share the meeting link after scheduling."}
+          </p>
+          <Button variant="outline" onClick={() => setFormOpen(false)} disabled={saving} className="w-full sm:w-auto">
+            Cancel
+          </Button>
+          <Button onClick={submit} loading={saving} disabled={!formValid} className="w-full sm:w-auto">
+            {editing ? <><Icon.Check size={14} /> Save changes</> : <><Icon.Video size={14} /> Schedule class</>}
+          </Button>
         </div>
       </Modal>
 
@@ -727,6 +865,17 @@ export default function AdminLiveClassesPage() {
           </div>
         )}
       </Modal>
+    </div>
+  );
+}
+
+/* ── Section label helper ──────────────────────────────────────────────── */
+function LiveSectionLabel({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="flex items-center justify-center w-5 h-5 rounded-md bg-[var(--primary-soft)] text-[var(--primary)]">{icon}</span>
+      <span className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">{label}</span>
+      <div className="flex-1 h-px bg-[var(--border)]" />
     </div>
   );
 }

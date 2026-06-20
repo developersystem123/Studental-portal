@@ -566,41 +566,130 @@ export default function AdminCertificatesPage() {
       </Modal>
 
       {/* Issue modal */}
-      <Modal open={issueOpen} onClose={() => setIssueOpen(false)} size="md" title="Issue certificate">
-        <div className="p-5 space-y-4">
-          <div>
-            <Label>Student</Label>
-            <Select value={studentId} onChange={(e) => setStudentId(e.target.value)}>
-              <option value="">Select a student…</option>
-              {students.map((s) => <option key={s.id} value={s.id}>{s.name} — {s.email}</option>)}
-            </Select>
-          </div>
-          <div>
-            <Label>Course</Label>
-            <Select value={courseId} onChange={(e) => setCourseId(e.target.value)}>
-              <option value="">Select a course…</option>
-              {courses.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
-            </Select>
-          </div>
-          <div>
-            <Label>Score (0–100)</Label>
-            <div className="space-y-2">
-              <Input type="number" min={0} max={100} value={score} onChange={(e) => setScore(e.target.value)} />
-              {score && Number(score) >= 0 && Number(score) <= 100 && (
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 h-2 rounded-full bg-[var(--surface-2)] overflow-hidden">
-                    <div className={cn("h-full rounded-full bg-gradient-to-r transition-all", scoreBarColor(Number(score)))} style={{ width: `${score}%` }} />
-                  </div>
-                  <Badge variant={scoreBadge(Number(score)).variant} className="text-[10px] shrink-0">
+      <Modal
+        open={issueOpen}
+        onClose={() => setIssueOpen(false)}
+        size="md"
+        title="Issue certificate"
+      >
+        <div>
+          {/* Live preview header */}
+          <div className="px-5 sm:px-6 py-4 flex items-center gap-4 border-b border-[var(--border)] bg-[var(--surface-2)]/50">
+            <div className={cn(
+              "h-14 w-14 rounded-2xl text-white flex items-center justify-center shrink-0 shadow-md transition-all duration-300 bg-gradient-to-br",
+              studentId && courseId
+                ? Number(score) >= 90 ? "from-[var(--primary)] to-emerald-400 shadow-green-500/20"
+                  : Number(score) >= 60 ? "from-emerald-500 to-green-400 shadow-green-500/20"
+                  : "from-red-500 to-orange-400 shadow-red-500/20"
+                : "from-[var(--primary)] to-emerald-400 shadow-green-500/20"
+            )}>
+              <Icon.Award size={26} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold truncate">
+                {studentId ? students.find((s) => s.id === studentId)?.name : "Select a student"}
+              </p>
+              <p className="text-xs text-[var(--muted)] truncate mt-0.5">
+                {courseId ? courses.find((c) => c.id === courseId)?.title : "Select a course below"}
+              </p>
+              {studentId && courseId && score && Number(score) >= 0 && Number(score) <= 100 && (
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className={cn(
+                    "text-[10px] font-semibold px-2 py-0.5 rounded-full",
+                    Number(score) >= 90 ? "bg-[var(--primary-soft)] text-[var(--primary)]"
+                      : Number(score) >= 60 ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                      : "bg-red-500/15 text-red-600 dark:text-red-400"
+                  )}>
                     {scoreBadge(Number(score)).label}
-                  </Badge>
+                  </span>
+                  <span className="text-[10px] text-[var(--muted)]">{score}% score</span>
                 </div>
               )}
             </div>
           </div>
-          <div className="flex justify-end gap-2 pt-2 border-t border-[var(--border)]">
-            <Button variant="outline" onClick={() => setIssueOpen(false)} disabled={saving}>Cancel</Button>
-            <Button onClick={issue} loading={saving} disabled={!studentId || !courseId}>
+
+          <div className="p-5 sm:p-6 space-y-5">
+            {/* Student */}
+            <div>
+              <Label htmlFor="cert-student">Student</Label>
+              <Select
+                id="cert-student"
+                value={studentId}
+                onChange={(e) => setStudentId(e.target.value)}
+              >
+                <option value="">Select a student…</option>
+                {students.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name} — {s.email}</option>
+                ))}
+              </Select>
+            </div>
+
+            {/* Course */}
+            <div>
+              <Label htmlFor="cert-course">Course</Label>
+              <Select
+                id="cert-course"
+                value={courseId}
+                onChange={(e) => setCourseId(e.target.value)}
+              >
+                <option value="">Select a course…</option>
+                {courses.map((c) => (
+                  <option key={c.id} value={c.id}>{c.title}</option>
+                ))}
+              </Select>
+            </div>
+
+            {/* Score */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <Label htmlFor="cert-score">Score (0–100)</Label>
+                {score && Number(score) >= 0 && Number(score) <= 100 && (
+                  <Badge variant={scoreBadge(Number(score)).variant} className="text-[10px]">
+                    {scoreBadge(Number(score)).label}
+                  </Badge>
+                )}
+              </div>
+              <Input
+                id="cert-score"
+                type="number"
+                min={0}
+                max={100}
+                value={score}
+                onChange={(e) => setScore(e.target.value)}
+                icon={<Icon.TrendingUp size={16} />}
+              />
+              {score && Number(score) >= 0 && Number(score) <= 100 && (
+                <div className="mt-3 space-y-1.5">
+                  <div className="h-2.5 rounded-full bg-[var(--surface-2)] overflow-hidden">
+                    <div
+                      className={cn("h-full rounded-full bg-gradient-to-r transition-all duration-300", scoreBarColor(Number(score)))}
+                      style={{ width: `${score}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[11px]">
+                    <span className="text-[var(--muted)]">0 · Fail</span>
+                    <span className={cn("font-bold tabular-nums",
+                      Number(score) >= 90 ? "text-[var(--primary)]"
+                        : Number(score) >= 60 ? "text-emerald-600 dark:text-emerald-400"
+                        : "text-red-500"
+                    )}>
+                      {score}%
+                    </span>
+                    <span className="text-[var(--muted)]">Distinction · 90+</span>
+                  </div>
+                </div>
+              )}
+              <p className="mt-2 text-[11px] text-[var(--muted)]">
+                Pass ≥ 60% · Distinction ≥ 90%
+              </p>
+            </div>
+          </div>
+
+          <div className="px-5 sm:px-6 pb-5 pt-4 flex flex-col-reverse sm:flex-row justify-end gap-2 border-t border-[var(--border)]">
+            <Button variant="outline" onClick={() => setIssueOpen(false)} disabled={saving} className="w-full sm:w-auto">
+              Cancel
+            </Button>
+            <Button onClick={issue} loading={saving} disabled={!studentId || !courseId} className="w-full sm:w-auto">
               <Icon.Award size={15} /> Issue certificate
             </Button>
           </div>

@@ -57,12 +57,12 @@ function StatPill({
     warning: "bg-amber-500/10 text-amber-500",
   }[color];
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 hover-lift">
-      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${bg}`}>{icon}</div>
+    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 rounded-xl border border-border bg-surface px-3 py-3 hover-lift">
+      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${bg}`}>{icon}</div>
       <div className="min-w-0">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">{label}</p>
-        <p className="text-xl font-bold leading-tight">{value}</p>
-        {sub && <p className="text-[11px] text-[var(--muted)]">{sub}</p>}
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted truncate">{label}</p>
+        <p className="text-lg font-bold leading-tight">{value}</p>
+        {sub && <p className="text-[10px] text-muted">{sub}</p>}
       </div>
     </div>
   );

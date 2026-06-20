@@ -527,7 +527,7 @@ export const QUIZ_SCORE_HISTORY = [
  *  the SSR snapshot matches the client render. */
 export const ACTIVITY_HEATMAP: { day: number; week: number; value: number }[] = (() => {
   const cells: { day: number; week: number; value: number }[] = [];
-  for (let week = 0; week < 12; week++) {
+  for (let week = 0; week < 26; week++) {
     for (let day = 0; day < 7; day++) {
       // Deterministic pseudo-random: small hash of (week, day).
       const seed = (week * 31 + day * 7 + 11) % 17;

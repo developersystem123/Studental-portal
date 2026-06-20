@@ -33,9 +33,11 @@ export function LineChart({
     })
     .join(" ");
 
+  if (points.length === 0) return <svg viewBox={`0 0 600 ${h}`} className="w-full h-full" />;
+  const last = points[points.length - 1];
   const areaD =
     pathD +
-    ` L ${points[points.length - 1].x} ${h - pad.bottom} L ${points[0].x} ${h - pad.bottom} Z`;
+    ` L ${last.x} ${h - pad.bottom} L ${points[0].x} ${h - pad.bottom} Z`;
 
   const yTicks = 4;
   const tickVals = Array.from({ length: yTicks + 1 }, (_, i) => (maxY * (yTicks - i)) / yTicks);
@@ -214,6 +216,7 @@ export function Heatmap({
   cellSize = 14,
   gap = 3,
   weekdayLabels = ["Mon", "Wed", "Fri"],
+  monthLabels,
 }: {
   cells: { day: number; week: number; value: number }[];
   weeks: number;
@@ -221,13 +224,15 @@ export function Heatmap({
   cellSize?: number;
   gap?: number;
   weekdayLabels?: string[];
+  monthLabels?: { week: number; label: string }[];
 }) {
   const labelW = 28;
+  const topPad = monthLabels && monthLabels.length > 0 ? 13 : 0;
   const w = labelW + weeks * (cellSize + gap);
-  const h = 7 * (cellSize + gap) + 18;
+  const h = topPad + 7 * (cellSize + gap) + 18;
 
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-full block" preserveAspectRatio="xMinYMin meet">
+    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-full block" preserveAspectRatio="none">
       <defs>
         <linearGradient id="hm-cell" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor="var(--primary)" />
@@ -235,12 +240,25 @@ export function Heatmap({
         </linearGradient>
       </defs>
 
-      {/* Weekday labels (every other row) */}
+      {/* Month labels */}
+      {monthLabels?.map(({ week, label }) => (
+        <text
+          key={`m-${week}`}
+          x={labelW + week * (cellSize + gap)}
+          y={topPad - 3}
+          fontSize="9"
+          fill="var(--muted)"
+        >
+          {label}
+        </text>
+      ))}
+
+      {/* Weekday labels (Mon / Wed / Fri) */}
       {[1, 3, 5].map((dayIdx, i) => (
         <text
           key={dayIdx}
           x={0}
-          y={dayIdx * (cellSize + gap) + cellSize}
+          y={topPad + dayIdx * (cellSize + gap) + cellSize}
           fontSize="9"
           fill="var(--muted-2)"
         >
@@ -250,7 +268,7 @@ export function Heatmap({
 
       {cells.map((c) => {
         const x = labelW + c.week * (cellSize + gap);
-        const y = c.day * (cellSize + gap);
+        const y = topPad + c.day * (cellSize + gap);
         const intensity = c.value / Math.max(1, maxValue);
         const fill = c.value === 0 ? "var(--surface-2)" : "url(#hm-cell)";
         const opacity = c.value === 0 ? 1 : 0.3 + intensity * 0.7;
@@ -276,7 +294,7 @@ export function Heatmap({
       })}
 
       {/* Legend */}
-      <g transform={`translate(${labelW} ${7 * (cellSize + gap) + 8})`}>
+      <g transform={`translate(${labelW} ${topPad + 7 * (cellSize + gap) + 8})`}>
         <text x={0} y={9} fontSize="9" fill="var(--muted-2)">Less</text>
         {Array.from({ length: 5 }).map((_, i) => {
           const o = i === 0 ? 1 : 0.3 + (i / 4) * 0.7;

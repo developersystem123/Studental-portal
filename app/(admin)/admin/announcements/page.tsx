@@ -454,138 +454,186 @@ export default function AdminAnnouncementsPage() {
         size="lg"
         title={editingId ? "Edit announcement" : "New announcement"}
       >
-        <div className="p-5 space-y-4">
-          {/* Title */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <Label htmlFor="ann-title">Title</Label>
-              <span className="text-[11px] text-[var(--muted)]">{form.title.length}/80</span>
+        <div>
+          {/* Live preview header */}
+          <div className="px-5 sm:px-6 py-4 flex items-center gap-4 border-b border-[var(--border)] bg-[var(--surface-2)]/50">
+            <div className={cn(
+              "h-14 w-14 rounded-2xl text-white flex items-center justify-center shrink-0 shadow-md bg-gradient-to-br transition-all duration-300",
+              form.audience === "students" ? "from-violet-500 to-purple-400 shadow-violet-500/20"
+                : form.audience === "teachers" ? "from-sky-500 to-blue-400 shadow-sky-500/20"
+                : form.audience === "pro" ? "from-amber-500 to-orange-400 shadow-amber-500/20"
+                : "from-[var(--primary)] to-emerald-400 shadow-green-500/20"
+            )}>
+              <Icon.Megaphone size={24} />
             </div>
-            <Input
-              id="ann-title"
-              placeholder="e.g. Platform maintenance notice"
-              value={form.title}
-              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value.slice(0, 80) }))}
-              maxLength={80}
-            />
+            <div className="min-w-0 flex-1">
+              <p className={cn("font-semibold truncate", form.title ? "text-[var(--foreground)]" : "text-[var(--muted)] text-sm italic")}>
+                {form.title || "Announcement title…"}
+              </p>
+              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1", AUDIENCE_CLS[form.audience])}>
+                  <Icon.Users size={9} /> {AUDIENCE_LABELS[form.audience]} (~{AUDIENCE_REACH[form.audience].toLocaleString()})
+                </span>
+                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-[var(--surface)] border border-[var(--border)] text-[var(--muted)] flex items-center gap-1">
+                  {CHANNEL_ICON[form.channel]} {CHANNEL_LABELS[form.channel]}
+                </span>
+                {form.scheduleMode && form.scheduledAt && (
+                  <span className="text-[10px] text-sky-600 dark:text-sky-400 flex items-center gap-1">
+                    <Icon.Calendar size={9} /> {form.scheduledAt.replace("T", " ")}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* Body */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <Label htmlFor="ann-body">Message</Label>
-              <span className="text-[11px] text-[var(--muted)]">{form.body.length}/600</span>
-            </div>
-            <Textarea
-              id="ann-body"
-              placeholder="Write your announcement here…"
-              value={form.body}
-              onChange={(e) => setForm((f) => ({ ...f, body: e.target.value.slice(0, 600) }))}
-              rows={4}
-            />
-          </div>
-
-          {/* Audience + Channel */}
-          <div className="grid sm:grid-cols-2 gap-4">
+          <div className="p-5 sm:p-6 space-y-5">
+            {/* Title */}
             <div>
-              <Label htmlFor="ann-audience">Audience</Label>
-              <Select
-                id="ann-audience"
-                value={form.audience}
-                onChange={(e) => setForm((f) => ({ ...f, audience: e.target.value as Audience }))}
-              >
-                <option value="all">All users (~12,400)</option>
-                <option value="students">Students only (~8,600)</option>
-                <option value="teachers">Teachers only (~340)</option>
-                <option value="pro">Pro subscribers (~1,240)</option>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="ann-channel">Channel</Label>
-              <Select
-                id="ann-channel"
-                value={form.channel}
-                onChange={(e) => setForm((f) => ({ ...f, channel: e.target.value as Channel }))}
-              >
-                <option value="in_app">In-app notification only</option>
-                <option value="email">Email only</option>
-                <option value="both">In-app + Email</option>
-              </Select>
-            </div>
-          </div>
-
-          {/* Schedule toggle */}
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setForm((f) => ({ ...f, scheduleMode: !f.scheduleMode }))}
-              className={cn(
-                "relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors",
-                form.scheduleMode ? "bg-[var(--primary)]" : "bg-[var(--surface-2)]",
-              )}
-            >
-              <span className={cn(
-                "inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform",
-                form.scheduleMode ? "translate-x-4" : "translate-x-0",
-              )} />
-            </button>
-            <span className="text-sm font-medium">Schedule for later</span>
-          </div>
-
-          {form.scheduleMode && (
-            <div className="fade-in">
-              <Label htmlFor="ann-schedule">Schedule date &amp; time</Label>
+              <div className="flex items-center justify-between mb-1.5">
+                <Label htmlFor="ann-title">Title</Label>
+                <span className={cn("text-[11px]", form.title.length > 70 ? "text-amber-500" : "text-[var(--muted)]")}>
+                  {form.title.length}/80
+                </span>
+              </div>
               <Input
-                id="ann-schedule"
-                type="datetime-local"
-                value={form.scheduledAt}
-                onChange={(e) => setForm((f) => ({ ...f, scheduledAt: e.target.value }))}
+                id="ann-title"
+                placeholder="e.g. Platform maintenance notice"
+                value={form.title}
+                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value.slice(0, 80) }))}
+                maxLength={80}
+                icon={<Icon.Megaphone size={16} />}
               />
             </div>
-          )}
 
-          {/* Reach preview */}
-          <div className="flex items-start gap-3 p-3.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
-            <Icon.Users size={14} className="shrink-0 text-[var(--muted)] mt-0.5" />
-            <div className="text-xs text-[var(--muted)] leading-relaxed">
-              This will reach approximately{" "}
-              <span className="font-bold text-[var(--foreground)]">
-                {AUDIENCE_REACH[form.audience].toLocaleString()} users
-              </span>{" "}
-              via{" "}
-              <span className="font-bold text-[var(--foreground)]">
-                {CHANNEL_LABELS[form.channel].toLowerCase()}
-              </span>.
-              {form.channel === "both" && (
-                <span className="text-amber-600 dark:text-amber-400"> Email delivery may take a few minutes.</span>
-              )}
+            {/* Message */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <Label htmlFor="ann-body">Message</Label>
+                <span className={cn("text-[11px]", form.body.length > 540 ? "text-amber-500" : "text-[var(--muted)]")}>
+                  {form.body.length}/600
+                </span>
+              </div>
+              <Textarea
+                id="ann-body"
+                placeholder="Write your announcement here…"
+                value={form.body}
+                onChange={(e) => setForm((f) => ({ ...f, body: e.target.value.slice(0, 600) }))}
+                rows={4}
+              />
+            </div>
+
+            {/* Audience + Channel */}
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="ann-audience">Audience</Label>
+                <Select
+                  id="ann-audience"
+                  value={form.audience}
+                  onChange={(e) => setForm((f) => ({ ...f, audience: e.target.value as Audience }))}
+                >
+                  <option value="all">All users (~12,400)</option>
+                  <option value="students">Students only (~8,600)</option>
+                  <option value="teachers">Teachers only (~340)</option>
+                  <option value="pro">Pro subscribers (~1,240)</option>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="ann-channel">Channel</Label>
+                <Select
+                  id="ann-channel"
+                  value={form.channel}
+                  onChange={(e) => setForm((f) => ({ ...f, channel: e.target.value as Channel }))}
+                >
+                  <option value="in_app">In-app notification only</option>
+                  <option value="email">Email only</option>
+                  <option value="both">In-app + Email</option>
+                </Select>
+              </div>
+            </div>
+
+            {/* Schedule toggle card */}
+            <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-colors",
+                  form.scheduleMode ? "bg-sky-500/15 text-sky-600 dark:text-sky-400" : "bg-[var(--surface)] text-[var(--muted)]"
+                )}>
+                  <Icon.Calendar size={15} />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Schedule for later</p>
+                  <p className="text-[11px] text-[var(--muted)]">
+                    {form.scheduleMode ? "Pick a date and time below" : "Send immediately on click"}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, scheduleMode: !f.scheduleMode }))}
+                className={cn(
+                  "relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors",
+                  form.scheduleMode ? "bg-[var(--primary)]" : "bg-[var(--border-strong)]",
+                )}
+              >
+                <span className={cn(
+                  "inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform scale-90",
+                  form.scheduleMode ? "translate-x-4" : "translate-x-0",
+                )} />
+              </button>
+            </div>
+
+            {/* Schedule datetime */}
+            {form.scheduleMode && (
+              <div className="fade-in">
+                <Label htmlFor="ann-schedule">Schedule date &amp; time</Label>
+                <Input
+                  id="ann-schedule"
+                  type="datetime-local"
+                  value={form.scheduledAt}
+                  onChange={(e) => setForm((f) => ({ ...f, scheduledAt: e.target.value }))}
+                  icon={<Icon.Calendar size={16} />}
+                />
+              </div>
+            )}
+
+            {/* Reach summary */}
+            <div className={cn(
+              "flex items-start gap-3 p-3.5 rounded-xl border transition-colors",
+              form.channel === "both"
+                ? "bg-amber-500/8 border-amber-500/20"
+                : "bg-[var(--primary-soft)] border-[var(--primary)]/15"
+            )}>
+              <div className={cn(
+                "h-7 w-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5",
+                form.channel === "both" ? "bg-amber-500/15 text-amber-600 dark:text-amber-400" : "bg-[var(--primary)]/15 text-[var(--primary)]"
+              )}>
+                <Icon.Users size={14} />
+              </div>
+              <p className="text-xs text-[var(--muted)] leading-relaxed">
+                This will reach approximately{" "}
+                <span className="font-bold text-[var(--foreground)]">
+                  {AUDIENCE_REACH[form.audience].toLocaleString()} users
+                </span>{" "}
+                via{" "}
+                <span className="font-bold text-[var(--foreground)]">
+                  {CHANNEL_LABELS[form.channel].toLowerCase()}
+                </span>.
+                {form.channel === "both" && (
+                  <span className="text-amber-600 dark:text-amber-400"> Email delivery may take a few minutes.</span>
+                )}
+              </p>
             </div>
           </div>
 
-          {/* Preview */}
-          {(form.title || form.body) && (
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
-              <p className="text-[11px] uppercase tracking-wider text-[var(--muted)] font-semibold mb-2 flex items-center gap-1.5">
-                <Icon.Eye size={11} /> Preview
-              </p>
-              {form.title && <p className="font-semibold text-sm">{form.title}</p>}
-              {form.body && (
-                <p className="text-sm text-[var(--muted)] mt-1 whitespace-pre-wrap leading-relaxed">
-                  {form.body}
-                </p>
-              )}
-            </div>
-          )}
-
           {/* Actions */}
-          <div className="flex flex-col-reverse sm:flex-row gap-2 pt-2 border-t border-[var(--border)]">
-            <Button variant="ghost" onClick={() => setComposeOpen(false)} disabled={sending}>
+          <div className="px-5 sm:px-6 pb-5 pt-4 flex flex-col-reverse sm:flex-row gap-2 border-t border-[var(--border)]">
+            <Button variant="ghost" onClick={() => setComposeOpen(false)} disabled={sending} className="sm:mr-auto">
               Cancel
             </Button>
-            <Button variant="outline" onClick={() => handleSend(true)} loading={sending} className="flex-1">
+            <Button variant="outline" onClick={() => handleSend(true)} loading={sending} className="w-full sm:w-auto">
               <Icon.Save size={14} /> Save as draft
             </Button>
-            <Button className="flex-1" loading={sending} onClick={() => handleSend(false)}>
+            <Button loading={sending} onClick={() => handleSend(false)} className="w-full sm:w-auto">
               {form.scheduleMode
                 ? <><Icon.Calendar size={14} /> Schedule</>
                 : <><Icon.Send size={14} /> Send now</>}

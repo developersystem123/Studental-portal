@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Avatar,
   Badge,
@@ -18,6 +18,16 @@ import { useAuth } from "@/lib/store";
 import { cn, relativeTime } from "@/lib/utils";
 
 type Contact = { id: string; name: string; avatar: string | null; role: string };
+
+function MsgSectionLabel({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="h-5 w-5 rounded-md bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center shrink-0">{icon}</span>
+      <span className="text-[10px] font-bold tracking-widest text-[var(--primary)]">{label}</span>
+      <div className="flex-1 h-px bg-[var(--border)]" />
+    </div>
+  );
+}
 
 type Conversation = {
   conversationId: string;
@@ -436,87 +446,176 @@ export default function MessagesPage() {
         open={newOpen}
         onClose={() => { setNewOpen(false); setSelectedContact(null); }}
         title="New message"
-        size="md"
+        size="lg"
       >
-        <div className="p-5 space-y-4">
-          {contacts.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">
-              No contacts yet. Enroll in a course to message instructors.
-            </p>
-          ) : (
-            <>
-              {!selectedContact ? (
-                <>
-                  <p className="text-sm text-[var(--muted)]">Choose who to message:</p>
-                  <Input
-                    icon={<Icon.Search size={15} />}
-                    placeholder="Search contacts…"
-                    value={contactSearch}
-                    onChange={(e) => setContactSearch(e.target.value)}
-                  />
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {filteredContacts.length === 0 ? (
-                      <p className="text-sm text-[var(--muted)] text-center py-4">No contacts match.</p>
-                    ) : (
-                      filteredContacts.map((c) => (
-                        <button
-                          key={c.id}
-                          onClick={() => setSelectedContact(c)}
-                          className="w-full flex items-center gap-3 p-3 rounded-xl border border-[var(--border)] hover:border-[var(--primary)]/40 hover:bg-[var(--primary-soft)] transition text-left group"
-                        >
-                          <Avatar name={c.name} src={c.avatar} size={38} />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold">{c.name}</p>
-                            <p className="text-xs text-[var(--muted-2)]">{c.role}</p>
-                          </div>
-                          <Icon.ChevronRight size={15} className="text-[var(--muted-2)] group-hover:text-[var(--primary)] transition" />
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </>
+        {contacts.length === 0 ? (
+          <div className="px-5 pb-5 pt-2">
+            <div className="flex flex-col items-center gap-3 py-8 text-center">
+              <span className="h-14 w-14 rounded-2xl bg-[var(--surface-2)] flex items-center justify-center text-[var(--muted)]">
+                <Icon.Users size={26} />
+              </span>
+              <div>
+                <p className="font-semibold text-sm">No contacts yet</p>
+                <p className="text-xs text-[var(--muted)] mt-1">Enroll in a course to message instructors.</p>
+              </div>
+            </div>
+          </div>
+        ) : !selectedContact ? (
+          /* ── Step 1: pick a contact ── */
+          <div className="space-y-0">
+            {/* section label */}
+            <div className="px-5 pb-3">
+              <MsgSectionLabel icon={<Icon.Users size={12} />} label="CHOOSE RECIPIENT" />
+            </div>
+            {/* search */}
+            <div className="px-5 pb-3">
+              <Input
+                icon={<Icon.Search size={15} />}
+                placeholder="Search by name or role…"
+                value={contactSearch}
+                onChange={(e) => setContactSearch(e.target.value)}
+                autoFocus
+              />
+            </div>
+            {/* contact list */}
+            <div className="px-5 pb-5 space-y-2 max-h-72 overflow-y-auto">
+              {filteredContacts.length === 0 ? (
+                <div className="flex flex-col items-center gap-2 py-8 text-center">
+                  <Icon.Search size={20} className="text-[var(--muted)]" />
+                  <p className="text-sm text-[var(--muted)]">No contacts match "{contactSearch}"</p>
+                </div>
               ) : (
-                <>
-                  <button
-                    onClick={() => setSelectedContact(null)}
-                    className="flex items-center gap-1.5 text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition"
-                  >
-                    <Icon.ArrowLeft size={13} /> Back to contacts
-                  </button>
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--primary-soft)] border border-[var(--primary)]/20">
-                    <Avatar name={selectedContact.name} src={selectedContact.avatar} size={38} />
-                    <div>
-                      <p className="text-sm font-semibold">{selectedContact.name}</p>
-                      <p className="text-xs text-[var(--muted-2)]">{selectedContact.role}</p>
-                    </div>
-                  </div>
-                  <div className="relative">
-                    <Textarea
-                      value={modalDraft}
-                      onChange={(e) => setModalDraft(e.target.value)}
-                      rows={4}
-                      placeholder="Write your message…"
-                      className="!min-h-[100px]"
-                    />
-                    <span className={cn("absolute right-3 bottom-3 text-[10px]", modalDraft.length > 480 ? "text-red-500" : "text-[var(--muted-2)]")}>
-                      {modalDraft.length}/500
-                    </span>
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <Button variant="ghost" onClick={() => setNewOpen(false)}>Cancel</Button>
-                    <Button
-                      onClick={() => send(selectedContact.id)}
-                      loading={sending}
-                      disabled={!modalDraft.trim() || modalDraft.length > 500}
-                    >
-                      <Icon.Send size={14} /> Send message
-                    </Button>
-                  </div>
-                </>
+                (() => {
+                  const instructors = filteredContacts.filter((c) => c.role === "Instructor");
+                  const others = filteredContacts.filter((c) => c.role !== "Instructor");
+                  const renderGroup = (label: string, items: Contact[]) =>
+                    items.length === 0 ? null : (
+                      <div key={label}>
+                        <p className="text-[10px] font-bold tracking-widest text-[var(--muted)] uppercase mb-2 mt-1">{label}</p>
+                        <div className="space-y-1.5">
+                          {items.map((c) => (
+                            <button
+                              key={c.id}
+                              onClick={() => setSelectedContact(c)}
+                              className="w-full flex items-center gap-3 p-3 rounded-xl border border-[var(--border)] hover:border-[var(--primary)]/40 hover:bg-[var(--primary-soft)] transition text-left group"
+                            >
+                              <div className="relative shrink-0">
+                                <Avatar name={c.name} src={c.avatar} size={40} />
+                                {c.role === "Instructor" && (
+                                  <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-emerald-400 border-2 border-[var(--surface)]" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold leading-tight">{c.name}</p>
+                                <p className="text-xs text-[var(--muted)] mt-0.5">{c.role}</p>
+                              </div>
+                              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${
+                                c.role === "Instructor"
+                                  ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400"
+                                  : "bg-[var(--primary-soft)] text-[var(--primary)]"
+                              }`}>
+                                {c.role === "Instructor" ? "● Online" : "Admin"}
+                              </span>
+                              <Icon.ChevronRight size={15} className="text-[var(--muted-2)] group-hover:text-[var(--primary)] transition shrink-0" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  return (
+                    <>
+                      {renderGroup("Instructors", instructors)}
+                      {renderGroup("Staff", others)}
+                    </>
+                  );
+                })()
               )}
-            </>
-          )}
-        </div>
+            </div>
+          </div>
+        ) : (
+          /* ── Step 2: compose message ── */
+          <div className="space-y-0">
+            {/* back + recipient */}
+            <div className="px-5 pb-4 space-y-3">
+              <button
+                onClick={() => setSelectedContact(null)}
+                className="flex items-center gap-1.5 text-xs text-[var(--muted)] hover:text-[var(--primary)] transition font-medium"
+              >
+                <Icon.ArrowLeft size={13} /> Back to contacts
+              </button>
+
+              {/* recipient card */}
+              <div className="flex items-center gap-3 p-3.5 rounded-xl bg-[var(--primary-soft)] border border-[var(--primary)]/20">
+                <div className="relative shrink-0">
+                  <Avatar name={selectedContact.name} src={selectedContact.avatar} size={44} />
+                  {selectedContact.role === "Instructor" && (
+                    <span className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full bg-emerald-400 border-2 border-[var(--surface)]" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold leading-tight text-[var(--primary)]">{selectedContact.name}</p>
+                  <p className="text-xs text-[var(--muted)] mt-0.5">{selectedContact.role}</p>
+                </div>
+                <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full ${
+                  selectedContact.role === "Instructor"
+                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                    : "bg-white/70 text-[var(--primary)] dark:bg-black/20"
+                }`}>
+                  {selectedContact.role === "Instructor" ? "● Online" : "Admin"}
+                </span>
+              </div>
+            </div>
+
+            {/* message label + live preview bubble */}
+            <div className="px-5 pb-3 space-y-3">
+              <MsgSectionLabel icon={<Icon.Edit size={12} />} label="YOUR MESSAGE" />
+
+              {/* live preview chat bubble */}
+              {modalDraft.trim() && (
+                <div className="flex justify-end">
+                  <div className="max-w-[85%] bg-[var(--primary)] text-white rounded-2xl rounded-br-sm px-3.5 py-2.5 text-sm shadow-sm">
+                    <p className="whitespace-pre-wrap break-words leading-relaxed">{modalDraft.slice(0, 120)}{modalDraft.length > 120 ? "…" : ""}</p>
+                    <p className="text-[10px] text-white/60 text-right mt-1">Preview · Just now</p>
+                  </div>
+                </div>
+              )}
+
+              {/* textarea */}
+              <div className="relative">
+                <Textarea
+                  value={modalDraft}
+                  onChange={(e) => setModalDraft(e.target.value)}
+                  rows={4}
+                  placeholder={`Write your message to ${selectedContact.name}…`}
+                  className={cn("!min-h-[100px] resize-none pr-16", modalDraft.length > 480 && "border-red-400 focus:ring-red-400")}
+                  autoFocus
+                />
+                <span className={cn("absolute right-3 bottom-3 text-[10px] tabular-nums font-medium pointer-events-none", modalDraft.length > 480 ? "text-red-500" : "text-[var(--muted-2)]")}>
+                  {modalDraft.length}/500
+                </span>
+              </div>
+              {/* char progress bar */}
+              <div className="h-1 rounded-full bg-[var(--border)] overflow-hidden -mt-1">
+                <div
+                  className={`h-full rounded-full transition-all ${modalDraft.length > 480 ? "bg-red-500" : modalDraft.length > 350 ? "bg-amber-500" : "bg-[var(--primary)]"}`}
+                  style={{ width: `${Math.min(100, (modalDraft.length / 500) * 100)}%` }}
+                />
+              </div>
+            </div>
+
+            {/* footer */}
+            <div className="px-5 pb-5 flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setNewOpen(false)}>Cancel</Button>
+              <Button
+                onClick={() => send(selectedContact.id)}
+                loading={sending}
+                disabled={!modalDraft.trim() || modalDraft.length > 500}
+              >
+                <Icon.Send size={14} /> Send message
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

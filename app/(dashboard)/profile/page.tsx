@@ -261,16 +261,16 @@ export default function StudentProfilePage() {
 
         {/* Progress summary */}
         {enrollments.length > 0 && (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2">
             {[
               { label: "Not started", value: notStarted, color: "bg-[var(--surface-2)]" },
               { label: "In progress", value: inProgress, color: "bg-amber-500" },
               { label: "Completed", value: completed, color: "bg-emerald-500" },
             ].map(({ label, value, color }) => (
-              <div key={label} className="rounded-xl border border-[var(--border)] p-3 text-center">
-                <div className={cn("mx-auto mb-1.5 h-1.5 w-8 rounded-full", color)} />
+              <div key={label} className="rounded-xl border border-border p-2 text-center">
+                <div className={cn("mx-auto mb-1.5 h-1.5 w-6 rounded-full", color)} />
                 <p className="text-xl font-bold tabular-nums">{value}</p>
-                <p className="text-xs text-[var(--muted)]">{label}</p>
+                <p className="text-[10px] leading-tight text-muted">{label}</p>
               </div>
             ))}
           </div>

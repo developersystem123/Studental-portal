@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -13,7 +14,6 @@ import {
   Input,
   Label,
   Modal,
-  Select,
   Textarea,
   useToast,
 } from "@/components/ui";
@@ -164,6 +164,32 @@ const FAQ_CATEGORIES: FaqCategory[] = [
     ],
   },
 ];
+
+/* ─── Modal config ───────────────────────────────────────────── */
+const CATEGORY_CONFIG: Record<Ticket["category"], { label: string; icon: React.ReactNode; bg: string; text: string; border: string }> = {
+  technical: { label: "Technical",  icon: <Icon.Settings size={16} />,   bg: "bg-sky-50 dark:bg-sky-900/20",      text: "text-sky-600 dark:text-sky-400",      border: "border-sky-200 dark:border-sky-700" },
+  billing:   { label: "Billing",    icon: <Icon.CreditCard size={16} />, bg: "bg-emerald-50 dark:bg-emerald-900/20", text: "text-emerald-600 dark:text-emerald-400", border: "border-emerald-200 dark:border-emerald-700" },
+  course:    { label: "Course",     icon: <Icon.Book size={16} />,       bg: "bg-amber-50 dark:bg-amber-900/20",  text: "text-amber-600 dark:text-amber-400",   border: "border-amber-200 dark:border-amber-700" },
+  account:   { label: "Account",    icon: <Icon.User size={16} />,       bg: "bg-violet-50 dark:bg-violet-900/20", text: "text-violet-600 dark:text-violet-400", border: "border-violet-200 dark:border-violet-700" },
+  other:     { label: "Other",      icon: <Icon.Help size={16} />,       bg: "bg-[var(--surface-2)]",             text: "text-[var(--muted)]",                 border: "border-[var(--border)]" },
+};
+
+const PRIORITY_CONFIG: Record<Ticket["priority"], { label: string; icon: React.ReactNode; bg: string; text: string; border: string; hint: string }> = {
+  low:    { label: "Low",    icon: <Icon.ChevronDown size={16} />, bg: "bg-[var(--surface-2)]",          text: "text-[var(--muted)]",               border: "border-[var(--border)]",            hint: "Not urgent" },
+  medium: { label: "Medium", icon: <Icon.Circle size={16} />,      bg: "bg-sky-50 dark:bg-sky-900/20",   text: "text-sky-600 dark:text-sky-400",    border: "border-sky-200 dark:border-sky-700", hint: "Normal" },
+  high:   { label: "High",   icon: <Icon.ArrowUp size={16} />,     bg: "bg-amber-50 dark:bg-amber-900/20",text: "text-amber-600 dark:text-amber-400",border: "border-amber-200 dark:border-amber-700",hint: "Needs attention" },
+  urgent: { label: "Urgent", icon: <Icon.AlertCircle size={16} />, bg: "bg-red-50 dark:bg-red-900/20",   text: "text-red-600 dark:text-red-400",    border: "border-red-200 dark:border-red-700",hint: "Critical" },
+};
+
+function SupportSectionLabel({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="h-5 w-5 rounded-md bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center shrink-0">{icon}</span>
+      <span className="text-[10px] font-bold tracking-widest text-[var(--primary)]">{label}</span>
+      <div className="flex-1 h-px bg-[var(--border)]" />
+    </div>
+  );
+}
 
 /* ─── Main Component ─────────────────────────────────────────── */
 export default function SupportPage() {
@@ -512,65 +538,157 @@ export default function SupportPage() {
       </Card>
 
       {/* ── New ticket modal ──────────────────────────────────── */}
-      <Modal open={open} onClose={() => setOpen(false)} title="New support ticket" size="md">
-        <div className="p-5 space-y-4">
-          <div>
-            <Label>Subject</Label>
-            <Input
-              value={form.subject}
-              onChange={(e) => setForm({ ...form, subject: e.target.value })}
-              placeholder="Briefly, what's wrong?"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Category</Label>
-              <Select
-                value={form.category}
-                onChange={(e) =>
-                  setForm({ ...form, category: e.target.value as Ticket["category"] })
-                }
-              >
-                <option value="technical">Technical issue</option>
-                <option value="billing">Billing / Payments</option>
-                <option value="course">Course content</option>
-                <option value="account">Account</option>
-                <option value="other">Other</option>
-              </Select>
+      <Modal open={open} onClose={() => setOpen(false)} title="New support ticket" size="lg">
+        {(() => {
+          const cc = CATEGORY_CONFIG[form.category];
+          const pc = PRIORITY_CONFIG[form.priority];
+          const bodyLen = form.body.length;
+          const bodyOver = bodyLen > 2000;
+          return (
+            <div className="space-y-0">
+              {/* ── Live preview banner ── */}
+              <div className={`mx-5 mt-1 mb-4 rounded-xl p-4 border ${cc.bg} ${cc.border}`}>
+                <div className="flex items-start gap-3">
+                  <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 bg-white/70 dark:bg-black/20 ${cc.text}`}>
+                    {cc.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`font-semibold text-sm leading-snug ${cc.text}`}>
+                      {form.subject.trim() || <span className="opacity-40 italic font-normal">Your ticket subject…</span>}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${cc.bg} ${cc.text} ${cc.border}`}>
+                        {cc.label}
+                      </span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${pc.bg} ${pc.text} ${pc.border}`}>
+                        {pc.label} priority
+                      </span>
+                      {form.body.trim() && (
+                        <span className="text-[10px] text-[var(--muted)] line-clamp-1 max-w-[200px]">
+                          {form.body.slice(0, 60)}{form.body.length > 60 ? "…" : ""}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-5 space-y-5 pb-2">
+                {/* ── Ticket details ── */}
+                <SupportSectionLabel icon={<Icon.FilePen size={12} />} label="TICKET DETAILS" />
+
+                <div>
+                  <Label>Subject</Label>
+                  <Input
+                    value={form.subject}
+                    onChange={(e) => setForm({ ...form, subject: e.target.value })}
+                    placeholder="Briefly, what's wrong?"
+                    maxLength={200}
+                    autoFocus
+                  />
+                  <p className="text-[10px] text-[var(--muted)] mt-1 text-right">{form.subject.length}/200</p>
+                </div>
+
+                {/* Category cards */}
+                <div>
+                  <Label>Category</Label>
+                  <div className="grid grid-cols-5 gap-1.5 mt-1">
+                    {(["technical", "billing", "course", "account", "other"] as Ticket["category"][]).map((cat) => {
+                      const cs = CATEGORY_CONFIG[cat];
+                      const active = form.category === cat;
+                      return (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => setForm({ ...form, category: cat })}
+                          className={`flex flex-col items-center gap-1.5 p-2.5 rounded-xl border-2 transition-all text-center ${
+                            active
+                              ? `${cs.bg} ${cs.text} border-current shadow-sm scale-[1.04]`
+                              : "bg-[var(--surface-2)] text-[var(--muted)] border-transparent hover:border-[var(--border)] hover:text-[var(--foreground)]"
+                          }`}
+                        >
+                          <span className={`h-7 w-7 rounded-lg flex items-center justify-center ${active ? "bg-white/60 dark:bg-black/20" : "bg-[var(--surface)]"}`}>
+                            {cs.icon}
+                          </span>
+                          <p className="text-[10px] font-semibold leading-none">{cs.label}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Priority cards */}
+                <div>
+                  <Label>Priority</Label>
+                  <div className="grid grid-cols-4 gap-2 mt-1">
+                    {(["low", "medium", "high", "urgent"] as Ticket["priority"][]).map((pri) => {
+                      const ps = PRIORITY_CONFIG[pri];
+                      const active = form.priority === pri;
+                      return (
+                        <button
+                          key={pri}
+                          type="button"
+                          onClick={() => setForm({ ...form, priority: pri })}
+                          className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-center ${
+                            active
+                              ? `${ps.bg} ${ps.text} border-current shadow-sm scale-[1.03]`
+                              : "bg-[var(--surface-2)] text-[var(--muted)] border-transparent hover:border-[var(--border)] hover:text-[var(--foreground)]"
+                          }`}
+                        >
+                          <span className={`h-7 w-7 rounded-lg flex items-center justify-center ${active ? "bg-white/60 dark:bg-black/20" : "bg-[var(--surface)]"}`}>
+                            {ps.icon}
+                          </span>
+                          <p className="text-[10px] font-semibold leading-none">{ps.label}</p>
+                          <p className="text-[9px] opacity-60 leading-tight">{ps.hint}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* ── Message ── */}
+                <SupportSectionLabel icon={<Icon.Edit size={12} />} label="DESCRIBE THE ISSUE" />
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <Label className="mb-0">Message</Label>
+                    <span className={`text-xs tabular-nums ${bodyOver ? "text-red-500 font-semibold" : "text-[var(--muted)]"}`}>
+                      {bodyLen}/2000
+                    </span>
+                  </div>
+                  <Textarea
+                    value={form.body}
+                    onChange={(e) => setForm({ ...form, body: e.target.value })}
+                    rows={5}
+                    placeholder={
+                      form.category === "technical"
+                        ? "Describe the technical issue — what happened, what you expected, your browser/OS…"
+                        : form.category === "billing"
+                        ? "Describe your billing issue — include the transaction date and amount if applicable…"
+                        : "Describe your issue in as much detail as possible…"
+                    }
+                    className={bodyOver ? "border-red-400 focus:ring-red-400" : ""}
+                  />
+                  {bodyOver && <p className="text-xs text-red-500 mt-1">Message exceeds 2000 characters.</p>}
+                  <div className="mt-2 h-1 rounded-full bg-[var(--border)] overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${bodyOver ? "bg-red-500" : bodyLen > 1600 ? "bg-amber-500" : "bg-[var(--primary)]"}`}
+                      style={{ width: `${Math.min(100, (bodyLen / 2000) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* ── Footer ── */}
+                <div className="flex justify-end gap-2 pt-1 pb-2">
+                  <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+                  <Button onClick={create} loading={saving} disabled={bodyOver}>
+                    <Icon.Send size={14} /> Submit ticket
+                  </Button>
+                </div>
+              </div>
             </div>
-            <div>
-              <Label>Priority</Label>
-              <Select
-                value={form.priority}
-                onChange={(e) =>
-                  setForm({ ...form, priority: e.target.value as Ticket["priority"] })
-                }
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="urgent">Urgent</option>
-              </Select>
-            </div>
-          </div>
-          <div>
-            <Label>Message</Label>
-            <Textarea
-              value={form.body}
-              onChange={(e) => setForm({ ...form, body: e.target.value })}
-              rows={5}
-              placeholder="Describe the issue in detail…"
-            />
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={create} loading={saving}>
-              Submit
-            </Button>
-          </div>
-        </div>
+          );
+        })()}
       </Modal>
     </div>
   );

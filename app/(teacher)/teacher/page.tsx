@@ -66,6 +66,56 @@ export default function TeacherOverviewPage() {
     return () => clearInterval(id);
   }, []);
 
+  // Draggable bottom panels — pointer-based (works on touch + mouse)
+  const [panelOrder, setPanelOrder] = React.useState<Array<"courses" | "activity">>(["courses", "activity"]);
+  const [draggingPanel, setDraggingPanel] = React.useState<string | null>(null);
+  const [dragOverPanel, setDragOverPanel] = React.useState<string | null>(null);
+  const panelRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
+  const dragSourceRef = React.useRef<string | null>(null);
+
+  function swapPanels(a: string, b: string) {
+    setPanelOrder((prev) => {
+      const next = [...prev] as typeof panelOrder;
+      const ai = next.indexOf(a as "courses" | "activity");
+      const bi = next.indexOf(b as "courses" | "activity");
+      if (ai !== -1 && bi !== -1) [next[ai], next[bi]] = [next[bi], next[ai]];
+      return next;
+    });
+  }
+
+  function onGripPointerDown(panelId: string, e: React.PointerEvent<HTMLSpanElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    dragSourceRef.current = panelId;
+    setDraggingPanel(panelId);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  }
+
+  function onGripPointerMove(e: React.PointerEvent<HTMLSpanElement>) {
+    if (!dragSourceRef.current) return;
+    const { clientX: x, clientY: y } = e;
+    let found: string | null = null;
+    for (const [id, ref] of Object.entries(panelRefs.current)) {
+      if (ref && id !== dragSourceRef.current) {
+        const r = ref.getBoundingClientRect();
+        if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) {
+          found = id;
+          break;
+        }
+      }
+    }
+    setDragOverPanel(found);
+  }
+
+  function onGripPointerUp() {
+    if (dragSourceRef.current && dragOverPanel) {
+      swapPanels(dragSourceRef.current, dragOverPanel);
+    }
+    dragSourceRef.current = null;
+    setDraggingPanel(null);
+    setDragOverPanel(null);
+  }
+
   // Enrollment trend across teacher's courses (last 6 months)
   const realTrend = monthBuckets(myStudents.map((s) => s.enrolledAt), 6);
   const demoTrend = realTrend.map((b, i) => ({ ...b, hours: [3, 5, 4, 7, 11, 14][i] ?? 0 }));
@@ -470,81 +520,134 @@ export default function TeacherOverviewPage() {
         </CardBody>
       </Card>
 
+      {/* Draggable bottom panels — pointer events work on touch + mouse */}
       <div className="grid sm:grid-cols-2 gap-4 min-w-0 overflow-hidden">
-        <Card className="overflow-hidden">
-          <CardBody>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold">Your courses</h2>
-              <Link href="/teacher/courses" className="text-xs text-[var(--primary)] hover:underline font-medium">
-                Manage
-              </Link>
-            </div>
-            {myCourses.length === 0 ? (
-              <p className="text-sm text-[var(--muted)] py-6 text-center">
-                You aren&apos;t assigned to any courses yet. Ask an admin to assign you as the instructor on a course.
-              </p>
+        {panelOrder.map((panelId) => (
+          <div
+            key={panelId}
+            ref={(el) => { panelRefs.current[panelId] = el; }}
+            className={`min-w-0 overflow-hidden transition-all duration-200 select-none ${
+              draggingPanel === panelId ? "opacity-40 scale-[0.97]" : "opacity-100"
+            } ${
+              dragOverPanel === panelId && draggingPanel !== panelId
+                ? "ring-2 ring-[var(--primary)] ring-offset-2 rounded-2xl"
+                : ""
+            }`}
+          >
+            {panelId === "courses" ? (
+              <Card className="overflow-hidden h-full">
+                <CardBody>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="cursor-grab active:cursor-grabbing touch-none select-none text-[var(--muted-2)] hover:text-[var(--primary)] transition-colors p-0.5 rounded"
+                        style={{ touchAction: "none" }}
+                        title="Hold and drag to reorder"
+                        onPointerDown={(e) => onGripPointerDown(panelId, e)}
+                        onPointerMove={onGripPointerMove}
+                        onPointerUp={onGripPointerUp}
+                        onPointerCancel={onGripPointerUp}
+                      >
+                        <GripHandle />
+                      </span>
+                      <h2 className="font-semibold">Your courses</h2>
+                    </div>
+                    <Link href="/teacher/courses" className="text-xs text-[var(--primary)] hover:underline font-medium">
+                      Manage
+                    </Link>
+                  </div>
+                  {myCourses.length === 0 ? (
+                    <p className="text-sm text-[var(--muted)] py-6 text-center">
+                      You aren&apos;t assigned to any courses yet. Ask an admin to assign you as the instructor on a course.
+                    </p>
+                  ) : (
+                    <ul className="space-y-3">
+                      {myCourses.slice(0, 5).map((c) => (
+                        <li key={c.id} className="flex items-center gap-3 min-w-0">
+                          <div className="h-10 w-10 rounded-lg overflow-hidden border border-[var(--border)] shrink-0">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={c.thumbnail} alt={c.title} className="w-full h-full object-cover" />
+                          </div>
+                          <div className="flex-1 min-w-0 overflow-hidden">
+                            <div className="flex items-center justify-between gap-1.5 min-w-0">
+                              <p className="text-sm font-medium truncate flex-1 min-w-0">{c.title}</p>
+                              <Badge variant="default" className="shrink-0 text-[10px] ml-auto">{c.level}</Badge>
+                            </div>
+                            <p className="text-xs text-[var(--muted)] mt-0.5 truncate">
+                              {c.category} · {c.chapters.length} chapters
+                            </p>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </CardBody>
+              </Card>
             ) : (
-              <ul className="space-y-3">
-                {myCourses.slice(0, 5).map((c) => (
-                  <li key={c.id} className="flex items-center gap-3 min-w-0">
-                    <div className="h-10 w-10 rounded-lg overflow-hidden border border-[var(--border)] shrink-0">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={c.thumbnail} alt={c.title} className="w-full h-full object-cover" />
+              <Card className="overflow-hidden h-full">
+                <CardBody>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="cursor-grab active:cursor-grabbing touch-none select-none text-[var(--muted-2)] hover:text-[var(--primary)] transition-colors p-0.5 rounded"
+                        style={{ touchAction: "none" }}
+                        title="Hold and drag to reorder"
+                        onPointerDown={(e) => onGripPointerDown(panelId, e)}
+                        onPointerMove={onGripPointerMove}
+                        onPointerUp={onGripPointerUp}
+                        onPointerCancel={onGripPointerUp}
+                      >
+                        <GripHandle />
+                      </span>
+                      <h2 className="font-semibold">Recent activity</h2>
                     </div>
-                    <div className="flex-1 min-w-0 overflow-hidden">
-                      <div className="flex items-center justify-between gap-1.5 min-w-0">
-                        <p className="text-sm font-medium truncate flex-1 min-w-0">{c.title}</p>
-                        <Badge variant="default" className="shrink-0 text-[10px] ml-auto">{c.level}</Badge>
-                      </div>
-                      <p className="text-xs text-[var(--muted)] mt-0.5 truncate">
-                        {c.category} · {c.chapters.length} chapters
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+                    <Link href="/teacher/students" className="text-xs text-[var(--primary)] hover:underline font-medium">
+                      View all
+                    </Link>
+                  </div>
+                  {recentStudents.length === 0 ? (
+                    <p className="text-sm text-[var(--muted)] py-6 text-center">No students have enrolled yet.</p>
+                  ) : (
+                    <ul className="space-y-3">
+                      {recentStudents.map((s) => (
+                        <li key={`${s.userId}-${s.courseId}`} className="flex items-start gap-3">
+                          <div className="h-9 w-9 shrink-0 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white font-semibold inline-flex items-center justify-center text-sm">
+                            {s.userName.slice(0, 1).toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-sm font-medium truncate">{s.userName}</p>
+                              {s.completed ? (
+                                <Badge variant="success" className="shrink-0 text-[10px]">Done</Badge>
+                              ) : (
+                                <Badge variant="info" className="shrink-0 text-[10px]">{s.progress}%</Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-[var(--muted)] mt-0.5 truncate">
+                              {s.courseTitle} · {relativeTime(s.enrolledAt)}
+                            </p>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </CardBody>
+              </Card>
             )}
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardBody>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold">Recent activity</h2>
-              <Link href="/teacher/students" className="text-xs text-[var(--primary)] hover:underline font-medium">
-                View all
-              </Link>
-            </div>
-            {recentStudents.length === 0 ? (
-              <p className="text-sm text-[var(--muted)] py-6 text-center">No students have enrolled yet.</p>
-            ) : (
-              <ul className="space-y-3">
-                {recentStudents.map((s) => (
-                  <li key={`${s.userId}-${s.courseId}`} className="flex items-start gap-3">
-                    <div className="h-9 w-9 shrink-0 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white font-semibold inline-flex items-center justify-center text-sm">
-                      {s.userName.slice(0, 1).toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-medium truncate">{s.userName}</p>
-                        {s.completed ? (
-                          <Badge variant="success" className="shrink-0 text-[10px]">Done</Badge>
-                        ) : (
-                          <Badge variant="info" className="shrink-0 text-[10px]">{s.progress}%</Badge>
-                        )}
-                      </div>
-                      <p className="text-xs text-[var(--muted)] mt-0.5 truncate">
-                        {s.courseTitle} · {relativeTime(s.enrolledAt)}
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardBody>
-        </Card>
+          </div>
+        ))}
       </div>
     </div>
+  );
+}
+
+function GripHandle() {
+  return (
+    <svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor" className="text-[var(--muted-2)]">
+      <circle cx="3" cy="3" r="1.5" /><circle cx="9" cy="3" r="1.5" />
+      <circle cx="3" cy="8" r="1.5" /><circle cx="9" cy="8" r="1.5" />
+      <circle cx="3" cy="13" r="1.5" /><circle cx="9" cy="13" r="1.5" />
+    </svg>
   );
 }
 

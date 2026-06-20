@@ -701,14 +701,35 @@ export default function NotificationsPage() {
                             <p className="mt-1 text-sm leading-relaxed text-[var(--muted)]">
                               {n.message}
                             </p>
-                            <p className="mt-1.5 text-xs text-[var(--muted-2)]">
-                              {relativeTime(n.createdAt)}
-                            </p>
+                            {/* timestamp + mobile-only inline actions */}
+                            <div className="mt-1.5 flex items-center justify-between gap-2">
+                              <p className="text-xs text-[var(--muted-2)]">{relativeTime(n.createdAt)}</p>
+                              {!bulkMode && (
+                                <div className="flex sm:hidden items-center gap-0.5 -mr-1">
+                                  {!n.read && (
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); markNotificationRead(n.id); }}
+                                      title="Mark as read"
+                                      className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--primary)] hover:bg-[var(--primary-soft)] transition"
+                                    >
+                                      <Icon.Check size={13} />
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); deleteNotification(n.id); }}
+                                    title="Delete"
+                                    className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition"
+                                  >
+                                    <Icon.Trash size={13} />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
 
-                          {/* Hover actions — hidden in bulk mode */}
+                          {/* Desktop hover actions (sm+) — no layout impact on mobile */}
                           {!bulkMode && (
-                            <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                            <div className="hidden sm:flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                               {!n.read && (
                                 <button
                                   onClick={(e) => {

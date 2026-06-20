@@ -337,11 +337,11 @@ export default function AchievementsPage() {
       {/* Leaderboard */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5">
             <CardTitle>Leaderboard</CardTitle>
             {data.rank && (
-              <span className="text-xs text-[var(--muted)]">
-                You&apos;re ranked <span className="font-semibold text-[var(--foreground)]">#{data.rank}</span> of {data.totalLearners} learners
+              <span className="text-xs text-muted">
+                You&apos;re ranked <span className="font-semibold text-foreground">#{data.rank}</span> of {data.totalLearners} learners
               </span>
             )}
           </div>

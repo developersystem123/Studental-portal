@@ -638,86 +638,224 @@ export default function TeacherSchedulePage() {
 
       {/* Event form modal */}
       <Modal open={formOpen} onClose={() => setFormOpen(false)} size="lg" title={editing ? "Edit event" : "New event"}>
-        <div className="p-5 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="sm:col-span-2">
-              <Label>Title</Label>
-              <Input
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                placeholder="e.g. Lecture 5 — Hooks Deep Dive"
-                maxLength={120}
-              />
-            </div>
-            <div>
-              <Label>Type</Label>
-              <Select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as EventType })}>
-                {(Object.entries(TYPE_META) as [EventType, typeof TYPE_META[EventType]][]).map(([k, m]) => (
-                  <option key={k} value={k}>{m.label}</option>
-                ))}
-              </Select>
-            </div>
-            <div>
-              <Label>Course (optional)</Label>
-              <Select value={form.courseId} onChange={(e) => setForm({ ...form, courseId: e.target.value })}>
-                <option value="">No course</option>
-                {courses.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
-              </Select>
-            </div>
-            <div>
-              <Label>Date</Label>
-              <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
-            </div>
-            <div>
-              <Label>Time</Label>
-              <Input type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} />
-            </div>
-            <div>
-              <Label>Duration (min)</Label>
-              <Input type="number" min={5} step={5} value={form.durationMinutes} onChange={(e) => setForm({ ...form, durationMinutes: e.target.value })} />
-            </div>
-            <div>
-              <Label>Location</Label>
-              <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Room 204 / Zoom link" />
-            </div>
-            <div className="sm:col-span-2">
-              <Label>Notes</Label>
-              <Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-            </div>
-          </div>
+        {/* Accent bar — colour follows selected type */}
+        <div className={`h-1.5 w-full bg-gradient-to-r ${TYPE_META[form.type]?.tint ?? "from-[var(--primary)] to-emerald-400"}`} />
 
-          {/* Type preview strip */}
-          {form.type && (
-            <div className={`flex items-center gap-2 rounded-lg px-3 py-2 text-white text-sm font-medium bg-gradient-to-r ${TYPE_META[form.type].tint}`}>
-              {TYPE_META[form.type].icon}
-              <span>{TYPE_META[form.type].label}</span>
+        <div className="overflow-y-auto max-h-[80vh] scrollbar-thin">
+          <div className="p-6 space-y-6">
+
+            {/* ── Live preview card ── */}
+            <div className={`flex items-center gap-4 rounded-2xl px-4 py-3.5 text-white bg-gradient-to-r ${TYPE_META[form.type]?.tint ?? "from-[var(--primary)] to-emerald-400"} shadow-md`}>
+              <div className="h-11 w-11 rounded-xl bg-white/20 flex items-center justify-center shrink-0 backdrop-blur-sm">
+                <span className="text-white scale-125">{TYPE_META[form.type]?.icon}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-sm truncate">{form.title.trim() || "Event title…"}</p>
+                <p className="text-xs text-white/80 truncate mt-0.5">
+                  {TYPE_META[form.type]?.label}
+                  {form.courseId && courses.find((c) => c.id === form.courseId)
+                    ? ` · ${courses.find((c) => c.id === form.courseId)!.title}`
+                    : ""}
+                </p>
+              </div>
               {form.date && form.time && (
-                <span className="ml-auto text-xs opacity-90">
-                  {new Date(`${form.date}T${form.time}`).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })} at {form.time}
-                </span>
+                <div className="text-right shrink-0">
+                  <p className="text-sm font-bold">
+                    {new Date(`${form.date}T${form.time}`).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
+                  </p>
+                  <p className="text-xs text-white/80">
+                    {new Date(`${form.date}T${form.time}`).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
+                    {form.durationMinutes ? ` · ${form.durationMinutes} min` : ""}
+                  </p>
+                </div>
               )}
             </div>
-          )}
 
-          <div className="flex flex-wrap justify-between gap-2 pt-2 border-t border-[var(--border)]">
-            <div className="flex gap-2">
-              {editing && (
-                <>
-                  <Button type="button" variant="danger" onClick={() => remove(editing)}>
-                    <Icon.Trash size={14} /> Delete
-                  </Button>
-                  <Button type="button" variant="outline" onClick={() => duplicate(editing)} disabled={saving}>
-                    <Icon.Copy size={14} /> Duplicate
-                  </Button>
-                </>
-              )}
+            {/* ── Section 1: Event details ── */}
+            <div className="space-y-4">
+              <p className="text-[11px] uppercase tracking-widest font-bold text-[var(--muted-2)] flex items-center gap-1.5">
+                <Icon.Calendar size={12} /> Event details
+              </p>
+
+              {/* Title */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-1.5">
+                    <Icon.Edit size={14} className="text-[var(--muted)]" />
+                    Title <span className="text-[var(--danger)]">*</span>
+                  </label>
+                  <span className={`text-[11px] tabular-nums ${form.title.length > 100 ? "text-amber-500" : "text-[var(--muted-2)]"}`}>
+                    {form.title.length}/120
+                  </span>
+                </div>
+                <Input
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  placeholder="e.g. Lecture 5 — Hooks Deep Dive"
+                  maxLength={120}
+                />
+              </div>
+
+              {/* Type picker */}
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-1.5">
+                  <Icon.Tag size={14} className="text-[var(--muted)]" />
+                  Event type
+                </label>
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                  {(Object.entries(TYPE_META) as [EventType, typeof TYPE_META[EventType]][]).map(([k, m]) => {
+                    const active = form.type === k;
+                    return (
+                      <button
+                        key={k}
+                        type="button"
+                        onClick={() => setForm({ ...form, type: k })}
+                        className={`flex flex-col items-center gap-1.5 px-2 py-2.5 rounded-xl border-2 transition-all ${
+                          active
+                            ? `border-transparent text-white bg-gradient-to-br ${m.tint} shadow-sm`
+                            : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted)] hover:border-[var(--border-strong)]"
+                        }`}
+                      >
+                        <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${active ? "bg-white/25" : "bg-[var(--surface)]"}`}>
+                          {m.icon}
+                        </span>
+                        <span className="text-[11px] font-semibold leading-tight">{m.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Course */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-1.5">
+                  <Icon.Book size={14} className="text-[var(--muted)]" />
+                  Course <span className="text-[var(--muted-2)] font-normal text-xs">(optional)</span>
+                </label>
+                <Select value={form.courseId} onChange={(e) => setForm({ ...form, courseId: e.target.value })}>
+                  <option value="">No course</option>
+                  {courses.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
+                </Select>
+              </div>
             </div>
-            <div className="flex gap-2 ml-auto">
-              <Button variant="outline" onClick={() => setFormOpen(false)} disabled={saving}>Cancel</Button>
-              <Button onClick={submit} loading={saving}>
-                <Icon.Save size={14} /> {editing ? "Save" : "Create"}
-              </Button>
+
+            <div className="h-px bg-[var(--border)]" />
+
+            {/* ── Section 2: Schedule ── */}
+            <div className="space-y-4">
+              <p className="text-[11px] uppercase tracking-widest font-bold text-[var(--muted-2)] flex items-center gap-1.5">
+                <Icon.Clock size={12} /> Schedule
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-1.5">
+                    <Icon.Calendar size={14} className="text-[var(--muted)]" /> Date
+                  </label>
+                  <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-1.5">
+                    <Icon.Clock size={14} className="text-[var(--muted)]" /> Start time
+                  </label>
+                  <Input type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} />
+                </div>
+              </div>
+
+              {/* Duration presets */}
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-1.5">
+                  <Icon.Clock size={14} className="text-[var(--muted)]" /> Duration
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {[30, 45, 60, 90, 120].map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setForm({ ...form, durationMinutes: String(d) })}
+                      className={`px-3 h-8 rounded-lg text-xs font-semibold border transition-all ${
+                        form.durationMinutes === String(d)
+                          ? "border-[var(--primary)] bg-[var(--primary-soft)] text-[var(--primary)]"
+                          : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted)] hover:border-[var(--border-strong)]"
+                      }`}
+                    >
+                      {d < 60 ? `${d} min` : `${d / 60}h`}
+                    </button>
+                  ))}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-[var(--muted)]">or</span>
+                    <div className="relative w-24">
+                      <Input
+                        type="number"
+                        min={5}
+                        step={5}
+                        value={form.durationMinutes}
+                        onChange={(e) => setForm({ ...form, durationMinutes: e.target.value })}
+                        className="!h-8 !text-xs pr-8"
+                      />
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-[var(--muted)] pointer-events-none">min</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
+
+            <div className="h-px bg-[var(--border)]" />
+
+            {/* ── Section 3: Location & Notes ── */}
+            <div className="space-y-4">
+              <p className="text-[11px] uppercase tracking-widest font-bold text-[var(--muted-2)] flex items-center gap-1.5">
+                <Icon.Pin size={12} /> Location &amp; notes
+              </p>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-1.5">
+                  <Icon.Pin size={14} className="text-[var(--muted)]" />
+                  Location
+                </label>
+                <Input
+                  value={form.location}
+                  onChange={(e) => setForm({ ...form, location: e.target.value })}
+                  placeholder="Room 204 / Zoom link / Google Meet…"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-1.5">
+                  <Icon.FilePen size={14} className="text-[var(--muted)]" />
+                  Notes
+                </label>
+                <Textarea
+                  rows={3}
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  placeholder="Additional details, agenda, or instructions…"
+                />
+              </div>
+            </div>
+
+            {/* ── Footer ── */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[var(--border)]">
+              <div className="flex gap-2">
+                {editing && (
+                  <>
+                    <Button type="button" variant="danger" size="sm" onClick={() => remove(editing)}>
+                      <Icon.Trash size={14} /> Delete
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => duplicate(editing)} disabled={saving}>
+                      <Icon.Copy size={14} /> Duplicate
+                    </Button>
+                  </>
+                )}
+              </div>
+              <div className="flex gap-2 ml-auto">
+                <Button variant="outline" onClick={() => setFormOpen(false)} disabled={saving}>Cancel</Button>
+                <Button onClick={submit} loading={saving} disabled={!form.title.trim()}>
+                  <Icon.Save size={14} /> {editing ? "Save changes" : "Create event"}
+                </Button>
+              </div>
+            </div>
+
           </div>
         </div>
       </Modal>

@@ -66,6 +66,11 @@ export default function TeacherAiChatPage() {
 
   const active = sessions.find((s) => s.id === activeId);
 
+  // Sync context dropdown when switching sessions
+  React.useEffect(() => {
+    if (active) setContext(active.context ?? "");
+  }, [activeId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   React.useEffect(() => {
     if (atBottom) scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [active?.messages.length, streaming, atBottom]);
@@ -91,10 +96,23 @@ export default function TeacherAiChatPage() {
   }
 
   function newChat() {
+    // If the active session is already empty, reuse it instead of stacking another blank.
+    const activeSess = sessions.find((s) => s.id === activeId);
+    if (activeSess && activeSess.messages.length === 0) {
+      setSessions((p) =>
+        p.map((s) => s.id === activeId ? { ...s, title: "New chat", context: "" } : s),
+      );
+      setContext("");
+      setSidebarOpen(false);
+      setTimeout(() => textareaRef.current?.focus(), 50);
+      return;
+    }
     const s = freshSession();
     setSessions((p) => [s, ...p]);
     setActiveId(s.id);
+    setContext("");
     setSidebarOpen(false);
+    setTimeout(() => textareaRef.current?.focus(), 50);
   }
 
   function deleteSession(id: string) {
@@ -200,7 +218,7 @@ export default function TeacherAiChatPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-7rem)] grid grid-cols-1 md:grid-cols-[280px_1fr] gap-4 relative">
+    <div className="h-[calc(100svh-5.5rem)] sm:h-[calc(100vh-7rem)] grid grid-cols-1 md:grid-cols-[280px_1fr] gap-4 relative">
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/40 z-30 md:hidden" onClick={() => setSidebarOpen(false)} />
       )}
@@ -241,7 +259,7 @@ export default function TeacherAiChatPage() {
                 </div>
               ) : (
                 <button
-                  onClick={() => { setActiveId(s.id); setSidebarOpen(false); }}
+                  onClick={() => { setActiveId(s.id); setSidebarOpen(false); setTimeout(() => textareaRef.current?.focus(), 50); }}
                   className={cn(
                     "w-full text-left px-4 py-3 hover:bg-[var(--surface-2)] flex items-start gap-2 group transition-colors",
                     s.id === activeId && "bg-[var(--primary-soft)]",
@@ -279,18 +297,29 @@ export default function TeacherAiChatPage() {
       {/* Main chat area */}
       <Card className="flex flex-col overflow-hidden relative">
         {/* Header */}
-        <div className="p-3 sm:p-4 border-b border-[var(--border)] flex items-center gap-3 flex-wrap">
-          <button className="md:hidden h-9 w-9 flex items-center justify-center rounded-lg hover:bg-[var(--surface-2)] text-[var(--muted)] shrink-0" onClick={() => setSidebarOpen(true)}>
-            <Icon.Menu size={18} />
+        <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-[var(--border)] flex items-center gap-2 sm:gap-3">
+          <button
+            className="md:hidden h-8 w-8 flex items-center justify-center rounded-lg hover:bg-[var(--surface-2)] text-[var(--muted)] shrink-0"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <Icon.Menu size={17} />
           </button>
-          <div className="h-9 w-9 rounded-lg bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center shrink-0">
-            <Icon.Sparkles size={18} />
+          <div className="h-8 w-8 rounded-lg bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center shrink-0">
+            <Icon.Sparkles size={16} />
           </div>
           <div className="min-w-0 flex-1">
             <p className="font-semibold text-sm truncate">{active?.title ?? "Teacher AI Assistant"}</p>
-            <p className="text-xs text-[var(--muted)]">Powered by Claude · lesson plans, quizzes, feedback & more</p>
+            <p className="text-[11px] text-[var(--muted)] hidden sm:block">Powered by Claude · lesson plans, quizzes, feedback & more</p>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
+          {/* Context select — desktop only in header */}
+          <div className="hidden sm:block w-48 shrink-0">
+            <Select value={context} onChange={(e) => setContext(e.target.value)}>
+              {TEACHER_CONTEXTS.map((c) => (
+                <option key={c.value} value={c.value}>{c.label}</option>
+              ))}
+            </Select>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
             {streaming && (
               <Button variant="outline" size="sm" onClick={stopStreaming}>
                 <Icon.X size={13} /> Stop
@@ -298,16 +327,9 @@ export default function TeacherAiChatPage() {
             )}
             {active && active.messages.length > 0 && (
               <button onClick={clearChat} title="Clear chat" className="h-8 w-8 flex items-center justify-center rounded-lg text-[var(--muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition">
-                <Icon.Trash size={15} />
+                <Icon.Trash size={14} />
               </button>
             )}
-          </div>
-          <div className="w-full sm:w-52">
-            <Select value={context} onChange={(e) => setContext(e.target.value)}>
-              {TEACHER_CONTEXTS.map((c) => (
-                <option key={c.value} value={c.value}>{c.label}</option>
-              ))}
-            </Select>
           </div>
         </div>
 
@@ -356,20 +378,30 @@ export default function TeacherAiChatPage() {
         )}
 
         {/* Input */}
-        <form onSubmit={(e) => { e.preventDefault(); send(); }} className="p-3 sm:p-4 border-t border-[var(--border)] flex gap-2 items-end">
-          <Textarea
-            ref={textareaRef}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder="Ask anything… lesson plans, quiz ideas, feedback templates (Enter to send)"
-            className="flex-1 !min-h-[44px] max-h-[120px] py-2.5 resize-none"
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-            disabled={streaming}
-          />
-          <Button type="submit" loading={streaming} className="h-11" disabled={!draft.trim()}>
-            <Icon.Send size={16} />
-            <span className="hidden sm:inline">Send</span>
-          </Button>
+        <form onSubmit={(e) => { e.preventDefault(); send(); }} className="p-3 sm:p-4 border-t border-[var(--border)] space-y-2">
+          {/* Context select — mobile only (desktop is in header) */}
+          <div className="sm:hidden">
+            <Select value={context} onChange={(e) => setContext(e.target.value)}>
+              {TEACHER_CONTEXTS.map((c) => (
+                <option key={c.value} value={c.value}>{c.label}</option>
+              ))}
+            </Select>
+          </div>
+          <div className="flex gap-2 items-end">
+            <Textarea
+              ref={textareaRef}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder="Ask anything… lesson plans, quiz ideas, feedback templates"
+              className="flex-1 !min-h-[40px] max-h-[100px] py-2 resize-none text-sm"
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
+              disabled={streaming}
+            />
+            <Button type="submit" loading={streaming} className="h-10 w-10 sm:w-auto shrink-0" disabled={!draft.trim()}>
+              <Icon.Send size={15} />
+              <span className="hidden sm:inline">Send</span>
+            </Button>
+          </div>
         </form>
       </Card>
     </div>

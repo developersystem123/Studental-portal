@@ -9,9 +9,7 @@ import {
   CardBody,
   EmptyState,
   Input,
-  Label,
   Modal,
-  Select,
   useToast,
 } from "@/components/ui";
 import { BarChart, Donut, Sparkline } from "@/components/charts";
@@ -536,6 +534,33 @@ function QuickStat({
   );
 }
 
+const PAYOUT_METHODS = [
+  {
+    value: "Bank",
+    label: "Bank transfer",
+    desc: "2–5 business days",
+    icon: <Icon.DollarSign size={16} />,
+    active: "border-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+    iconBg: "bg-emerald-100 dark:bg-emerald-500/20",
+  },
+  {
+    value: "PayPal",
+    label: "PayPal",
+    desc: "Within 24 hours",
+    icon: <Icon.Globe size={16} />,
+    active: "border-sky-400 bg-sky-50 dark:bg-sky-500/10 text-sky-700 dark:text-sky-300",
+    iconBg: "bg-sky-100 dark:bg-sky-500/20",
+  },
+  {
+    value: "Stripe",
+    label: "Stripe",
+    desc: "Instant payout",
+    icon: <Icon.CreditCard size={16} />,
+    active: "border-violet-400 bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300",
+    iconBg: "bg-violet-100 dark:bg-violet-500/20",
+  },
+];
+
 function PayoutModal({
   open,
   onClose,
@@ -552,51 +577,164 @@ function PayoutModal({
   const [busy, setBusy] = React.useState(false);
 
   React.useEffect(() => {
-    if (open) setAmount(available.toFixed(2));
+    if (open) { setAmount(available.toFixed(2)); setMethod("Bank"); }
   }, [open, available]);
 
+  const numAmount = Number(amount);
+  const pct = available > 0 ? Math.min(100, Math.round((numAmount / available) * 100)) : 0;
+  const isValid = numAmount > 0 && numAmount <= available;
+  const activeMethod = PAYOUT_METHODS.find((m) => m.value === method)!;
+
   return (
-    <Modal open={open} onClose={onClose} title="Request payout" size="sm">
-      <div className="p-5 space-y-3">
-        <p className="text-sm text-[var(--muted)]">
-          Available to withdraw:{" "}
-          <b className="text-[var(--foreground)]">${available.toFixed(2)}</b>
-        </p>
-        <div>
-          <Label>Amount (USD)</Label>
-          <Input
-            type="number"
-            min={1}
-            max={available}
-            step="0.01"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-          />
+    <Modal open={open} onClose={onClose} title="Request payout" size="md">
+      {/* Accent bar */}
+      <div className="h-1.5 w-full bg-gradient-to-r from-emerald-500 to-primary" />
+
+      <div className="p-6 space-y-6">
+
+        {/* ── Live preview card ── */}
+        <div className="flex items-center gap-4 rounded-2xl px-4 py-3.5 bg-gradient-to-r from-emerald-500 to-primary text-white shadow-md">
+          <div className="h-11 w-11 rounded-xl bg-white/20 flex items-center justify-center shrink-0 backdrop-blur-sm">
+            <Icon.Wallet size={20} className="text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-2xl font-bold tracking-tight">
+              ${isValid ? numAmount.toFixed(2) : "0.00"}
+            </p>
+            <p className="text-xs text-white/80 mt-0.5">via {activeMethod.label} · {activeMethod.desc}</p>
+          </div>
+          <div className="text-right shrink-0">
+            <p className="text-xs text-white/70">of available</p>
+            <p className="text-sm font-bold">${available.toFixed(2)}</p>
+          </div>
         </div>
-        <div>
-          <Label>Method</Label>
-          <Select value={method} onChange={(e) => setMethod(e.target.value)}>
-            <option value="Bank">Bank transfer</option>
-            <option value="PayPal">PayPal</option>
-            <option value="Stripe">Stripe</option>
-          </Select>
+
+        {/* ── Section 1: Amount ── */}
+        <div className="space-y-4">
+          <p className="text-[11px] uppercase tracking-widest font-bold text-muted flex items-center gap-1.5">
+            <Icon.DollarSign size={12} /> Amount
+          </p>
+
+          {/* Available balance display */}
+          <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-surface-2 border border-[var(--border)]">
+            <div className="flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                <Icon.Wallet size={15} className="text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-[10px] text-muted uppercase tracking-wider font-semibold">Available</p>
+                <p className="font-bold text-sm text-foreground">${available.toFixed(2)}</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] text-muted uppercase tracking-wider font-semibold">Requesting</p>
+              <p className={`font-bold text-sm ${isValid ? "text-emerald-600 dark:text-emerald-400" : "text-muted"}`}>
+                {pct}%
+              </p>
+            </div>
+          </div>
+
+          {/* Percentage bar */}
+          <div className="h-2 rounded-full bg-[var(--surface-2)] overflow-hidden">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-primary transition-all duration-300"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+
+          {/* Quick preset chips */}
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+              <Icon.DollarSign size={14} className="text-muted" />
+              Amount (USD) <span className="text-[var(--danger)]">*</span>
+            </label>
+            <div className="flex gap-2 flex-wrap">
+              {[25, 50, 75, 100].map((p) => {
+                const v = ((available * p) / 100).toFixed(2);
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setAmount(v)}
+                    className={`px-3 h-8 rounded-lg text-xs font-semibold border transition-all ${
+                      amount === v
+                        ? "border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                        : "border-[var(--border)] bg-surface-2 text-muted hover:border-[var(--border-strong)]"
+                    }`}
+                  >
+                    {p === 100 ? "Max" : `${p}%`}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted font-semibold text-sm pointer-events-none">$</span>
+              <Input
+                type="number"
+                min={1}
+                max={available}
+                step="0.01"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="!pl-7"
+                placeholder="0.00"
+              />
+            </div>
+            {numAmount > available && (
+              <p className="text-xs text-[var(--danger)] flex items-center gap-1.5">
+                <Icon.AlertCircle size={12} /> Amount exceeds available balance
+              </p>
+            )}
+          </div>
         </div>
-        <div className="flex justify-end gap-2 pt-1">
-          <Button variant="outline" onClick={onClose} disabled={busy}>
-            Cancel
-          </Button>
+
+        <div className="h-px bg-[var(--border)]" />
+
+        {/* ── Section 2: Method ── */}
+        <div className="space-y-3">
+          <p className="text-[11px] uppercase tracking-widest font-bold text-muted flex items-center gap-1.5">
+            <Icon.CreditCard size={12} /> Payout method
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            {PAYOUT_METHODS.map(({ value, label, desc, icon, active, iconBg }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setMethod(value)}
+                className={`flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl border-2 transition-all ${
+                  method === value
+                    ? active
+                    : "border-[var(--border)] bg-surface-2 text-muted hover:border-[var(--border-strong)]"
+                }`}
+              >
+                <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+                  method === value ? iconBg : "bg-[var(--surface)]"
+                }`}>
+                  {icon}
+                </span>
+                <span className="text-[11px] font-bold leading-tight">{label}</span>
+                <span className="text-[10px] opacity-70 leading-tight">{desc}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Footer ── */}
+        <div className="flex justify-end gap-2 pt-2 border-t border-[var(--border)]">
+          <Button variant="outline" onClick={onClose} disabled={busy}>Cancel</Button>
           <Button
             loading={busy}
-            disabled={Number(amount) <= 0 || Number(amount) > available}
+            disabled={!isValid}
             onClick={async () => {
               setBusy(true);
-              await onRequest(Number(Number(amount).toFixed(2)), method);
+              await onRequest(Number(numAmount.toFixed(2)), method);
               setBusy(false);
             }}
           >
-            <Icon.Wallet size={14} /> Request
+            <Icon.Wallet size={14} /> Request ${isValid ? numAmount.toFixed(2) : "0.00"}
           </Button>
         </div>
+
       </div>
     </Modal>
   );

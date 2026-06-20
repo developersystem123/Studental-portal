@@ -675,146 +675,261 @@ export default function TeacherLivePage() {
         size="lg"
         title={editing ? "Edit live class" : "Schedule live class"}
       >
-        <div className="p-5 space-y-4">
-          <div>
-            <Label>Title</Label>
-            <Input
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              placeholder="e.g. Live Q&A — Hooks vs Classes"
-              maxLength={120}
-            />
-          </div>
-          <div>
-            <Label>Description</Label>
-            <Textarea
-              rows={2}
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-            />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label>Course</Label>
-              <Select
-                value={form.courseId}
-                onChange={(e) => setForm({ ...form, courseId: e.target.value })}
-              >
-                <option value="">Select a course…</option>
-                {courses.map((c) => (
-                  <option key={c.id} value={c.id}>{c.title}</option>
-                ))}
-              </Select>
+        {/* Accent bar */}
+        <div className="h-1.5 w-full bg-gradient-to-r from-primary to-emerald-400" />
+
+        <div className="overflow-y-auto max-h-[80vh] scrollbar-thin">
+          <div className="p-6 space-y-6">
+
+            {/* ── Live preview card ── */}
+            <div className="flex items-center gap-4 rounded-2xl px-4 py-3.5 bg-gradient-to-r from-primary to-emerald-400 text-white shadow-md">
+              <div className="h-11 w-11 rounded-xl bg-white/20 flex items-center justify-center shrink-0 backdrop-blur-sm">
+                <Icon.Video size={20} className="text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-sm truncate">
+                  {form.title.trim() || "Session title…"}
+                </p>
+                <p className="text-xs text-white/80 truncate mt-0.5">
+                  {courses.find((c) => c.id === form.courseId)?.title ?? "No course selected"}
+                </p>
+              </div>
+              {form.date && form.time && (
+                <div className="text-right shrink-0">
+                  <p className="text-sm font-bold">
+                    {new Date(`${form.date}T${form.time}`).toLocaleDateString(undefined, {
+                      weekday: "short", month: "short", day: "numeric",
+                    })}
+                  </p>
+                  <p className="text-xs text-white/80">
+                    {new Date(`${form.date}T${form.time}`).toLocaleTimeString(undefined, {
+                      hour: "2-digit", minute: "2-digit",
+                    })}
+                    {form.durationMinutes ? ` · ${form.durationMinutes} min` : ""}
+                  </p>
+                </div>
+              )}
             </div>
-            <div>
-              <Label>Meeting URL</Label>
-              <Input
-                value={form.meetingUrl}
-                onChange={(e) => setForm({ ...form, meetingUrl: e.target.value })}
-                placeholder="https://meet.google.com/…"
-              />
-            </div>
-            <div>
-              <Label>Date</Label>
-              <Input
-                type="date"
-                value={form.date}
-                onChange={(e) => setForm({ ...form, date: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label>Time</Label>
-              <Input
-                type="time"
-                value={form.time}
-                onChange={(e) => setForm({ ...form, time: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label>Duration (min)</Label>
-              <div className="space-y-2">
+
+            {/* ── Section 1: Class details ── */}
+            <div className="space-y-4">
+              <p className="text-[11px] uppercase tracking-widest font-bold text-muted flex items-center gap-1.5">
+                <Icon.Edit size={12} /> Class details
+              </p>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                    <Icon.Edit size={14} className="text-muted" />
+                    Title <span className="text-[var(--danger)]">*</span>
+                  </label>
+                  <span className={`text-[11px] tabular-nums ${form.title.length > 100 ? "text-amber-500" : "text-muted"}`}>
+                    {form.title.length}/120
+                  </span>
+                </div>
                 <Input
-                  type="number"
-                  min={5}
-                  step={5}
-                  value={form.durationMinutes}
-                  onChange={(e) => setForm({ ...form, durationMinutes: e.target.value })}
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  placeholder="e.g. Live Q&A — Hooks vs Classes"
+                  maxLength={120}
                 />
-                {/* Quick presets */}
-                <div className="flex gap-1.5 flex-wrap">
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                  <Icon.FilePen size={14} className="text-muted" />
+                  Description
+                </label>
+                <Textarea
+                  rows={2}
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  placeholder="What will you cover in this session?"
+                />
+              </div>
+            </div>
+
+            <div className="h-px bg-[var(--border)]" />
+
+            {/* ── Section 2: Session info ── */}
+            <div className="space-y-4">
+              <p className="text-[11px] uppercase tracking-widest font-bold text-muted flex items-center gap-1.5">
+                <Icon.Video size={12} /> Session info
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                    <Icon.Book size={14} className="text-muted" />
+                    Course <span className="text-[var(--danger)]">*</span>
+                  </label>
+                  <Select
+                    value={form.courseId}
+                    onChange={(e) => setForm({ ...form, courseId: e.target.value })}
+                  >
+                    <option value="">Select a course…</option>
+                    {courses.map((c) => (
+                      <option key={c.id} value={c.id}>{c.title}</option>
+                    ))}
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                    <Icon.CheckCircle size={14} className="text-muted" />
+                    Status
+                  </label>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {(
+                      [
+                        { value: "upcoming",  label: "Upcoming",  active: "text-sky-600 border-sky-400 bg-sky-50 dark:bg-sky-500/10 dark:text-sky-400" },
+                        { value: "live",      label: "Live",      active: "text-rose-600 border-rose-400 bg-rose-50 dark:bg-rose-500/10 dark:text-rose-400" },
+                        { value: "ended",     label: "Ended",     active: "text-emerald-600 border-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 dark:text-emerald-400" },
+                        { value: "cancelled", label: "Cancelled", active: "text-muted border-[var(--border-strong)] bg-surface-2" },
+                      ] as { value: Status; label: string; active: string }[]
+                    ).map(({ value, label, active }) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setForm({ ...form, status: value })}
+                        className={`h-9 rounded-lg border-2 text-xs font-semibold transition-all ${
+                          form.status === value
+                            ? active
+                            : "border-[var(--border)] text-muted bg-surface-2 hover:border-[var(--border-strong)]"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                  <Icon.Globe size={14} className="text-muted" />
+                  Meeting URL <span className="text-[var(--danger)]">*</span>
+                </label>
+                <Input
+                  value={form.meetingUrl}
+                  onChange={(e) => setForm({ ...form, meetingUrl: e.target.value })}
+                  placeholder="https://meet.google.com/…"
+                />
+                {/^https?:\/\/\S{4,}$/.test(form.meetingUrl) && (
+                  <div className="flex items-center gap-2 rounded-xl bg-surface-2 border border-[var(--border)] px-3 py-2">
+                    <Icon.Globe size={13} className="text-muted shrink-0" />
+                    <span className="truncate flex-1 text-xs text-muted">{form.meetingUrl}</span>
+                    <CopyLinkButton url={form.meetingUrl} label="Copy" />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="h-px bg-[var(--border)]" />
+
+            {/* ── Section 3: Schedule ── */}
+            <div className="space-y-4">
+              <p className="text-[11px] uppercase tracking-widest font-bold text-muted flex items-center gap-1.5">
+                <Icon.Clock size={12} /> Schedule
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                    <Icon.Calendar size={14} className="text-muted" /> Date
+                  </label>
+                  <Input
+                    type="date"
+                    value={form.date}
+                    onChange={(e) => setForm({ ...form, date: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                    <Icon.Clock size={14} className="text-muted" /> Start time
+                  </label>
+                  <Input
+                    type="time"
+                    value={form.time}
+                    onChange={(e) => setForm({ ...form, time: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                  <Icon.Clock size={14} className="text-muted" /> Duration
+                </label>
+                <div className="flex flex-wrap items-center gap-2">
                   {[30, 45, 60, 90, 120].map((d) => (
                     <button
                       key={d}
                       type="button"
                       onClick={() => setForm({ ...form, durationMinutes: String(d) })}
-                      className={`px-2 py-0.5 rounded-md text-xs font-medium transition border ${
+                      className={`px-3 h-8 rounded-lg text-xs font-semibold border transition-all ${
                         form.durationMinutes === String(d)
-                          ? "bg-[var(--primary)] text-white border-[var(--primary)]"
-                          : "border-[var(--border)] text-[var(--muted)] hover:border-[var(--primary)]/40"
+                          ? "border-primary bg-[var(--primary-soft)] text-primary"
+                          : "border-[var(--border)] bg-surface-2 text-muted hover:border-[var(--border-strong)]"
                       }`}
                     >
-                      {d < 60 ? `${d}m` : `${d / 60}h`}
+                      {d < 60 ? `${d} min` : `${d / 60}h`}
                     </button>
                   ))}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-muted">or</span>
+                    <div className="relative w-24">
+                      <Input
+                        type="number"
+                        min={5}
+                        step={5}
+                        value={form.durationMinutes}
+                        onChange={(e) => setForm({ ...form, durationMinutes: e.target.value })}
+                        className="!h-8 !text-xs pr-8"
+                      />
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted pointer-events-none">min</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-            <div>
-              <Label>Status</Label>
-              <Select
-                value={form.status}
-                onChange={(e) => setForm({ ...form, status: e.target.value as Status })}
-              >
-                <option value="upcoming">Upcoming</option>
-                <option value="live">Live</option>
-                <option value="ended">Ended</option>
-                <option value="cancelled">Cancelled</option>
-              </Select>
-            </div>
-          </div>
 
-          {/* URL preview + copy */}
-          {/^https?:\/\/\S+$/.test(form.meetingUrl) && (
-            <div className="flex items-center gap-2 rounded-lg bg-[var(--surface-2)] px-3 py-2 text-xs text-[var(--muted)]">
-              <Icon.Globe size={13} className="shrink-0" />
-              <span className="truncate flex-1">{form.meetingUrl}</span>
-              <CopyLinkButton url={form.meetingUrl} label="Copy" />
-            </div>
-          )}
+            {/* Inline error */}
+            {formErr && (
+              <p className="text-sm text-[var(--danger)] bg-red-500/10 border border-red-500/20 px-3 py-2.5 rounded-xl flex items-center gap-2">
+                <Icon.AlertCircle size={14} className="shrink-0" /> {formErr}
+              </p>
+            )}
 
-          {/* Inline error */}
-          {formErr && (
-            <p className="text-sm text-[var(--danger)] bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg flex items-center gap-2">
-              <Icon.AlertCircle size={14} className="shrink-0" /> {formErr}
-            </p>
-          )}
+            {/* ── Footer ── */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[var(--border)]">
+              <div className="flex gap-2">
+                {editing && (
+                  <>
+                    <Button type="button" variant="danger" size="sm" onClick={() => remove(editing)}>
+                      <Icon.Trash size={14} /> Delete
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => duplicate(editing)}
+                      disabled={saving}
+                    >
+                      <Icon.Copy size={14} /> Duplicate
+                    </Button>
+                  </>
+                )}
+              </div>
+              <div className="flex gap-2 ml-auto">
+                <Button variant="outline" onClick={() => setFormOpen(false)} disabled={saving}>
+                  Cancel
+                </Button>
+                <Button onClick={submit} loading={saving} disabled={!form.title.trim()}>
+                  <Icon.Save size={14} /> {editing ? "Save changes" : "Schedule"}
+                </Button>
+              </div>
+            </div>
 
-          <div className="flex flex-wrap justify-between gap-2 pt-2 border-t border-[var(--border)]">
-            <div className="flex gap-2">
-              {editing && (
-                <>
-                  <Button type="button" variant="danger" onClick={() => remove(editing)}>
-                    <Icon.Trash size={14} /> Delete
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => duplicate(editing)}
-                    disabled={saving}
-                  >
-                    <Icon.Copy size={14} /> Duplicate
-                  </Button>
-                </>
-              )}
-            </div>
-            <div className="flex gap-2 ml-auto">
-              <Button variant="outline" onClick={() => setFormOpen(false)} disabled={saving}>
-                Cancel
-              </Button>
-              <Button onClick={submit} loading={saving}>
-                <Icon.Save size={14} /> {editing ? "Save" : "Schedule"}
-              </Button>
-            </div>
           </div>
         </div>
       </Modal>

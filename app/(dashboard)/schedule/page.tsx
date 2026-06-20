@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Badge,
   Button,
@@ -426,69 +426,158 @@ export default function SchedulePage() {
       )}
 
       {/* Add / Edit modal */}
-      <Modal open={open} onClose={() => { setOpen(false); setEditTarget(null); }} title={editTarget ? "Edit event" : "Add event"} size="md">
-        <div className="p-5 space-y-4">
-          <div>
-            <Label>Title</Label>
-            <Input
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              placeholder="e.g., Study session"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Type</Label>
-              <Select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as EventType })}>
-                <option value="event">Event</option>
-                <option value="class">Class</option>
-                <option value="exam">Exam</option>
-                <option value="assignment">Assignment</option>
-                <option value="meeting">Meeting</option>
-              </Select>
+      <Modal open={open} onClose={() => { setOpen(false); setEditTarget(null); }} title={editTarget ? "Edit event" : "Add event"} size="lg">
+        {(() => {
+          const s = TYPE_STYLES[form.type];
+          const hasDuration = form.startTime && form.endTime && new Date(form.endTime) > new Date(form.startTime);
+          const dur = hasDuration ? durationLabel(new Date(form.startTime).toISOString(), new Date(form.endTime).toISOString()) : null;
+
+          return (
+            <div className="space-y-0">
+              {/* ── Live preview banner ── */}
+              <div className={cn("mx-5 mt-1 mb-4 rounded-xl p-4 flex items-center gap-3 border", s.bg, s.border)}>
+                <div className={cn("h-11 w-11 rounded-xl flex items-center justify-center shrink-0 bg-white/60", s.text)}>
+                  {s.icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={cn("font-semibold text-sm truncate", s.text)}>
+                    {form.title || <span className="opacity-50 italic">Event title…</span>}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full border", s.bg, s.text, s.border)}>{s.label}</span>
+                    {form.startTime && (
+                      <span className="text-[10px] text-[var(--muted)] flex items-center gap-1">
+                        <Icon.Clock size={10} />
+                        {new Date(form.startTime).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                        {" "}·{" "}
+                        {new Date(form.startTime).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
+                        {dur && <> · <strong>{dur}</strong></>}
+                      </span>
+                    )}
+                    {form.location && (
+                      <span className="text-[10px] text-[var(--muted)] flex items-center gap-1">
+                        <Icon.Pin size={10} /> {form.location}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-5 space-y-5">
+                {/* ── Details section ── */}
+                <SchedSectionLabel icon={<Icon.FilePen size={12} />} label="EVENT DETAILS" />
+
+                <div>
+                  <Label>Title</Label>
+                  <Input
+                    value={form.title}
+                    onChange={(e) => setForm({ ...form, title: e.target.value })}
+                    placeholder="e.g., Study session, Final exam…"
+                  />
+                </div>
+
+                {/* Type card picker */}
+                <div>
+                  <Label>Type</Label>
+                  <div className="grid grid-cols-5 gap-2 mt-1">
+                    {(["event", "class", "exam", "assignment", "meeting"] as EventType[]).map((t) => {
+                      const ts = TYPE_STYLES[t];
+                      const active = form.type === t;
+                      return (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => setForm({ ...form, type: t })}
+                          className={cn(
+                            "flex flex-col items-center gap-1.5 p-2.5 rounded-xl border-2 transition-all text-center",
+                            active
+                              ? `${ts.bg} ${ts.text} border-current shadow-sm scale-[1.03]`
+                              : "bg-[var(--surface-2)] text-[var(--muted)] border-transparent hover:border-[var(--border)] hover:text-[var(--foreground)]",
+                          )}
+                        >
+                          <span className={cn("h-7 w-7 rounded-lg flex items-center justify-center", active ? "bg-white/50" : "bg-[var(--surface)]")}>
+                            {ts.icon}
+                          </span>
+                          <span className="text-[10px] font-semibold leading-none">{ts.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* ── Timing section ── */}
+                <SchedSectionLabel icon={<Icon.Clock size={12} />} label="TIMING" />
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Start</Label>
+                    <Input
+                      type="datetime-local"
+                      value={form.startTime}
+                      onChange={(e) => setForm({ ...form, startTime: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label>End</Label>
+                    <Input
+                      type="datetime-local"
+                      value={form.endTime}
+                      onChange={(e) => setForm({ ...form, endTime: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                {dur && (
+                  <div className="flex items-center gap-2 -mt-2 px-3 py-2 rounded-lg bg-[var(--primary-soft)] text-[var(--primary)]">
+                    <Icon.Clock size={13} />
+                    <span className="text-xs font-medium">Duration: <strong>{dur}</strong></span>
+                  </div>
+                )}
+
+                {/* ── Location & Notes section ── */}
+                <SchedSectionLabel icon={<Icon.Pin size={12} />} label="LOCATION & NOTES" />
+
+                <div>
+                  <Label>Location <span className="text-[var(--muted)] font-normal">(optional)</span></Label>
+                  <Input
+                    value={form.location}
+                    onChange={(e) => setForm({ ...form, location: e.target.value })}
+                    placeholder="e.g., Room B-204, Zoom, Library…"
+                  />
+                </div>
+
+                <div>
+                  <Label>Notes <span className="text-[var(--muted)] font-normal">(optional)</span></Label>
+                  <Textarea
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    placeholder="Any extra details, links, or reminders…"
+                    rows={3}
+                  />
+                </div>
+
+                {/* ── Footer ── */}
+                <div className="flex justify-end gap-2 pt-1 pb-2">
+                  <Button variant="outline" onClick={() => { setOpen(false); setEditTarget(null); }}>Cancel</Button>
+                  <Button onClick={save} loading={saving}>
+                    {editTarget ? <><Icon.Check size={14} /> Save changes</> : <><Icon.Plus size={14} /> Add event</>}
+                  </Button>
+                </div>
+              </div>
             </div>
-            <div>
-              <Label>Location</Label>
-              <Input
-                value={form.location}
-                onChange={(e) => setForm({ ...form, location: e.target.value })}
-                placeholder="(optional)"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Start</Label>
-              <Input
-                type="datetime-local"
-                value={form.startTime}
-                onChange={(e) => setForm({ ...form, startTime: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label>End</Label>
-              <Input
-                type="datetime-local"
-                value={form.endTime}
-                onChange={(e) => setForm({ ...form, endTime: e.target.value })}
-              />
-            </div>
-          </div>
-          {form.startTime && form.endTime && new Date(form.endTime) > new Date(form.startTime) && (
-            <p className="text-xs text-[var(--muted)] -mt-2">
-              Duration: {durationLabel(new Date(form.startTime).toISOString(), new Date(form.endTime).toISOString())}
-            </p>
-          )}
-          <div>
-            <Label>Notes</Label>
-            <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} />
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => { setOpen(false); setEditTarget(null); }}>Cancel</Button>
-            <Button onClick={save} loading={saving}>{editTarget ? "Save changes" : "Add event"}</Button>
-          </div>
-        </div>
+          );
+        })()}
       </Modal>
+    </div>
+  );
+}
+
+function SchedSectionLabel({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <div className="flex items-center gap-2 -mb-1">
+      <span className="h-5 w-5 rounded-md bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center shrink-0">{icon}</span>
+      <span className="text-[10px] font-bold tracking-widest text-[var(--primary)]">{label}</span>
+      <div className="flex-1 h-px bg-[var(--border)]" />
     </div>
   );
 }

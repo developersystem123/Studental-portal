@@ -229,9 +229,9 @@ export default function TeacherReviewsPage() {
 
       <Card>
         <CardBody className="space-y-4">
-          {/* Single-row filter bar */}
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="flex-1 overflow-x-auto min-w-0 pb-0.5 scrollbar-none">
+          {/* Filter bar — tabs row + controls row (stacked on mobile) */}
+          <div className="space-y-2 sm:space-y-0 sm:flex sm:items-center sm:gap-3">
+            <div className="overflow-x-auto min-w-0 pb-0.5 scrollbar-none sm:flex-1">
               <Tabs
                 value={filter}
                 onChange={(v) => setFilter(v as Filter)}
@@ -245,8 +245,8 @@ export default function TeacherReviewsPage() {
                 ]}
               />
             </div>
-            <div className="flex gap-2 shrink-0 items-center">
-              <Select value={courseFilter} onChange={(e) => setCourseFilter(e.target.value)} className="!h-9 !w-40">
+            <div className="flex gap-2 items-center sm:shrink-0">
+              <Select value={courseFilter} onChange={(e) => setCourseFilter(e.target.value)} className="!h-9 flex-1 sm:w-40!">
                 <option value="all">All courses</option>
                 {courses.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
               </Select>
@@ -255,7 +255,7 @@ export default function TeacherReviewsPage() {
                 placeholder="Search…"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="!h-9 !w-36"
+                className="!h-9 flex-1 sm:w-36!"
               />
             </div>
           </div>
@@ -301,13 +301,21 @@ export default function TeacherReviewsPage() {
                         )}
                       </div>
                     </div>
-                    <div className="flex justify-end gap-2 pt-3">
-                      <Button size="sm" variant="ghost" onClick={() => toggleHidden(r)}>
-                        <Icon.Eye size={14} /> {r.hidden ? "Show" : "Hide"}
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => remove(r.id)}>
-                        <Icon.Trash size={14} /> Delete
-                      </Button>
+                    <div className="flex justify-end items-center gap-1.5 pt-3">
+                      <button
+                        onClick={() => toggleHidden(r)}
+                        title={r.hidden ? "Show" : "Hide"}
+                        className="h-8 w-8 flex items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-surface-2 transition"
+                      >
+                        <Icon.Eye size={15} />
+                      </button>
+                      <button
+                        onClick={() => remove(r.id)}
+                        title="Delete"
+                        className="h-8 w-8 flex items-center justify-center rounded-lg text-muted hover:text-danger hover:bg-red-500/10 transition"
+                      >
+                        <Icon.Trash size={15} />
+                      </button>
                       <Button size="sm" variant={r.reply ? "outline" : "primary"} onClick={() => setReplying(r)}>
                         <Icon.MessageSquare size={14} /> {r.reply ? "Edit reply" : "Reply"}
                       </Button>
@@ -318,8 +326,8 @@ export default function TeacherReviewsPage() {
 
               {/* Pagination */}
               {filtered.length > PAGE_SIZE && (
-                <div className="flex items-center justify-between gap-3 pt-2 border-t border-[var(--border)]">
-                  <p className="text-xs text-[var(--muted)]">
+                <div className="flex items-center justify-between gap-3 pt-2 border-t border-border">
+                  <p className="text-xs text-muted">
                     Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
                   </p>
                   <div className="flex items-center gap-1">
@@ -338,7 +346,7 @@ export default function TeacherReviewsPage() {
                         className={`h-8 w-8 rounded-lg text-sm font-medium transition-colors ${
                           p === page
                             ? "btn-primary"
-                            : "hover:bg-[var(--surface-2)] text-[var(--muted)]"
+                            : "hover:bg-surface-2 text-muted"
                         }`}
                       >
                         {p}
@@ -363,7 +371,7 @@ export default function TeacherReviewsPage() {
       <Modal open={replying !== null} onClose={() => setReplying(null)} title="Reply to review" size="lg">
         {replying && (
           <div className="p-5 space-y-4">
-            <div className="rounded-xl bg-[var(--surface-2)] p-3">
+            <div className="rounded-xl bg-surface-2 p-3">
               <div className="flex items-center gap-2 mb-1">
                 <p className="text-sm font-medium">{replying.author.name}</p>
                 <Stars value={replying.rating} />
@@ -394,7 +402,7 @@ function Stars({ value, className }: { value: number; className?: string }) {
   return (
     <span className={`inline-flex items-center gap-0.5 ${className ?? ""}`}>
       {Array.from({ length: 5 }, (_, i) => (
-        <Icon.StarFill key={i} size={14} className={i < v ? "text-amber-500" : "text-[var(--surface-2)]"} />
+        <Icon.StarFill key={i} size={14} className={i < v ? "text-amber-500" : "text-surface-2"} />
       ))}
     </span>
   );

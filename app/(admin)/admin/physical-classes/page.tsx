@@ -19,7 +19,7 @@ import {
 } from "@/components/ui";
 import Icon from "@/components/icons";
 import { useAdmin, useData } from "@/lib/store";
-import { formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import {
   BATCH_OPTIONS,
   CAMPUSES,
@@ -415,7 +415,48 @@ export default function AdminPhysicalClassesPage() {
         size="xl"
         title={editing ? "Edit batch" : "New physical class batch"}
       >
-        <div className="p-5 space-y-4">
+        {/* ── Live preview header ── */}
+        <div className="px-5 sm:px-6 py-4 flex items-center gap-4 border-b border-[var(--border)] bg-[var(--surface-2)]/50">
+          <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-sky-500 to-blue-400 text-white flex items-center justify-center shrink-0 shadow-md shadow-sky-500/20">
+            <Icon.Calendar size={24} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className={cn("font-semibold truncate", form.title ? "text-[var(--foreground)]" : "text-[var(--muted)] text-sm italic")}>
+              {form.title || "Batch title…"}
+            </p>
+            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+              {form.courseId ? (
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-600 dark:text-sky-400 flex items-center gap-1">
+                  <Icon.Book size={9} /> {courses.find((c) => c.id === form.courseId)?.title ?? "Course"}
+                </span>
+              ) : (
+                <span className="text-[10px] text-[var(--muted)]">Select course &amp; instructor below</span>
+              )}
+              {form.room && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--surface)] border border-[var(--border)] text-[var(--muted)] flex items-center gap-1">
+                  <Icon.Pin size={9} /> {form.campus} · Room {form.room}
+                </span>
+              )}
+              {form.daysOfWeek.length > 0 && (
+                <span className="text-[10px] text-[var(--primary)] flex items-center gap-1">
+                  <Icon.Clock size={9} /> {form.daysOfWeek.join(", ")}{form.batch ? ` · ${form.batch}` : ""}
+                </span>
+              )}
+            </div>
+          </div>
+          {form.status && (
+            <Badge
+              variant={STATUS_BADGE[form.status]}
+              className="shrink-0 capitalize hidden sm:inline-flex"
+            >
+              {form.status}
+            </Badge>
+          )}
+        </div>
+
+        {/* ── Section 1: Course & Instructor ── */}
+        <div className="px-5 pt-5 pb-5 space-y-4">
+          <BatchSectionLabel icon={<Icon.Book size={13} />} label="Course & instructor" />
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <Label>Course</Label>
@@ -425,9 +466,7 @@ export default function AdminPhysicalClassesPage() {
               >
                 <option value="">Select a course…</option>
                 {courses.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.title}
-                  </option>
+                  <option key={c.id} value={c.id}>{c.title}</option>
                 ))}
               </Select>
             </div>
@@ -439,26 +478,34 @@ export default function AdminPhysicalClassesPage() {
               >
                 <option value="">Select an instructor…</option>
                 {teachers.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
+                  <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
               </Select>
               {teachers.length === 0 && (
-                <p className="mt-1 text-xs text-amber-500">
-                  No instructors found. Add a teacher first.
+                <p className="mt-1.5 text-[11px] text-amber-500 flex items-center gap-1">
+                  <Icon.AlertCircle size={12} /> No instructors yet — add a teacher first.
                 </p>
               )}
             </div>
-            <div className="sm:col-span-2">
-              <Label>Batch title</Label>
-              <Input
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                placeholder="e.g. Calculus I — Spring Morning Batch"
-                maxLength={100}
-              />
-            </div>
+          </div>
+          <div>
+            <Label>Batch title</Label>
+            <Input
+              icon={<Icon.Tag size={14} />}
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              placeholder="e.g. Calculus I — Spring Morning Batch"
+              maxLength={100}
+            />
+          </div>
+        </div>
+
+        <div className="h-px bg-[var(--border)]" />
+
+        {/* ── Section 2: Location ── */}
+        <div className="px-5 py-5 space-y-4">
+          <BatchSectionLabel icon={<Icon.Pin size={13} />} label="Location" />
+          <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <Label>Campus</Label>
               <Select
@@ -466,21 +513,30 @@ export default function AdminPhysicalClassesPage() {
                 onChange={(e) => setForm({ ...form, campus: e.target.value })}
               >
                 {CAMPUSES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
+                  <option key={c} value={c}>{c}</option>
                 ))}
               </Select>
             </div>
             <div>
               <Label>Room</Label>
               <Input
+                icon={<Icon.Compass size={14} />}
                 value={form.room}
                 onChange={(e) => setForm({ ...form, room: e.target.value })}
                 placeholder="e.g. B-204"
                 maxLength={40}
               />
             </div>
+          </div>
+        </div>
+
+        <div className="h-px bg-[var(--border)]" />
+
+        {/* ── Section 3: Schedule ── */}
+        <div className="px-5 py-5 space-y-4">
+          <BatchSectionLabel icon={<Icon.Calendar size={13} />} label="Schedule" />
+
+          <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <Label>Timing</Label>
               <Select
@@ -488,9 +544,7 @@ export default function AdminPhysicalClassesPage() {
                 onChange={(e) => setForm({ ...form, batch: e.target.value })}
               >
                 {BATCH_OPTIONS.map((b) => (
-                  <option key={b} value={b}>
-                    {b}
-                  </option>
+                  <option key={b} value={b}>{b}</option>
                 ))}
               </Select>
             </div>
@@ -500,6 +554,7 @@ export default function AdminPhysicalClassesPage() {
                 type="number"
                 min={1}
                 max={500}
+                icon={<Icon.Users size={14} />}
                 value={form.capacity}
                 onChange={(e) => setForm({ ...form, capacity: e.target.value })}
               />
@@ -521,27 +576,85 @@ export default function AdminPhysicalClassesPage() {
                 onChange={(e) => setForm({ ...form, endDate: e.target.value })}
               />
             </div>
-            <div className="sm:col-span-2">
-              <Label>Class days</Label>
-              <div className="flex flex-wrap gap-3 pt-1">
-                {DAYS_OF_WEEK.map((d) => (
-                  <Checkbox
+          </div>
+
+          {/* Day-of-week pill picker */}
+          <div>
+            <Label>Class days</Label>
+            <div className="flex flex-wrap gap-2 mt-1.5">
+              {DAYS_OF_WEEK.map((d) => {
+                const active = form.daysOfWeek.includes(d);
+                return (
+                  <button
                     key={d}
-                    id={`day-${d}`}
-                    checked={form.daysOfWeek.includes(d)}
-                    onChange={() => toggleDay(d)}
-                    label={d}
-                  />
-                ))}
-              </div>
+                    type="button"
+                    onClick={() => toggleDay(d)}
+                    className={`h-9 w-12 rounded-xl text-xs font-semibold border transition-all duration-150 ${
+                      active
+                        ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-sm"
+                        : "bg-[var(--surface-2)] text-[var(--muted)] border-[var(--border)] hover:border-[var(--primary)]/40 hover:text-[var(--foreground)]"
+                    }`}
+                  >
+                    {d}
+                  </button>
+                );
+              })}
+              {form.daysOfWeek.length === 0 && (
+                <p className="text-xs text-[var(--danger)] flex items-center gap-1 self-center">
+                  <Icon.AlertCircle size={12} /> Select at least one day.
+                </p>
+              )}
             </div>
+          </div>
+
+          {/* Schedule summary card */}
+          {(form.daysOfWeek.length > 0 || form.startDate || form.batch) && (
+            <div className="grid sm:grid-cols-3 gap-3">
+              {[
+                {
+                  icon: <Icon.Calendar size={14} />,
+                  label: "Days",
+                  value: form.daysOfWeek.length > 0 ? form.daysOfWeek.join(" · ") : "—",
+                  show: true,
+                },
+                {
+                  icon: <Icon.Clock size={14} />,
+                  label: "Timing",
+                  value: form.batch || "—",
+                  show: true,
+                },
+                {
+                  icon: <Icon.Users size={14} />,
+                  label: "Dates",
+                  value: form.startDate && form.endDate
+                    ? `${formatDate(form.startDate)} – ${formatDate(form.endDate)}`
+                    : form.startDate ? `From ${formatDate(form.startDate)}` : "—",
+                  show: true,
+                },
+              ].map((item) => (
+                <div key={item.label} className="flex items-start gap-2.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] px-3 py-2.5">
+                  <span className="text-[var(--primary)] mt-0.5 shrink-0">{item.icon}</span>
+                  <div className="min-w-0">
+                    <p className="text-[10px] text-[var(--muted)] font-medium uppercase tracking-wide">{item.label}</p>
+                    <p className="text-xs font-semibold truncate mt-0.5">{item.value}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="h-px bg-[var(--border)]" />
+
+        {/* ── Section 4: Status & Notes ── */}
+        <div className="px-5 py-5 space-y-4">
+          <BatchSectionLabel icon={<Icon.Settings size={13} />} label="Status & notes" />
+          <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <Label>Status</Label>
               <Select
                 value={form.status}
-                onChange={(e) =>
-                  setForm({ ...form, status: e.target.value as PhysicalClassStatus })
-                }
+                onChange={(e) => setForm({ ...form, status: e.target.value as PhysicalClassStatus })}
               >
                 {PHYSICAL_CLASS_STATUSES.map((s) => (
                   <option key={s} value={s} className="capitalize">
@@ -550,23 +663,31 @@ export default function AdminPhysicalClassesPage() {
                 ))}
               </Select>
             </div>
-            <div className="sm:col-span-2">
-              <Label>Notes (optional)</Label>
-              <Textarea
-                value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                placeholder="Anything students should know — orientation date, what to bring, etc."
-              />
-            </div>
           </div>
-          <div className="flex justify-end gap-2 pt-2 border-t border-[var(--border)]">
-            <Button variant="outline" onClick={() => setFormOpen(false)} disabled={saving}>
-              Cancel
-            </Button>
-            <Button onClick={submit} loading={saving} disabled={!formValid}>
-              <Icon.Save size={16} /> {editing ? "Save changes" : "Create batch"}
-            </Button>
+          <div>
+            <Label>
+              Notes <span className="text-[var(--muted-2)] font-normal">(optional)</span>
+            </Label>
+            <Textarea
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              placeholder="Anything students should know — orientation date, what to bring, etc."
+              rows={2}
+            />
           </div>
+        </div>
+
+        {/* ── Footer ── */}
+        <div className="px-5 sm:px-6 pb-5 pt-4 border-t border-[var(--border)] flex flex-col-reverse sm:flex-row gap-2">
+          <p className="text-xs text-[var(--muted)] self-center hidden sm:block sm:mr-auto">
+            {editing ? "Changes apply immediately to enrolled students." : "Add students to this batch after creating it."}
+          </p>
+          <Button variant="outline" onClick={() => setFormOpen(false)} disabled={saving} className="w-full sm:w-auto">
+            Cancel
+          </Button>
+          <Button onClick={submit} loading={saving} disabled={!formValid} className="w-full sm:w-auto">
+            {editing ? <><Icon.Check size={14} /> Save changes</> : <><Icon.CheckCircle size={14} /> Create batch</>}
+          </Button>
         </div>
       </Modal>
 
@@ -595,6 +716,16 @@ export default function AdminPhysicalClassesPage() {
           </div>
         )}
       </Modal>
+    </div>
+  );
+}
+
+function BatchSectionLabel({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="flex items-center justify-center w-5 h-5 rounded-md bg-[var(--primary-soft)] text-[var(--primary)]">{icon}</span>
+      <span className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">{label}</span>
+      <div className="flex-1 h-px bg-[var(--border)]" />
     </div>
   );
 }

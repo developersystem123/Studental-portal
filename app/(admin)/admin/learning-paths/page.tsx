@@ -877,135 +877,189 @@ function PathFormModal({
       title={mode === "edit" ? "Edit learning path" : "New learning path"}
       size="lg"
     >
-      <form onSubmit={submit} className="p-5 space-y-4">
-        {/* Title */}
-        <div>
-          <Label htmlFor="p-title">Title</Label>
-          <Input
-            id="p-title"
-            value={form.title}
-            onChange={(e) => update("title", e.target.value)}
-            placeholder="e.g. Full-Stack Web Developer"
-            maxLength={120}
-          />
+      <form onSubmit={submit}>
+        {/* Live preview header */}
+        <div className="px-5 sm:px-6 py-4 flex items-center gap-4 border-b border-[var(--border)] bg-[var(--surface-2)]/50">
+          <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-[var(--primary)] to-emerald-400 text-white flex items-center justify-center shrink-0 shadow-md shadow-green-500/20">
+            {form.title.trim() ? (
+              <span className="text-xl font-bold">{form.title.trim()[0].toUpperCase()}</span>
+            ) : (
+              <Icon.Route size={22} />
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold truncate">
+              {form.title.trim() || (mode === "edit" ? "Learning path" : "New learning path")}
+            </p>
+            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${CAT_COLORS[form.category]}`}>
+                {form.category}
+              </span>
+              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${LEVEL_COLORS[form.level]}`}>
+                {form.level}
+              </span>
+              {form.featured && (
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                  <Icon.Star size={8} /> Featured
+                </span>
+              )}
+              <span className="text-[10px] text-[var(--muted)]">
+                {form.courseIds.length} course{form.courseIds.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+          </div>
         </div>
 
-        {/* Description */}
-        <div>
-          <Label htmlFor="p-desc">Description</Label>
-          <Textarea
-            id="p-desc"
-            value={form.description}
-            onChange={(e) => update("description", e.target.value)}
-            placeholder="What will students achieve by completing this path?"
-            rows={3}
-          />
-          <p className="text-[11px] text-[var(--muted)] mt-1 text-right">
-            {form.description.length} chars
-          </p>
-        </div>
+        <div className="p-5 sm:p-6 space-y-5">
+          {/* Title */}
+          <div>
+            <Label htmlFor="p-title">Title</Label>
+            <Input
+              id="p-title"
+              value={form.title}
+              onChange={(e) => update("title", e.target.value)}
+              placeholder="e.g. Full-Stack Web Developer"
+              maxLength={120}
+              icon={<Icon.Route size={16} />}
+            />
+          </div>
 
-        {/* Category · Level · Featured */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          {/* Description */}
           <div>
-            <Label htmlFor="p-cat">Category</Label>
-            <Select
-              id="p-cat"
-              value={form.category}
-              onChange={(e) => update("category", e.target.value as CourseCategory)}
-            >
-              {CATEGORIES.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </Select>
+            <div className="flex items-center justify-between mb-1.5">
+              <Label htmlFor="p-desc">Description</Label>
+              <span className="text-[11px] text-[var(--muted)]">{form.description.length} chars</span>
+            </div>
+            <Textarea
+              id="p-desc"
+              value={form.description}
+              onChange={(e) => update("description", e.target.value)}
+              placeholder="What will students achieve by completing this path?"
+              rows={3}
+            />
           </div>
-          <div>
-            <Label htmlFor="p-lvl">Level</Label>
-            <Select
-              id="p-lvl"
-              value={form.level}
-              onChange={(e) => update("level", e.target.value as CourseLevel)}
-            >
-              {LEVELS.map((l) => (
-                <option key={l} value={l}>{l}</option>
-              ))}
-            </Select>
+
+          {/* Category + Level */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="p-cat">Category</Label>
+              <Select
+                id="p-cat"
+                value={form.category}
+                onChange={(e) => update("category", e.target.value as CourseCategory)}
+              >
+                {CATEGORIES.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="p-lvl">Level</Label>
+              <Select
+                id="p-lvl"
+                value={form.level}
+                onChange={(e) => update("level", e.target.value as CourseLevel)}
+              >
+                {LEVELS.map((l) => (
+                  <option key={l} value={l}>{l}</option>
+                ))}
+              </Select>
+            </div>
           </div>
-          <div className="flex items-end pb-2.5">
+
+          {/* Featured row */}
+          <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <Icon.Star size={15} />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Feature this path</p>
+                <p className="text-[11px] text-[var(--muted)]">Highlighted on the student portal homepage</p>
+              </div>
+            </div>
             <Checkbox
               checked={form.featured}
               onChange={(v) => update("featured", v)}
-              label="Featured"
+              label=""
             />
           </div>
-        </div>
 
-        {/* Course picker */}
-        <div>
-          <Label>
-            Courses in this path
-            <span className="ml-1 text-[var(--muted)] font-normal">
-              ({form.courseIds.length} selected)
-            </span>
-          </Label>
-          <p className="text-xs text-[var(--muted)] mb-2">
-            Courses appear to students in the order you select them.
-          </p>
-          <Input
-            icon={<Icon.Search size={16} />}
-            placeholder="Search courses…"
-            value={courseQuery}
-            onChange={(e) => setCourseQuery(e.target.value)}
-            className="mb-2"
-          />
-          <div className="max-h-56 overflow-y-auto scrollbar-thin rounded-xl border border-[var(--border)] divide-y divide-[var(--border)]">
-            {visibleCourses.length === 0 ? (
-              <p className="text-sm text-[var(--muted)] p-3 text-center">No courses match.</p>
-            ) : (
-              visibleCourses.map((c) => {
-                const idx = form.courseIds.indexOf(c.id);
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => toggleCourse(c.id)}
-                    className="w-full flex items-center gap-3 p-2.5 text-left hover:bg-[var(--surface-2)] transition"
-                  >
-                    <span
-                      className={
-                        "h-5 w-5 shrink-0 rounded-md border flex items-center justify-center text-[10px] font-bold " +
-                        (idx >= 0
-                          ? "bg-[var(--primary)] border-[var(--primary)] text-white"
-                          : "border-[var(--border-strong)]")
-                      }
+          {/* Course picker */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label>Courses in this path</Label>
+              <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${
+                form.courseIds.length > 0
+                  ? "bg-[var(--primary-soft)] text-[var(--primary)]"
+                  : "bg-[var(--surface-2)] text-[var(--muted)]"
+              }`}>
+                {form.courseIds.length} selected
+              </span>
+            </div>
+            <p className="text-xs text-[var(--muted)] mb-2.5">
+              Courses appear to students in the order you select them.
+            </p>
+            <Input
+              icon={<Icon.Search size={16} />}
+              placeholder="Search courses…"
+              value={courseQuery}
+              onChange={(e) => setCourseQuery(e.target.value)}
+              className="mb-2"
+            />
+            <div className="max-h-56 overflow-y-auto scrollbar-thin rounded-xl border border-[var(--border)] divide-y divide-[var(--border)]">
+              {visibleCourses.length === 0 ? (
+                <p className="text-sm text-[var(--muted)] p-3 text-center">No courses match.</p>
+              ) : (
+                visibleCourses.map((c) => {
+                  const idx = form.courseIds.indexOf(c.id);
+                  const isSelected = idx >= 0;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => toggleCourse(c.id)}
+                      className={`w-full flex items-center gap-3 p-3 text-left transition ${
+                        isSelected ? "bg-[var(--primary-soft)]" : "hover:bg-[var(--surface-2)]"
+                      }`}
                     >
-                      {idx >= 0 ? idx + 1 : ""}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-medium truncate">{c.title}</span>
-                      <span className="block text-xs text-[var(--muted)]">
-                        {c.category} · {c.level}
+                      <span
+                        className={`h-6 w-6 shrink-0 rounded-lg border-2 flex items-center justify-center text-[10px] font-bold transition ${
+                          isSelected
+                            ? "bg-[var(--primary)] border-[var(--primary)] text-white"
+                            : "border-[var(--border-strong)]"
+                        }`}
+                      >
+                        {isSelected ? idx + 1 : ""}
                       </span>
-                    </span>
-                  </button>
-                );
-              })
-            )}
+                      <span className="min-w-0 flex-1">
+                        <span className={`block text-sm font-medium truncate ${isSelected ? "text-[var(--primary)]" : ""}`}>
+                          {c.title}
+                        </span>
+                        <span className="block text-xs text-[var(--muted)]">
+                          {c.category} · {c.level}
+                        </span>
+                      </span>
+                      {isSelected && <Icon.Check size={14} className="text-[var(--primary)] shrink-0" />}
+                    </button>
+                  );
+                })
+              )}
+            </div>
           </div>
+
+          {err && (
+            <div className="flex items-start gap-2.5 text-sm text-[var(--danger)] bg-red-500/8 border border-red-500/20 px-3.5 py-3 rounded-xl">
+              <Icon.AlertCircle size={16} className="mt-0.5 shrink-0" />
+              <span>{err}</span>
+            </div>
+          )}
         </div>
 
-        {err && (
-          <p className="text-sm text-[var(--danger)] bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg">
-            {err}
-          </p>
-        )}
-
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" type="button" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit" loading={saving}>
-            {mode === "edit" ? "Save changes" : "Create path"}
+        <div className="px-5 sm:px-6 pb-5 pt-4 flex flex-col-reverse sm:flex-row justify-end gap-2 border-t border-[var(--border)]">
+          <Button variant="outline" type="button" onClick={onClose} className="w-full sm:w-auto">Cancel</Button>
+          <Button type="submit" loading={saving} className="w-full sm:w-auto">
+            {mode === "edit" ? <><Icon.Check size={16} /> Save changes</> : <><Icon.CheckCircle size={16} /> Create path</>}
           </Button>
         </div>
       </form>

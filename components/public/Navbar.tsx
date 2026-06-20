@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import Icon from "@/components/icons";
 import { Button, Modal } from "@/components/ui";
 import { SignedOutPopup } from "@/components/layout/SignedOutPopup";
+import { LockScreen } from "@/components/layout/LockScreen";
 import { useAuth, useTheme } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -106,6 +107,7 @@ export function Navbar() {
   const [scrolled, setScrolled] = React.useState(false);
   const [confirmLogout, setConfirmLogout] = React.useState(false);
   const [signedOut, setSignedOut] = React.useState(false);
+  const [locked, setLocked] = React.useState(false);
   const [pendingCount, setPendingCount] = React.useState(0);
   const reportPending = React.useCallback((delta: number) => {
     setPendingCount((c) => Math.max(0, c + delta));
@@ -326,6 +328,15 @@ export function Navbar() {
                     <button
                       type="button"
                       role="menuitem"
+                      onClick={() => { setUserMenuOpen(false); setLocked(true); }}
+                      className="w-full flex items-center gap-2.5 px-3 h-9 rounded-lg text-sm text-foreground hover:bg-surface-2 transition"
+                    >
+                      <Icon.Lock size={15} className="text-muted" />
+                      Lock screen
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
                       onClick={() => { setUserMenuOpen(false); setConfirmLogout(true); }}
                       className="w-full flex items-center gap-2.5 px-3 h-9 rounded-lg text-sm text-[var(--danger)] hover:bg-red-500/8 transition"
                     >
@@ -440,6 +451,9 @@ export function Navbar() {
                     {user.role === "Admin" ? "Admin Portal" : user.role === "Instructor" ? "Teacher Portal" : "Student Portal"}
                   </Button>
                 </Link>
+                <Button variant="outline" className="w-full" size="sm" onClick={() => { setOpen(false); setLocked(true); }}>
+                  <Icon.Lock size={15} /> Lock screen
+                </Button>
                 <Button variant="outline" className="w-full" size="sm" onClick={() => setConfirmLogout(true)}>
                   <Icon.Logout size={15} /> Logout
                 </Button>
@@ -480,6 +494,9 @@ export function Navbar() {
       </Modal>
 
       <SignedOutPopup open={signedOut} redirectTo="/" />
+      {locked && (
+        <LockScreen onUnlock={() => setLocked(false)} onLogout={() => setLocked(false)} />
+      )}
     </header>
   );
 }

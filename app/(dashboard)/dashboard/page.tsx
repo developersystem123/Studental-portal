@@ -55,7 +55,19 @@ export default function DashboardPage() {
 
   // Quiz line chart needs the LineChart shape ({day, hours}).
   const quizLineData = QUIZ_SCORE_HISTORY.map((q, i) => ({ day: `Q${i + 1}`, hours: q.score }));
-  const heatmapWeeks = 12;
+  const heatmapWeeks = 26;
+  // Month labels for 26-week window ending 2026-06-19 (starting ~Dec 19, 2025)
+  const heatmapMonthLabels = [
+    { week: 0,  label: "Dec" },
+    { week: 2,  label: "Jan" },
+    { week: 6,  label: "Feb" },
+    { week: 11, label: "Mar" },
+    { week: 15, label: "Apr" },
+    { week: 19, label: "May" },
+    { week: 23, label: "Jun" },
+  ];
+  const activeDays   = ACTIVITY_HEATMAP.filter((c) => c.value > 0).length;
+  const totalSessions = ACTIVITY_HEATMAP.reduce((s, c) => s + c.value, 0);
   const xpPct = Math.min(100, (XP_DATA.xp / XP_DATA.xpForNext) * 100);
   const goalPct = Math.min(100, (WEEKLY_GOAL.doneHours / WEEKLY_GOAL.goalHours) * 100);
 
@@ -222,17 +234,38 @@ export default function DashboardPage() {
             <div>
               <CardTitle>Study activity</CardTitle>
               <p className="text-xs text-[var(--muted)] mt-1">
-                Last {heatmapWeeks} weeks · {STUDY_STREAK.daysActiveThisYear} active days this year
+                Dec 2025 – Jun 2026 · {STUDY_STREAK.daysActiveThisYear} active days this year
               </p>
             </div>
             <Badge variant="success">
               <Icon.TrendingUp size={12} /> Streak {STUDY_STREAK.current}d
             </Badge>
           </CardHeader>
-          <CardBody>
-            <div className="overflow-x-auto scrollbar-thin">
-              <div className="min-w-[560px] h-44">
-                <Heatmap cells={ACTIVITY_HEATMAP} weeks={heatmapWeeks} />
+          <CardBody className="space-y-3">
+            <div className="w-full h-44">
+              <Heatmap
+                cells={ACTIVITY_HEATMAP}
+                weeks={heatmapWeeks}
+                monthLabels={heatmapMonthLabels}
+              />
+            </div>
+            {/* Stats summary */}
+            <div className="grid grid-cols-4 gap-2 pt-3 border-t border-[var(--border)] text-center">
+              <div>
+                <p className="text-sm font-bold text-[var(--foreground)]">{activeDays}</p>
+                <p className="text-[10px] text-[var(--muted)] mt-0.5">Active days</p>
+              </div>
+              <div>
+                <p className="text-sm font-bold text-[var(--foreground)]">{totalSessions}</p>
+                <p className="text-[10px] text-[var(--muted)] mt-0.5">Total sessions</p>
+              </div>
+              <div>
+                <p className="text-sm font-bold text-[var(--primary)]">{STUDY_STREAK.current}d</p>
+                <p className="text-[10px] text-[var(--muted)] mt-0.5">Current streak</p>
+              </div>
+              <div>
+                <p className="text-sm font-bold text-[var(--foreground)]">{STUDY_STREAK.longest}d</p>
+                <p className="text-[10px] text-[var(--muted)] mt-0.5">Best streak</p>
               </div>
             </div>
           </CardBody>

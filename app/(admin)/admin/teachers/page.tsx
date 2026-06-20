@@ -631,89 +631,117 @@ function TeacherFormModal({
     onSaved();
   }
 
+  const initials = name.trim() ? name.trim()[0].toUpperCase() : null;
+  const gradClass = name.trim() ? avatarGradient(name.trim()) : "from-[var(--primary)] to-emerald-400";
+
   return (
     <Modal
       open={open}
       onClose={onClose}
       title={mode === "edit" ? "Edit teacher" : "Add teacher"}
+      description={mode === "edit" ? "Update this instructor's account details." : "Create a new instructor account with login credentials."}
       size="md"
     >
-      <form onSubmit={submit} className="p-5 space-y-4">
-        <div>
-          <Label htmlFor="t-name">Full name</Label>
-          <Input
-            id="t-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Ananya Sharma"
-            maxLength={60}
-          />
+      <form onSubmit={submit}>
+        {/* Live avatar preview */}
+        <div className="px-5 sm:px-6 py-4 flex items-center gap-4 border-b border-[var(--border)] bg-[var(--surface-2)]/50">
+          <div className={`h-14 w-14 rounded-2xl bg-gradient-to-br ${gradClass} text-white font-bold text-xl inline-flex items-center justify-center shrink-0 shadow-md`}>
+            {initials ?? <Icon.Sparkles size={22} />}
+          </div>
+          <div className="min-w-0">
+            <p className="font-semibold truncate">{name.trim() || (mode === "edit" ? "Teacher" : "New instructor")}</p>
+            <p className="text-xs text-[var(--muted)] truncate mt-0.5">{email.trim() || "Enter email below"}</p>
+            {bio.trim() && (
+              <p className="text-[11px] text-[var(--muted)] italic truncate mt-0.5 max-w-[220px]">{bio.trim()}</p>
+            )}
+          </div>
         </div>
-        <div>
-          <Label htmlFor="t-email">Email</Label>
-          <Input
-            id="t-email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="teacher@example.com"
-            icon={<Icon.Mail size={16} />}
-          />
-        </div>
-        {mode === "create" && (
+
+        <div className="p-5 sm:p-6 space-y-4">
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="t-name">Full name</Label>
+              <Input
+                id="t-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ananya Sharma"
+                maxLength={60}
+                icon={<Icon.User size={16} />}
+              />
+            </div>
+            <div>
+              <Label htmlFor="t-phone">
+                Phone <span className="text-[var(--muted-2)] font-normal">(optional)</span>
+              </Label>
+              <Input
+                id="t-phone"
+                value={phone}
+                onChange={(e) => setPhone(cleanPhoneInput(e.target.value))}
+                placeholder="+92 300 1234567"
+                inputMode="tel"
+                error={phone ? phoneError : undefined}
+              />
+            </div>
+          </div>
+
           <div>
-            <Label htmlFor="t-password">Temporary password</Label>
+            <Label htmlFor="t-email">Email address</Label>
             <Input
-              id="t-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="At least 6 characters"
-              icon={<Icon.Lock size={16} />}
-              maxLength={64}
+              id="t-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="teacher@example.com"
+              icon={<Icon.Mail size={16} />}
             />
           </div>
-        )}
-        <div>
-          <Label htmlFor="t-phone">Phone (optional)</Label>
-          <Input
-            id="t-phone"
-            value={phone}
-            onChange={(e) => setPhone(cleanPhoneInput(e.target.value))}
-            placeholder="+92 300 1234567"
-            inputMode="tel"
-            error={phone ? phoneError : undefined}
-          />
+
+          {mode === "create" && (
+            <div>
+              <Label htmlFor="t-password">Temporary password</Label>
+              <Input
+                id="t-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="At least 6 characters"
+                icon={<Icon.Lock size={16} />}
+                maxLength={64}
+              />
+              <p className="mt-1.5 text-[11px] text-[var(--muted)]">Share this with the teacher — they can change it after signing in.</p>
+            </div>
+          )}
+
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <Label htmlFor="t-bio">
+                Short bio <span className="text-[var(--muted-2)] font-normal">(optional)</span>
+              </Label>
+              <span className={`text-[11px] ${bio.length > 480 ? "text-amber-500" : "text-[var(--muted)]"}`}>
+                {bio.length} / 500
+              </span>
+            </div>
+            <Textarea
+              id="t-bio"
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              placeholder="What they teach, expertise, years of experience…"
+              rows={3}
+            />
+          </div>
+
+          {err && (
+            <div className="flex items-start gap-2.5 text-sm text-[var(--danger)] bg-red-500/8 border border-red-500/20 px-3.5 py-3 rounded-xl">
+              <Icon.AlertCircle size={16} className="mt-0.5 shrink-0" />
+              <span>{err}</span>
+            </div>
+          )}
         </div>
-        <div>
-          <Label htmlFor="t-bio">Short bio (optional)</Label>
-          <Textarea
-            id="t-bio"
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            placeholder="What they teach, expertise, etc."
-            rows={3}
-          />
-          <p className="text-[11px] text-[var(--muted)] mt-1 text-right">
-            {bio.length} / 500
-          </p>
-        </div>
-        {err && (
-          <p className="text-sm text-[var(--danger)] bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg">
-            {err}
-          </p>
-        )}
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" type="button" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit">
-            {mode === "edit" ? (
-              "Save changes"
-            ) : (
-              <>
-                <Icon.Plus size={16} /> Create teacher
-              </>
-            )}
+
+        <div className="px-5 sm:px-6 pb-5 pt-4 flex flex-col-reverse sm:flex-row justify-end gap-2 border-t border-[var(--border)]">
+          <Button variant="outline" type="button" onClick={onClose} className="w-full sm:w-auto">Cancel</Button>
+          <Button type="submit" className="w-full sm:w-auto">
+            {mode === "edit" ? <><Icon.Check size={16} /> Save changes</> : <><Icon.CheckCircle size={16} /> Create teacher</>}
           </Button>
         </div>
       </form>
@@ -768,32 +796,49 @@ function ResetPasswordModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={`Reset password${teacher ? ` — ${teacher.name}` : ""}`}
+      title="Reset password"
+      description={teacher ? `Set a new temporary password for ${teacher.name}.` : undefined}
       size="sm"
     >
-      <form onSubmit={submit} className="p-5 space-y-4">
-        <div>
-          <Label htmlFor="trp">New password</Label>
-          <Input
-            id="trp"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="At least 6 characters"
-            icon={<Icon.Lock size={16} />}
-          />
-        </div>
-        {err && (
-          <p className="text-sm text-[var(--danger)] bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg">
-            {err}
-          </p>
+      <form onSubmit={submit}>
+        {teacher && (
+          <div className="px-5 py-4 flex items-center gap-3 border-b border-[var(--border)] bg-amber-500/8">
+            <div className="h-10 w-10 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <Icon.Lock size={18} />
+            </div>
+            <div className="min-w-0">
+              <p className="font-semibold text-sm truncate">{teacher.name}</p>
+              <p className="text-xs text-[var(--muted)] truncate">{teacher.email}</p>
+            </div>
+          </div>
         )}
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" type="button" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit">
-            <Icon.Lock size={16} /> Set password
-          </Button>
+
+        <div className="p-5 space-y-4">
+          <div>
+            <Label htmlFor="trp">New password</Label>
+            <Input
+              id="trp"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="At least 6 characters"
+              icon={<Icon.Lock size={16} />}
+              maxLength={64}
+            />
+            <p className="mt-1.5 text-[11px] text-[var(--muted)]">
+              Share this securely — the teacher can update it after signing in.
+            </p>
+          </div>
+          {err && (
+            <div className="flex items-start gap-2.5 text-sm text-[var(--danger)] bg-red-500/8 border border-red-500/20 px-3.5 py-3 rounded-xl">
+              <Icon.AlertCircle size={16} className="mt-0.5 shrink-0" />
+              <span>{err}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="px-5 pb-5 pt-4 flex flex-col-reverse sm:flex-row justify-end gap-2 border-t border-[var(--border)]">
+          <Button variant="outline" type="button" onClick={onClose} className="w-full sm:w-auto">Cancel</Button>
+          <Button type="submit" className="w-full sm:w-auto"><Icon.Lock size={16} /> Set password</Button>
         </div>
       </form>
     </Modal>

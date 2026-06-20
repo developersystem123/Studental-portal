@@ -407,59 +407,135 @@ export default function AdminNotificationsPage() {
       )}
 
       {/* Compose / Send broadcast modal */}
-      <Modal open={compose} onClose={() => { if (!sending) { setCompose(false); setFormErr(""); } }} title="Send broadcast notification" size="md">
-        <form onSubmit={sendBroadcast} className="p-5 space-y-4">
-          <p className="text-sm text-[var(--muted)]">
-            A broadcast notification is sent to <strong>all users</strong> on the platform and will appear in their notification inbox.
-          </p>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-[var(--muted)]">Type</label>
-            <Select
-              value={form.type}
-              onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as NotifType }))}
-            >
-              <option value="announcement">Announcement</option>
-              <option value="reminder">Reminder</option>
-              <option value="achievement">Achievement</option>
-              <option value="assignment">Assignment</option>
-            </Select>
+      <Modal
+        open={compose}
+        onClose={() => { if (!sending) { setCompose(false); setFormErr(""); } }}
+        title="Send broadcast notification"
+        size="md"
+      >
+        <form onSubmit={sendBroadcast}>
+          {/* Live preview header */}
+          <div className="px-5 sm:px-6 py-4 flex items-center gap-4 border-b border-[var(--border)] bg-[var(--surface-2)]/50">
+            <div className={cn(
+              "h-14 w-14 rounded-2xl text-white flex items-center justify-center shrink-0 shadow-md transition-all duration-300 bg-gradient-to-br",
+              form.type === "announcement" ? "from-sky-500 to-blue-400 shadow-sky-500/20"
+                : form.type === "reminder" ? "from-amber-500 to-orange-400 shadow-amber-500/20"
+                : form.type === "achievement" ? "from-emerald-500 to-green-400 shadow-emerald-500/20"
+                : "from-[var(--primary)] to-emerald-400 shadow-green-500/20"
+            )}>
+              {form.type === "announcement" ? <Icon.Megaphone size={26} />
+                : form.type === "reminder" ? <Icon.Clock size={26} />
+                : form.type === "achievement" ? <Icon.Award size={26} />
+                : <Icon.FilePen size={26} />}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className={cn("font-semibold truncate", form.title ? "text-[var(--foreground)]" : "text-[var(--muted)] text-sm italic")}>
+                {form.title || "Notification title…"}
+              </p>
+              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full", TYPE_INFO[form.type].bg, TYPE_INFO[form.type].color)}>
+                  {TYPE_INFO[form.type].label}
+                </span>
+                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-[var(--primary-soft)] text-[var(--primary)] flex items-center gap-1">
+                  <Icon.Users size={9} /> All users
+                </span>
+              </div>
+            </div>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-[var(--muted)]">Title</label>
-            <Input
-              value={form.title}
-              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-              placeholder="e.g. Platform maintenance on Sunday"
-              maxLength={120}
-            />
-            <p className="text-[11px] text-[var(--muted-2)] text-right">{form.title.length}/120</p>
+          <div className="p-5 sm:p-6 space-y-5">
+            {/* Type picker */}
+            <div>
+              <label className="text-sm font-medium block mb-2">Type</label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {(Object.keys(TYPE_INFO) as NotifType[]).map((t) => {
+                  const info = TYPE_INFO[t];
+                  const active = form.type === t;
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setForm((f) => ({ ...f, type: t }))}
+                      className={cn(
+                        "flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl border text-xs font-semibold transition-all",
+                        active
+                          ? `${info.bg} ${info.color} border-current shadow-sm`
+                          : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)] hover:border-[var(--border-strong)]"
+                      )}
+                    >
+                      <span className={cn(
+                        "h-7 w-7 rounded-lg flex items-center justify-center transition-colors",
+                        active ? info.bg : "bg-[var(--surface)]",
+                        active ? info.color : "text-[var(--muted)]"
+                      )}>
+                        {info.icon}
+                      </span>
+                      {info.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Title */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-sm font-medium">Title</label>
+                <span className={cn("text-[11px]", form.title.length > 100 ? "text-amber-500" : "text-[var(--muted)]")}>
+                  {form.title.length}/120
+                </span>
+              </div>
+              <Input
+                value={form.title}
+                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                placeholder="e.g. Platform maintenance on Sunday"
+                maxLength={120}
+              />
+            </div>
+
+            {/* Message */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-sm font-medium">Message</label>
+                <span className={cn("text-[11px]", form.message.length > 450 ? "text-amber-500" : "text-[var(--muted)]")}>
+                  {form.message.length}/500
+                </span>
+              </div>
+              <Textarea
+                value={form.message}
+                onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
+                placeholder="Write a clear, concise message for your users…"
+                rows={4}
+                maxLength={500}
+              />
+            </div>
+
+            {/* Reach info */}
+            <div className="flex items-start gap-3 p-3.5 rounded-xl bg-[var(--primary-soft)] border border-[var(--primary)]/15">
+              <div className="h-7 w-7 rounded-lg bg-[var(--primary)]/15 text-[var(--primary)] flex items-center justify-center shrink-0 mt-0.5">
+                <Icon.Users size={14} />
+              </div>
+              <p className="text-xs text-[var(--muted)] leading-relaxed">
+                This notification will be delivered to{" "}
+                <span className="font-bold text-[var(--foreground)]">all users</span>{" "}
+                and will appear in their notification inbox immediately.
+              </p>
+            </div>
+
+            {/* Error */}
+            {formErr && (
+              <div className="flex items-start gap-2.5 text-sm text-[var(--danger)] bg-red-500/8 border border-red-500/20 px-3.5 py-3 rounded-xl">
+                <Icon.AlertCircle size={16} className="mt-0.5 shrink-0" />
+                <span>{formErr}</span>
+              </div>
+            )}
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-[var(--muted)]">Message</label>
-            <Textarea
-              value={form.message}
-              onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
-              placeholder="Write a clear, concise message for your users…"
-              rows={4}
-              maxLength={500}
-            />
-            <p className="text-[11px] text-[var(--muted-2)] text-right">{form.message.length}/500</p>
-          </div>
-
-          {formErr && (
-            <p className="text-xs text-[var(--danger)] flex items-center gap-1.5">
-              <Icon.AlertCircle size={13} /> {formErr}
-            </p>
-          )}
-
-          <div className="flex justify-end gap-2 border-t border-[var(--border)] pt-3">
-            <Button variant="outline" type="button" onClick={() => setCompose(false)} disabled={sending}>
+          <div className="px-5 sm:px-6 pb-5 pt-4 flex flex-col-reverse sm:flex-row justify-end gap-2 border-t border-[var(--border)]">
+            <Button variant="outline" type="button" onClick={() => setCompose(false)} disabled={sending} className="w-full sm:w-auto">
               Cancel
             </Button>
-            <Button type="submit" loading={sending} disabled={!form.title.trim() || !form.message.trim()}>
+            <Button type="submit" loading={sending} disabled={!form.title.trim() || !form.message.trim()} className="w-full sm:w-auto">
               <Icon.Send size={14} /> Send to all users
             </Button>
           </div>

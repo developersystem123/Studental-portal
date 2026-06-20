@@ -499,13 +499,13 @@ export default function TeacherAttendancePage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-[var(--muted)] border-b border-[var(--border)]">
+                    <tr className="text-left text-[var(--muted)] border-b border-border">
                       <th className="font-medium py-2.5 px-3">Student</th>
-                      <th className="font-medium py-2.5 px-3 text-center">
+                      <th className="font-medium py-2.5 px-3 text-center whitespace-nowrap">
                         {formatDate(sessionDate)}
                       </th>
-                      <th className="font-medium py-2.5 px-3 hidden md:table-cell">P · L · A · E</th>
-                      <th className="font-medium py-2.5 px-3">Rate</th>
+                      <th className="font-medium py-2.5 px-3 hidden md:table-cell whitespace-nowrap">P · L · A · E</th>
+                      <th className="font-medium py-2.5 px-3 w-36 whitespace-nowrap">Rate</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -661,15 +661,15 @@ export default function TeacherAttendancePage() {
               )}
 
               {/* Save footer */}
-              <div className="flex items-center justify-between gap-3 pt-2 border-t border-[var(--border)]">
-                <p className="text-xs text-[var(--muted)]">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-2 border-t border-border">
+                <p className="text-xs text-muted">
                   {markedCount} of {studentsInCourse.length} students marked for{" "}
-                  <span className="font-medium text-[var(--foreground)]">
+                  <span className="font-medium text-foreground">
                     {formatDate(sessionDate)}
                   </span>
                   .
                 </p>
-                <Button onClick={save} loading={saving} disabled={markedCount === 0}>
+                <Button className="self-end sm:self-auto shrink-0" onClick={save} loading={saving} disabled={markedCount === 0}>
                   <Icon.Save size={16} /> Save attendance
                 </Button>
               </div>

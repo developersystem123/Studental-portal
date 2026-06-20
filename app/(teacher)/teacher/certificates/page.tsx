@@ -239,6 +239,8 @@ function CertDetailModal({
 }
 
 // ─── Issue modal ──────────────────────────────────────────────────────────────
+const SCORE_PRESETS = [60, 70, 75, 80, 85, 90, 95, 100];
+
 function IssueModal({
   open,
   issuable,
@@ -283,69 +285,163 @@ function IssueModal({
   }
 
   const selected = issuable.find((s) => `${s.userId}::${s.courseId}` === pairKey);
+  const scoreNum = Number(score);
+  const validScore = Number.isFinite(scoreNum) && scoreNum >= 0 && scoreNum <= 100;
+  const scoreBarColor = scoreNum >= 85 ? "bg-emerald-500" : scoreNum >= 60 ? "bg-[var(--primary)]" : "bg-amber-500";
+  const scoreLabel = scoreNum >= 85 ? "Excellent" : scoreNum >= 70 ? "Good" : scoreNum >= 60 ? "Pass" : "Low";
+  const scoreLabelColor = scoreNum >= 85 ? "text-emerald-600" : scoreNum >= 70 ? "text-[var(--primary)]" : scoreNum >= 60 ? "text-amber-600" : "text-red-500";
 
   return (
     <Modal open={open} onClose={onClose} size="md" title="Issue Certificate">
-      <div className="p-5 space-y-4">
-        <div>
-          <Label>Student &amp; Course</Label>
-          <Select value={pairKey} onChange={(e) => setPairKey(e.target.value)}>
+      {/* Accent bar */}
+      <div className="h-1.5 w-full bg-gradient-to-r from-[var(--primary)] via-amber-400 to-emerald-400" />
+
+      <div className="p-4 sm:p-6 space-y-5">
+
+        {/* ── Certificate mini-preview ── */}
+        <div className="rounded-2xl border border-[var(--primary)]/20 bg-gradient-to-br from-[var(--primary)]/5 via-[var(--surface-2)] to-amber-400/5 p-4 flex items-center gap-4">
+          <div className="h-12 w-12 rounded-2xl bg-[var(--primary)]/10 flex items-center justify-center shrink-0 shadow-inner">
+            <Icon.Award size={24} className="text-[var(--primary)]" />
+          </div>
+          <div className="min-w-0 flex-1">
+            {selected ? (
+              <>
+                <p className="font-bold truncate">{selected.userName}</p>
+                <p className="text-xs text-[var(--muted)] truncate">{selected.courseTitle}</p>
+                <p className={`text-[11px] font-semibold mt-0.5 flex items-center gap-1 ${selected.completed ? "text-emerald-600" : "text-amber-600"}`}>
+                  {selected.completed
+                    ? <><Icon.CheckCircle size={11} /> Course completed</>
+                    : <><Icon.Clock size={11} /> {selected.progress}% progress</>}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-semibold text-[var(--muted)]">Certificate of Completion</p>
+                <p className="text-xs text-[var(--muted-2)]">Select a student to preview</p>
+              </>
+            )}
+          </div>
+          {selected && validScore && (
+            <div className="text-center shrink-0">
+              <p className={`text-2xl font-bold tabular-nums ${scoreLabelColor}`}>{scoreNum}%</p>
+              <p className={`text-[10px] font-semibold uppercase tracking-wide ${scoreLabelColor}`}>{scoreLabel}</p>
+            </div>
+          )}
+        </div>
+
+        {/* ── Student & Course ── */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-1.5">
+            <Icon.Users size={14} className="text-[var(--muted)]" />
+            Student &amp; Course
+            <span className="text-[var(--danger)] ml-0.5">*</span>
+          </label>
+          <Select value={pairKey} onChange={(e) => { setPairKey(e.target.value); setErr(null); }}>
             <option value="">Select a student…</option>
             {issuable.map((s) => (
               <option key={`${s.userId}::${s.courseId}`} value={`${s.userId}::${s.courseId}`}>
-                {s.userName} — {s.courseTitle} {s.completed ? "(completed)" : `(${s.progress}%)`}
+                {s.userName} — {s.courseTitle} {s.completed ? "✓" : `(${s.progress}%)`}
               </option>
             ))}
           </Select>
           {issuable.length === 0 && (
-            <p className="mt-1 text-xs text-[var(--muted-2)]">All eligible students already have certificates.</p>
+            <p className="text-xs text-[var(--muted-2)] flex items-center gap-1">
+              <Icon.CheckCircle size={12} className="text-emerald-500" />
+              All eligible students already have certificates.
+            </p>
           )}
         </div>
 
-        {selected && (
-          <div className="rounded-xl bg-[var(--surface-2)] p-3 text-sm flex items-center gap-3">
-            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold ${avatarColor(selected.userName)}`}>
-              {initials(selected.userName)}
+        {/* ── Score ── */}
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-[var(--foreground)] flex items-center justify-between gap-1.5">
+            <span className="flex items-center gap-1.5">
+              <Icon.Award size={14} className="text-[var(--muted)]" />
+              Score
             </span>
-            <div>
-              <p className="font-semibold">{selected.userName}</p>
-              <p className="text-xs text-[var(--muted)]">{selected.courseTitle}</p>
-              <p className="text-xs text-[var(--muted-2)]">
-                {selected.completed ? "✓ Course completed" : `${selected.progress}% progress`}
-              </p>
+            {validScore && (
+              <span className={`text-sm font-bold tabular-nums ${scoreLabelColor}`}>
+                {scoreNum}% · {scoreLabel}
+              </span>
+            )}
+          </label>
+
+          {/* Preset chips */}
+          <div className="flex flex-wrap gap-1.5">
+            {SCORE_PRESETS.map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setScore(String(p))}
+                className={`px-2.5 h-7 rounded-lg text-xs font-semibold border transition-all ${
+                  score === String(p)
+                    ? "border-[var(--primary)] bg-[var(--primary-soft)] text-[var(--primary)]"
+                    : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted)] hover:border-[var(--border-strong)]"
+                }`}
+              >
+                {p}%
+              </button>
+            ))}
+          </div>
+
+          {/* Custom input */}
+          <div className="relative">
+            <Input
+              type="number"
+              min={0}
+              max={100}
+              value={score}
+              onChange={(e) => setScore(e.target.value)}
+              placeholder="0–100"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--muted)] pointer-events-none">%</span>
+          </div>
+
+          {/* Score bar */}
+          {validScore && (
+            <div className="space-y-1">
+              <div className="h-2 w-full rounded-full bg-[var(--surface-2)] overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${scoreBarColor}`}
+                  style={{ width: `${Math.min(100, Math.max(0, scoreNum))}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-[10px] text-[var(--muted-2)]">
+                <span>0%</span>
+                <span>Pass (60%)</span>
+                <span>100%</span>
+              </div>
             </div>
+          )}
+        </div>
+
+        {/* Error */}
+        {err && (
+          <div className="flex items-center gap-2.5 text-sm text-[var(--danger)] bg-red-500/10 border border-red-500/20 px-3 py-2.5 rounded-xl">
+            <Icon.AlertCircle size={15} className="shrink-0" />
+            {err}
           </div>
         )}
 
-        <div>
-          <Label>Score (%)</Label>
-          <Input
-            type="number"
-            min={0}
-            max={100}
-            value={score}
-            onChange={(e) => setScore(e.target.value)}
-            placeholder="0–100"
-          />
-          {score && Number.isFinite(Number(score)) && (
-            <div className="mt-2 h-1.5 w-full rounded-full bg-[var(--surface-2)] overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all duration-500 ${scoreColor(Number(score))}`}
-                style={{ width: `${Math.min(100, Math.max(0, Number(score)))}%` }}
-              />
-            </div>
-          )}
-        </div>
-
-        {err && (
-          <p className="text-sm text-[var(--danger)] bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg">{err}</p>
-        )}
-
-        <div className="flex justify-end gap-2 pt-2 border-t border-[var(--border)]">
-          <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
-          <Button onClick={issue} loading={saving} disabled={!pairKey}>
-            <Icon.Award size={16} /> Issue
-          </Button>
+        {/* Footer */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-2 border-t border-border">
+          <p className="text-xs text-muted">
+            {selected
+              ? selected.completed
+                ? "Student has completed this course"
+                : `Student is at ${selected.progress}% progress`
+              : "Select a student to continue"}
+          </p>
+          <div className="flex gap-2 self-end sm:self-auto shrink-0">
+            <Button variant="outline" onClick={onClose} disabled={saving}>
+              Cancel
+            </Button>
+            <Button onClick={issue} loading={saving} disabled={!pairKey || !validScore}>
+              <Icon.Award size={15} />
+              <span className="hidden sm:inline">Issue Certificate</span>
+              <span className="sm:hidden">Issue</span>
+            </Button>
+          </div>
         </div>
       </div>
     </Modal>

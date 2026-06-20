@@ -33,6 +33,21 @@ const CATEGORY_COLORS: Record<CourseCategory, string> = {
   "Math":         "bg-blue-500/15 text-blue-600 dark:text-blue-400",
 };
 
+const THUMB_GRADIENTS = [
+  { a: "#16a34a", b: "#4ade80" },
+  { a: "#7c3aed", b: "#a78bfa" },
+  { a: "#0ea5e9", b: "#38bdf8" },
+  { a: "#ea580c", b: "#fb923c" },
+  { a: "#db2777", b: "#f472b6" },
+  { a: "#1d4ed8", b: "#60a5fa" },
+];
+
+const LEVEL_META: Record<CourseLevel, { icon: React.ReactNode; desc: string }> = {
+  Beginner:     { icon: <Icon.Compass size={16} />,    desc: "No prior experience needed" },
+  Intermediate: { icon: <Icon.TrendingUp size={16} />, desc: "Some experience helpful" },
+  Advanced:     { icon: <Icon.Award size={16} />,      desc: "Deep expertise required" },
+};
+
 const defaultThumb = (a = "#16a34a", b = "#4ade80") =>
   `data:image/svg+xml;utf8,${encodeURIComponent(
     `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 400'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='${a}'/><stop offset='1' stop-color='${b}'/></linearGradient></defs><rect width='600' height='400' fill='url(%23g)'/></svg>`,
@@ -367,6 +382,16 @@ export default function AdminCoursesPage() {
   );
 }
 
+/* ── Section label ─────────────────────────────────────────────────────────── */
+function SectionLabel({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="flex items-center justify-center w-5 h-5 rounded-md bg-[var(--primary-soft)] text-[var(--primary)]">{icon}</span>
+      <span className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">{label}</span>
+    </div>
+  );
+}
+
 /* ── Grid card ─────────────────────────────────────────────────────────────── */
 function CourseGridCard({
   course: c, duplicating, onEdit, onDuplicate, onDelete,
@@ -453,9 +478,13 @@ function CourseFormModal({ open, mode, course, onClose }: {
 }) {
   const admin = useAdmin();
   const toast = useToast();
-  const [form, setForm] = React.useState<FormState>(emptyForm);
-  const [saving, setSaving] = React.useState(false);
-  const [err, setErr] = React.useState<string | null>(null);
+  const [form, setForm]         = React.useState<FormState>(emptyForm);
+  const [thumbIdx, setThumbIdx] = React.useState(0);
+  const [uploadedImg, setUploadedImg] = React.useState<string | null>(null);
+  const [dragOver, setDragOver] = React.useState(false);
+  const [saving, setSaving]     = React.useState(false);
+  const [err, setErr]           = React.useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     if (!open) return;
@@ -466,11 +495,35 @@ function CourseFormModal({ open, mode, course, onClose }: {
         price: String(course.price), pricePkr: String(Math.round(course.price * USD_TO_PKR)),
         durationMinutes: String(course.durationMinutes), tags: course.tags.join(", "),
       });
+      setUploadedImg(course.thumbnail ?? null);
     } else {
       setForm(emptyForm);
+      setThumbIdx(0);
+      setUploadedImg(null);
     }
     setErr(null);
   }, [open, mode, course]);
+
+  function handleImageFile(file: File) {
+    if (!file.type.startsWith("image/")) return;
+    if (file.size > 4 * 1024 * 1024) { setErr("Image must be under 4 MB."); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => setUploadedImg(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  }
+
+  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) handleImageFile(file);
+    e.target.value = "";
+  }
+
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleImageFile(file);
+  }
 
   function update<K extends keyof FormState>(k: K, v: FormState[K]) {
     setForm((f) => ({ ...f, [k]: v }));
@@ -482,17 +535,18 @@ function CourseFormModal({ open, mode, course, onClose }: {
     if (form.title.trim().length < 3)         return setErr("Title must be at least 3 characters.");
     if (form.description.trim().length < 10)  return setErr("Description must be at least 10 characters.");
     if (form.instructor.trim().length < 2)    return setErr("Instructor name is required.");
-    const price = Number(form.price);
+    const price    = Number(form.price);
     const duration = Number(form.durationMinutes);
-    if (!Number.isFinite(price) || price < 0) return setErr("Price must be 0 or a positive number.");
+    if (!Number.isFinite(price) || price < 0)      return setErr("Price must be 0 or a positive number.");
     if (!Number.isFinite(duration) || duration <= 0) return setErr("Duration must be a positive number of minutes.");
 
     const tags = form.tags.split(",").map((t) => t.trim()).filter(Boolean);
+    const g    = THUMB_GRADIENTS[thumbIdx];
     const payload = {
       title: form.title.trim(), description: form.description.trim(),
       instructor: form.instructor.trim(), category: form.category, level: form.level,
       price, durationMinutes: duration, tags,
-      thumbnail: course?.thumbnail ?? defaultThumb(),
+      thumbnail: uploadedImg ?? defaultThumb(g.a, g.b),
     };
 
     setSaving(true);
@@ -508,73 +562,314 @@ function CourseFormModal({ open, mode, course, onClose }: {
     onClose();
   }
 
+  const isFree = Number(form.price) === 0;
+  const g      = THUMB_GRADIENTS[thumbIdx];
+  const thumb  = uploadedImg ?? defaultThumb(g.a, g.b);
+  const tags   = form.tags ? form.tags.split(",").map((t) => t.trim()).filter(Boolean) : [];
+
   return (
-    <Modal open={open} onClose={onClose} title={mode === "edit" ? "Edit course" : "New course"} size="lg">
-      <form onSubmit={submit} className="p-5 space-y-4">
-        <div>
-          <Label htmlFor="c-title">Title</Label>
-          <Input id="c-title" value={form.title} onChange={(e) => update("title", e.target.value)} placeholder="e.g. Intro to Python" />
+    <Modal open={open} onClose={onClose} title={mode === "edit" ? "Edit course" : "New course"} size="xl">
+      <form onSubmit={submit}>
+        <div className="flex min-h-0">
+
+          {/* ── Left: form fields ─────────────────────────────────────── */}
+          <div className="flex-1 min-w-0 divide-y divide-[var(--border)]">
+
+            {/* Section 1 · Basic info */}
+            <div className="px-5 pt-4 pb-5 space-y-4">
+              <SectionLabel icon={<Icon.Book size={13} />} label="Basic info" />
+
+              {/* ── Cover image upload ── */}
+              <div>
+                <Label>Cover image</Label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={onFileChange}
+                />
+
+                {uploadedImg ? (
+                  /* Uploaded image preview */
+                  <div className="relative mt-1.5 rounded-xl overflow-hidden border border-[var(--border)] group h-36">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={uploadedImg} alt="Cover" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/90 text-xs font-semibold text-gray-800 hover:bg-white transition"
+                      >
+                        <Icon.Camera size={13} /> Change
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setUploadedImg(null)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/90 text-xs font-semibold text-white hover:bg-red-500 transition"
+                      >
+                        <Icon.Trash size={13} /> Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Drop zone */
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                    onDragLeave={() => setDragOver(false)}
+                    onDrop={onDrop}
+                    className={cn(
+                      "mt-1.5 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed cursor-pointer transition-all h-36",
+                      dragOver
+                        ? "border-[var(--primary)] bg-[var(--primary-soft)] scale-[1.01]"
+                        : "border-[var(--border)] hover:border-[var(--primary)]/50 hover:bg-[var(--primary-soft)]/40",
+                    )}
+                  >
+                    <div className="h-10 w-10 rounded-xl bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center">
+                      <Icon.Camera size={18} />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs font-semibold text-[var(--foreground)]">Drop image here or <span className="text-[var(--primary)]">browse</span></p>
+                      <p className="text-[11px] text-[var(--muted)] mt-0.5">PNG, JPG, WEBP · max 4 MB</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Gradient fallback swatches (shown when no image uploaded) */}
+                {!uploadedImg && (
+                  <div className="mt-2.5 flex items-center gap-2">
+                    <span className="text-[11px] text-[var(--muted)] shrink-0">Or pick a colour:</span>
+                    <div className="flex gap-1.5">
+                      {THUMB_GRADIENTS.map((gr, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => setThumbIdx(i)}
+                          title={`Gradient ${i + 1}`}
+                          className={cn(
+                            "h-6 w-8 rounded-md border-2 transition-all duration-150",
+                            thumbIdx === i ? "border-[var(--foreground)] scale-110 shadow" : "border-transparent hover:scale-105",
+                          )}
+                          style={{ background: `linear-gradient(135deg, ${gr.a}, ${gr.b})` }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="c-title">Title</Label>
+                <Input id="c-title" icon={<Icon.FilePen size={14} />}
+                  value={form.title} onChange={(e) => update("title", e.target.value)}
+                  placeholder="e.g. Intro to Python" />
+              </div>
+
+              <div>
+                <Label htmlFor="c-desc">Description</Label>
+                <Textarea id="c-desc" rows={3}
+                  value={form.description} onChange={(e) => update("description", e.target.value)}
+                  placeholder="What will students learn from this course?" />
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="c-instr">Instructor</Label>
+                  <Input id="c-instr" icon={<Icon.User size={14} />}
+                    value={form.instructor} onChange={(e) => update("instructor", e.target.value)}
+                    placeholder="Full name" />
+                </div>
+                <div>
+                  <Label htmlFor="c-tags">
+                    Tags <span className="text-[var(--muted)] font-normal">(comma-separated)</span>
+                  </Label>
+                  <Input id="c-tags" icon={<Icon.Tag size={14} />}
+                    value={form.tags} onChange={(e) => update("tags", e.target.value)}
+                    placeholder="React, TypeScript, Hooks" />
+                </div>
+              </div>
+            </div>
+
+            {/* Section 2 · Settings */}
+            <div className="px-5 py-5 space-y-4">
+              <SectionLabel icon={<Icon.Settings size={13} />} label="Course settings" />
+
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="c-cat">Category</Label>
+                  <Select id="c-cat" value={form.category}
+                    onChange={(e) => update("category", e.target.value as CourseCategory)}>
+                    {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="c-dur">Duration (minutes)</Label>
+                  <Input id="c-dur" type="number" min="1" step="1" icon={<Icon.Clock size={14} />}
+                    value={form.durationMinutes} onChange={(e) => update("durationMinutes", e.target.value)} />
+                </div>
+              </div>
+
+              {/* Level card-picker */}
+              <div>
+                <Label>Level</Label>
+                <div className="grid grid-cols-3 gap-2 mt-1.5">
+                  {LEVELS.map((lvl) => {
+                    const meta   = LEVEL_META[lvl];
+                    const active = form.level === lvl;
+                    return (
+                      <button
+                        key={lvl}
+                        type="button"
+                        onClick={() => update("level", lvl)}
+                        className={cn(
+                          "flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border text-xs font-semibold transition-all duration-150",
+                          active
+                            ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-sm"
+                            : "bg-[var(--surface-2)] text-[var(--muted)] border-[var(--border)] hover:border-[var(--primary)]/40 hover:text-[var(--foreground)]",
+                        )}
+                      >
+                        <span className={cn(
+                          "flex items-center justify-center w-8 h-8 rounded-lg transition-colors",
+                          active ? "bg-white/20" : "bg-[var(--surface)] text-[var(--primary)]",
+                        )}>
+                          {meta.icon}
+                        </span>
+                        <span>{lvl}</span>
+                        <span className={cn("text-[10px] font-normal text-center leading-tight",
+                          active ? "text-white/70" : "text-[var(--muted)]")}>
+                          {meta.desc}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Section 3 · Pricing */}
+            <div className="px-5 py-5 space-y-4">
+              <SectionLabel icon={<Icon.DollarSign size={13} />} label="Pricing" />
+
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="c-price">Price (USD)</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-[var(--muted)] pointer-events-none select-none">$</span>
+                    <Input id="c-price" type="number" min="0" step="1" value={form.price} className="pl-7"
+                      onChange={(e) => {
+                        const usd = e.target.value;
+                        setForm((f) => ({ ...f, price: usd, pricePkr: usd === "" ? "" : String(Math.round(Number(usd) * USD_TO_PKR)) }));
+                      }} />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="c-pkr">Price (PKR)</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-[var(--muted)] pointer-events-none select-none">₨</span>
+                    <Input id="c-pkr" type="number" min="0" step="1" value={form.pricePkr} className="pl-7"
+                      onChange={(e) => {
+                        const pkr = e.target.value;
+                        setForm((f) => ({ ...f, pricePkr: pkr, price: pkr === "" ? "" : String(Math.round(Number(pkr) / USD_TO_PKR)) }));
+                      }} />
+                  </div>
+                </div>
+              </div>
+
+              <div className={cn(
+                "flex items-center gap-2 text-xs px-3 py-2.5 rounded-xl border transition-colors",
+                isFree
+                  ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                  : "bg-[var(--primary-soft)] border-[var(--primary)]/20 text-[var(--primary)]",
+              )}>
+                {isFree
+                  ? <><Icon.CheckCircle size={13} className="shrink-0" /> Listed as <strong>Free</strong> — students enrol at no cost</>
+                  : <><Icon.DollarSign size={13} className="shrink-0" /> Students pay <strong>${form.price}</strong> &nbsp;/&nbsp; <strong>₨{form.pricePkr}</strong></>}
+              </div>
+            </div>
+          </div>
+
+          {/* ── Right: live preview panel ──────────────────────────────── */}
+          <div className="w-64 shrink-0 border-l border-[var(--border)] bg-[var(--surface-2)] hidden lg:flex flex-col gap-4 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)] flex items-center gap-1.5">
+              <Icon.Eye size={11} /> Live preview
+            </p>
+
+            {/* Mini course card */}
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm">
+              {/* Thumbnail */}
+              <div className="relative h-32 overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={thumb} alt="" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                <div className="absolute top-2 left-2 flex gap-1 flex-wrap">
+                  <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full", CATEGORY_COLORS[form.category])}>
+                    {form.category}
+                  </span>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-black/30 text-white backdrop-blur-sm">
+                    {form.level}
+                  </span>
+                </div>
+                <div className="absolute bottom-2 right-2 flex flex-col items-end gap-1">
+                  {isFree
+                    ? <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-white">Free</span>
+                    : <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-black/50 text-white backdrop-blur-sm">₨{form.pricePkr || "0"}</span>}
+                </div>
+              </div>
+
+              {/* Card body */}
+              <div className="p-3 space-y-2">
+                <div>
+                  <p className="font-semibold text-sm leading-snug line-clamp-2">
+                    {form.title || <span className="text-[var(--muted)]">Course title…</span>}
+                  </p>
+                  <p className="text-[11px] text-[var(--muted)] mt-0.5">
+                    {form.instructor || "Instructor name"}
+                  </p>
+                </div>
+                <p className="text-[11px] text-[var(--muted)] line-clamp-2 leading-relaxed">
+                  {form.description || "Description will appear here."}
+                </p>
+                <div className="flex items-center gap-2 text-[11px] text-[var(--muted)]">
+                  <span className="flex items-center gap-0.5"><Icon.Clock size={10} /> {form.durationMinutes || "0"}m</span>
+                  <span className="flex items-center gap-0.5"><Icon.Star size={10} className="text-amber-400" /> New</span>
+                </div>
+
+                {tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 pt-0.5">
+                    {tags.slice(0, 3).map((t) => (
+                      <span key={t} className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--surface-2)] text-[var(--muted)]">{t}</span>
+                    ))}
+                    {tags.length > 3 && <span className="text-[10px] text-[var(--muted)]">+{tags.length - 3}</span>}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <p className="text-[10px] text-[var(--muted)] text-center">This is how the card appears in the catalog.</p>
+          </div>
         </div>
-        <div>
-          <Label htmlFor="c-desc">Description</Label>
-          <Textarea id="c-desc" value={form.description} onChange={(e) => update("description", e.target.value)} placeholder="What will students learn?" rows={3} />
-        </div>
-        <div className="grid sm:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="c-instr">Instructor</Label>
-            <Input id="c-instr" value={form.instructor} onChange={(e) => update("instructor", e.target.value)} placeholder="Full name" />
-          </div>
-          <div>
-            <Label htmlFor="c-tags">Tags (comma-separated)</Label>
-            <Input id="c-tags" value={form.tags} onChange={(e) => update("tags", e.target.value)} placeholder="React, TypeScript" />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div>
-            <Label htmlFor="c-cat">Category</Label>
-            <Select id="c-cat" value={form.category} onChange={(e) => update("category", e.target.value as CourseCategory)}>
-              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="c-lvl">Level</Label>
-            <Select id="c-lvl" value={form.level} onChange={(e) => update("level", e.target.value as CourseLevel)}>
-              {LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="c-price">Price (USD $)</Label>
-            <Input id="c-price" type="number" min="0" step="1" value={form.price}
-              onChange={(e) => {
-                const usd = e.target.value;
-                setForm((f) => ({ ...f, price: usd, pricePkr: usd === "" ? "" : String(Math.round(Number(usd) * USD_TO_PKR)) }));
-              }}
-            />
-          </div>
-          <div>
-            <Label htmlFor="c-pkr">Price (PKR ₨)</Label>
-            <Input id="c-pkr" type="number" min="0" step="1" value={form.pricePkr}
-              onChange={(e) => {
-                const pkr = e.target.value;
-                setForm((f) => ({ ...f, pricePkr: pkr, price: pkr === "" ? "" : String(Math.round(Number(pkr) / USD_TO_PKR)) }));
-              }}
-            />
-          </div>
-        </div>
-        <div>
-          <Label htmlFor="c-dur">Duration (minutes)</Label>
-          <Input id="c-dur" type="number" min="1" step="1" value={form.durationMinutes} onChange={(e) => update("durationMinutes", e.target.value)} className="sm:max-w-[160px]" />
-        </div>
+
+        {/* ── Error ─────────────────────────────────────────────────────── */}
         {err && (
-          <p className="text-sm text-[var(--danger)] bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg flex items-center gap-2">
-            <Icon.AlertCircle size={14} className="shrink-0" /> {err}
-          </p>
+          <div className="mx-5 mb-3">
+            <p className="text-sm text-[var(--danger)] bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg flex items-center gap-2">
+              <Icon.AlertCircle size={14} className="shrink-0" /> {err}
+            </p>
+          </div>
         )}
-        <div className="flex justify-end gap-2 pt-1">
-          <Button variant="outline" type="button" onClick={onClose} disabled={saving}>Cancel</Button>
-          <Button type="submit" loading={saving}>
-            {mode === "edit" ? "Save changes" : "Create course"}
-          </Button>
+
+        {/* ── Footer ────────────────────────────────────────────────────── */}
+        <div className="px-5 pb-5 flex items-center justify-between gap-3 pt-4 border-t border-[var(--border)]">
+          <p className="text-xs text-[var(--muted)] hidden sm:block">
+            {mode === "edit" ? "Changes save immediately." : "You can add chapters after creating."}
+          </p>
+          <div className="flex gap-2 ml-auto">
+            <Button variant="outline" type="button" onClick={onClose} disabled={saving}>Cancel</Button>
+            <Button type="submit" loading={saving}>
+              {mode === "edit" ? <><Icon.Check size={14} /> Save changes</> : <><Icon.Plus size={14} /> Create course</>}
+            </Button>
+          </div>
         </div>
       </form>
     </Modal>

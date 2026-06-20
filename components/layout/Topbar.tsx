@@ -6,18 +6,19 @@ import { useRouter } from "next/navigation";
 import Icon from "@/components/icons";
 import { Avatar, Badge, Button, Modal } from "@/components/ui";
 import { SignedOutPopup } from "@/components/layout/SignedOutPopup";
-import { useAuth, useData, useTheme } from "@/lib/store";
-import { cn, relativeTime } from "@/lib/utils";
+import { useAuth, useTheme } from "@/lib/store";
+import { cn } from "@/lib/utils";
 
 export function Topbar({
   onToggleSidebar,
   sidebarOpen,
+  onLockScreen,
 }: {
   onToggleSidebar: () => void;
   sidebarOpen: boolean;
+  onLockScreen?: () => void;
 }) {
   const { user, logout } = useAuth();
-  const { notifications, markNotificationRead } = useData();
   const { theme, toggle } = useTheme();
   const router = useRouter();
   const isAdmin = user?.role === "Admin";
@@ -27,13 +28,11 @@ export function Topbar({
   const profileHref = portalRoot ? `${portalRoot}/profile` : "/profile";
 
   const [menuOpen, setMenuOpen] = React.useState(false);
-  const [notifOpen, setNotifOpen] = React.useState(false);
   const [searchFocused, setSearchFocused] = React.useState(false);
   const [confirmLogout, setConfirmLogout] = React.useState(false);
   const [signedOut, setSignedOut] = React.useState(false);
 
   const userMenuRef = React.useRef<HTMLDivElement>(null);
-  const notifRef = React.useRef<HTMLDivElement>(null);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
 
   // Implement the ⌘K / Ctrl+K shortcut to focus the search input.
@@ -51,16 +50,13 @@ export function Topbar({
   React.useEffect(() => {
     function onClick(e: MouseEvent) {
       if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) setMenuOpen(false);
-      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
     }
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
-  const unread = notifications.filter((n) => !n.read).length;
-
   return (
-    <header className="sticky top-0 z-30 w-full glass border-b border-[var(--border)] h-16 flex items-center gap-2.5 px-4 sm:px-5">
+    <header className="hidden lg:flex sticky top-0 z-30 w-full glass border-b border-[var(--border)] h-16 items-center gap-2.5 px-4 sm:px-5">
       {/* Sidebar toggle */}
       <button
         onClick={onToggleSidebar}
@@ -143,88 +139,6 @@ export function Topbar({
         {theme === "dark" ? <Icon.Sun size={17} /> : <Icon.Moon size={17} />}
       </button>
 
-      {/* Notifications */}
-      <div className="relative shrink-0" ref={notifRef}>
-        <button
-          onClick={() => setNotifOpen((o) => !o)}
-          className={cn(
-            "h-9 w-9 rounded-xl flex items-center justify-center transition-all relative",
-            notifOpen
-              ? "bg-[var(--primary-soft)] text-[var(--primary)]"
-              : "bg-[var(--surface-2)] hover:bg-[var(--primary-soft)] text-[var(--muted)] hover:text-[var(--primary)]",
-          )}
-          aria-label="Notifications"
-        >
-          <Icon.Bell size={17} />
-          {unread > 0 && (
-            <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-[var(--danger)] text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-[var(--background)] badge-pulse">
-              {unread > 9 ? "9+" : unread}
-            </span>
-          )}
-        </button>
-
-        {notifOpen && (
-          <div className="absolute right-0 top-12 w-[22rem] max-w-[calc(100vw-1rem)] rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-xl shadow-black/10 fade-in overflow-hidden z-50">
-            {/* Header */}
-            <div className="px-4 py-3 flex items-center justify-between border-b border-[var(--border)] bg-gradient-to-b from-[var(--surface-2)]/60 to-transparent">
-              <div>
-                <p className="font-semibold text-sm">Notifications</p>
-                <p className="text-xs text-[var(--muted)] mt-0.5">
-                  {unread > 0 ? `${unread} unread` : "All caught up"}
-                </p>
-              </div>
-              <Link
-                href={notificationsHref}
-                onClick={() => setNotifOpen(false)}
-                className="text-xs font-semibold text-[var(--primary)] hover:underline underline-offset-2"
-              >
-                View all
-              </Link>
-            </div>
-
-            <ul className="max-h-80 overflow-y-auto scrollbar-thin">
-              {notifications.slice(0, 5).map((n) => (
-                <li
-                  key={n.id}
-                  className={cn(
-                    "px-3 py-3 hover:bg-[var(--surface-2)] cursor-pointer flex gap-3 border-b border-[var(--border)] last:border-b-0 transition-colors",
-                    !n.read && "bg-[var(--primary-soft)]/30",
-                  )}
-                  onClick={() => {
-                    markNotificationRead(n.id);
-                    setNotifOpen(false);
-                    router.push(notificationsHref);
-                  }}
-                >
-                  <div className="h-8 w-8 shrink-0 rounded-lg bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center">
-                    {n.type === "assignment"   && <Icon.FilePen size={14} />}
-                    {n.type === "announcement" && <Icon.Megaphone size={14} />}
-                    {n.type === "reminder"     && <Icon.Clock size={14} />}
-                    {n.type === "achievement"  && <Icon.Award size={14} />}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate leading-snug">{n.title}</p>
-                    <p className="text-xs text-[var(--muted)] line-clamp-1 mt-0.5">{n.message}</p>
-                    <p className="text-[10px] text-[var(--muted-2)] mt-1">{relativeTime(n.createdAt)}</p>
-                  </div>
-                  {!n.read && (
-                    <span className="h-2 w-2 rounded-full bg-[var(--primary)] mt-1.5 shrink-0" />
-                  )}
-                </li>
-              ))}
-              {notifications.length === 0 && (
-                <li className="py-10 text-center">
-                  <div className="h-10 w-10 rounded-xl bg-[var(--surface-2)] mx-auto mb-2.5 flex items-center justify-center text-[var(--muted)]">
-                    <Icon.Bell size={18} />
-                  </div>
-                  <p className="text-sm text-[var(--muted)]">No notifications yet</p>
-                </li>
-              )}
-            </ul>
-          </div>
-        )}
-      </div>
-
       {/* User menu */}
       <div className="relative shrink-0" ref={userMenuRef}>
         <button
@@ -274,6 +188,15 @@ export function Topbar({
                 </MenuItem>
               )}
               <div className="h-px bg-[var(--border)] my-1" />
+              {onLockScreen && (
+                <button
+                  onClick={() => { setMenuOpen(false); onLockScreen(); }}
+                  className="w-full px-3 py-2 rounded-xl text-sm flex items-center gap-2.5 text-foreground hover:bg-surface-2 transition"
+                >
+                  <span className="text-muted"><Icon.Lock size={15} /></span>
+                  Lock screen
+                </button>
+              )}
               <button
                 onClick={() => { setMenuOpen(false); setConfirmLogout(true); }}
                 className="w-full px-3 py-2 rounded-xl text-sm flex items-center gap-2.5 text-[var(--danger)] hover:bg-red-500/8 transition"

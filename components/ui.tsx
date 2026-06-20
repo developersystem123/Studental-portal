@@ -28,7 +28,7 @@ export const Button = React.forwardRef<
   const variants: Record<BtnVariant, string> = {
     primary: "btn-primary shadow-sm hover:shadow-md hover:-translate-y-px active:translate-y-0",
     secondary: "bg-[var(--surface-2)] text-[var(--foreground)] hover:bg-[color-mix(in_oklab,var(--muted)_15%,var(--surface-2))] hover:-translate-y-px active:translate-y-0",
-    outline: "border border-[var(--border-strong)] bg-transparent text-[var(--foreground)] hover:bg-[var(--surface-2)] hover:border-[var(--primary)]/40 hover:-translate-y-px active:translate-y-0",
+    outline: "border border-[var(--border-strong)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-2)] hover:border-[var(--primary)]/40 hover:-translate-y-px active:translate-y-0",
     ghost: "bg-transparent text-[var(--foreground)] hover:bg-[var(--surface-2)]",
     danger: "bg-[var(--danger)] text-white hover:brightness-110 hover:-translate-y-px active:translate-y-0 shadow-sm hover:shadow-md",
     soft: "bg-[var(--primary-soft)] text-[var(--primary)] hover:brightness-105 hover:-translate-y-px active:translate-y-0",
@@ -256,7 +256,7 @@ export function Switch({
       onClick={() => onChange(!checked)}
       disabled={disabled}
       className={cn(
-        "w-10 h-6 rounded-full relative transition-colors",
+        "w-10 h-6 rounded-full relative transition-colors shrink-0",
         checked ? "bg-[var(--primary)]" : "bg-[var(--surface-2)]",
         disabled && "opacity-50",
       )}
@@ -446,7 +446,7 @@ export function Tabs({
           key={o.value}
           onClick={() => onChange(o.value)}
           className={cn(
-            "px-3 h-9 rounded-lg text-sm font-medium transition-all flex items-center gap-2",
+            "px-3 h-9 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap",
             value === o.value
               ? "bg-[var(--surface)] text-[var(--foreground)] shadow-sm"
               : "text-[var(--muted)] hover:text-[var(--foreground)]",
@@ -515,7 +515,7 @@ export function Modal({
       role="dialog"
       aria-modal="true"
       aria-label={title}
-      className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6"
+      className="fixed inset-0 z-[70] flex items-center justify-center p-4 pb-20 sm:p-6"
     >
       <div
         className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm fade-in"
@@ -524,7 +524,7 @@ export function Modal({
       />
       <div
         className={cn(
-          "relative w-full max-h-[92vh] flex flex-col bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-2xl pop-in overflow-hidden",
+          "relative w-full max-h-[calc(100svh-5.5rem)] sm:max-h-[92vh] flex flex-col bg-surface rounded-2xl border border-border shadow-2xl pop-in overflow-hidden",
           sizes[size],
         )}
         onClick={(e) => e.stopPropagation()}

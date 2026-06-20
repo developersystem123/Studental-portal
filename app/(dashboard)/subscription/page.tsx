@@ -336,33 +336,33 @@ export default function SubscriptionPage() {
 
                 {/* Stats strip */}
                 {subscription && (
-                  <div className="mt-4 grid grid-cols-3 gap-3">
+                  <div className="mt-4 grid grid-cols-3 gap-1.5">
                     {[
                       {
                         label: "Plan",
                         value: subscription.planName,
-                        icon: <Icon.Crown size={14} />,
+                        icon: <Icon.Crown size={12} />,
                       },
                       {
                         label: "Billing",
                         value: subscription.interval === "annual" ? "Annual" : "Monthly",
-                        icon: <Icon.Calendar size={14} />,
+                        icon: <Icon.Calendar size={12} />,
                       },
                       {
                         label: "Status",
                         value: subscription.cancelAtPeriodEnd ? "Cancelling" : "Active",
-                        icon: <Icon.CheckCircle size={14} />,
+                        icon: <Icon.CheckCircle size={12} />,
                       },
                     ].map((s) => (
                       <div
                         key={s.label}
-                        className="rounded-xl bg-white/10 px-3 py-2 text-center backdrop-blur-sm"
+                        className="rounded-xl bg-white/10 px-2 py-2 text-center backdrop-blur-sm min-w-0"
                       >
-                        <div className="flex items-center justify-center gap-1 text-white/70 mb-0.5">
+                        <div className="flex items-center justify-center gap-0.5 text-white/70 mb-0.5">
                           {s.icon}
-                          <span className="text-[10px] uppercase tracking-wider">{s.label}</span>
+                          <span className="text-[9px] uppercase tracking-wide">{s.label}</span>
                         </div>
-                        <p className="text-sm font-semibold text-white">{s.value}</p>
+                        <p className="text-xs font-bold text-white truncate">{s.value}</p>
                       </div>
                     ))}
                   </div>

@@ -11,6 +11,7 @@ import {
   EmptyState,
   Input,
   Modal,
+  Select,
   Skeleton,
   Textarea,
   useToast,
@@ -265,7 +266,7 @@ export default function TeacherMessagesPage() {
   return (
     <div className="space-y-5 fade-in">
       {/* Page header */}
-      <div className="flex items-end justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">
             Engagement
@@ -278,7 +279,7 @@ export default function TeacherMessagesPage() {
               </span>
             )}
           </h1>
-          <p className="mt-1 text-[var(--muted)]">
+          <p className="mt-1 text-muted">
             Chat 1:1 with students enrolled in your courses.
           </p>
         </div>
@@ -286,6 +287,7 @@ export default function TeacherMessagesPage() {
           <Button
             size="sm"
             variant="outline"
+            className="self-start sm:self-auto shrink-0"
             onClick={() => {
               setBroadcastCourse(allCourses[0]);
               setBroadcastOpen(true);
@@ -567,34 +569,31 @@ export default function TeacherMessagesPage() {
         description="Send the same message to all students in a course at once."
         size="md"
       >
-        <div className="space-y-4">
+        <div className="p-4 sm:p-5 space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1.5">Course</label>
-            <select
+            <Select
               value={broadcastCourse}
               onChange={(e) => setBroadcastCourse(e.target.value)}
-              className="w-full text-sm border border-[var(--border)] rounded-lg px-3 py-2 bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-1 focus:ring-[var(--primary)]/40"
             >
               {allCourses.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
+                <option key={c} value={c}>{c}</option>
               ))}
-            </select>
+            </Select>
           </div>
 
           <div>
             <label className="block text-sm font-medium mb-1.5">Message</label>
             <Textarea
-              rows={4}
+              rows={3}
               value={broadcastMsg}
               onChange={(e) => setBroadcastMsg(e.target.value)}
               placeholder="Type your announcement to the entire class…"
             />
             {broadcastCourse && (
-              <p className="text-xs text-[var(--muted)] mt-1.5">
+              <p className="text-xs text-muted mt-1.5">
                 Will be sent to{" "}
-                <span className="font-semibold text-[var(--foreground)]">
+                <span className="font-semibold text-foreground">
                   {broadcastTargetCount}
                 </span>{" "}
                 student{broadcastTargetCount !== 1 ? "s" : ""} in this course.
@@ -602,7 +601,7 @@ export default function TeacherMessagesPage() {
             )}
           </div>
 
-          <div className="flex justify-end gap-2 pt-1">
+          <div className="flex justify-end gap-2">
             <Button
               variant="ghost"
               onClick={() => {
