@@ -330,18 +330,17 @@ export default function CareersPage() {
         </div>
       </section>
 
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-24">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] p-10 lg:p-14 text-white text-center">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-20 lg:py-24">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] p-6 sm:p-10 lg:p-14 text-white text-center">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(255,255,255,.25),transparent_60%)]" />
           <div className="relative">
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">Don&apos;t see a fit?</h2>
-            <p className="mt-3 text-white/85 max-w-xl mx-auto">
-              We always want to meet people who care deeply about education. Send us a note — even if there&apos;s no
-              open role.
+            <h2 className="text-2xl sm:text-4xl font-bold tracking-tight">Don&apos;t see a fit?</h2>
+            <p className="mt-3 text-white/85 max-w-xl mx-auto text-sm sm:text-base">
+              We always want to meet people who care deeply about education. Send us a note — even if there&apos;s no open role.
             </p>
-            <div className="mt-7">
-              <a href="mailto:careers@eduportal.app?subject=Open application">
-                <Button size="lg" className="bg-white text-[var(--primary)] hover:bg-white/90">
+            <div className="mt-5 sm:mt-7">
+              <a href="mailto:careers@eduportal.app?subject=Open application" className="inline-block w-full sm:w-auto">
+                <Button size="lg" className="w-full sm:w-auto bg-white text-primary hover:bg-white/90">
                   <Icon.Mail size={18} /> careers@eduportal.app
                 </Button>
               </a>

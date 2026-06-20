@@ -31,15 +31,15 @@ export default function BlogPage() {
               <h1 className="text-4xl sm:text-5xl xl:text-[3.3rem] font-bold tracking-tight leading-[1.1] text-balance">
                 Stories from the <span className="gradient-text">EduPortal</span> community
               </h1>
-              <p className="mt-4 text-lg text-[var(--muted)] leading-relaxed max-w-lg">
+              <p className="mt-4 text-base sm:text-lg text-muted leading-relaxed max-w-lg">
                 Tutorials, product updates, career advice, and reflections on the science of learning.
               </p>
-              <div className="mt-6 flex flex-wrap items-center gap-3">
+              <div className="mt-6 flex flex-wrap justify-center sm:justify-start items-center gap-3">
                 {["All", "Product", "Learning", "Careers", "AI"].map((cat) => (
-                  <span key={cat} className={`px-3 h-8 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
+                  <span key={cat} className={`px-3 h-8 rounded-full text-xs font-semibold border transition-all cursor-pointer whitespace-nowrap ${
                     cat === "All"
                       ? "bg-[var(--primary)] text-white border-transparent"
-                      : "bg-[var(--surface)] border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)] hover:border-[var(--border-strong)]"
+                      : "bg-surface border-border text-muted hover:text-foreground hover:border-border-strong"
                   }`}>
                     {cat}
                   </span>
@@ -136,21 +136,21 @@ export default function BlogPage() {
         </div>
 
         {/* Newsletter CTA */}
-        <div className="mt-14 relative overflow-hidden rounded-3xl bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] p-8 sm:p-10 text-white">
+        <div className="mt-14 relative overflow-hidden rounded-3xl bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] p-6 sm:p-10 text-white">
           <div className="absolute inset-0 bg-dots opacity-15 mix-blend-overlay pointer-events-none" />
           <div className="absolute -top-12 -right-12 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
-          <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
+          <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h3 className="text-xl font-bold">Get the best posts in your inbox</h3>
+              <h3 className="text-lg sm:text-xl font-bold">Get the best posts in your inbox</h3>
               <p className="text-white/80 text-sm mt-1">Weekly digest of learning tips, product news, and career guides.</p>
             </div>
-            <div className="flex gap-2 shrink-0 w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <input
                 type="email"
                 placeholder="you@example.com"
-                className="flex-1 sm:w-52 h-10 px-4 rounded-xl text-sm bg-white/15 border border-white/25 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-white/40"
+                className="w-full sm:w-52 h-10 px-4 rounded-xl text-sm bg-white/15 border border-white/25 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-white/40"
               />
-              <button className="h-10 px-4 rounded-xl bg-white text-[var(--primary)] text-sm font-semibold hover:bg-white/90 transition shrink-0">
+              <button className="h-10 px-4 rounded-xl bg-white text-primary text-sm font-semibold hover:bg-white/90 transition w-full sm:w-auto">
                 Subscribe
               </button>
             </div>

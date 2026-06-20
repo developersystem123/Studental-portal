@@ -261,13 +261,13 @@ export default function PressPage() {
               ];
               return (
                 <Card key={f.label} className="hover-lift">
-                  <CardBody className="flex items-start gap-3 p-5">
-                    <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${colors[i % colors.length]} to-transparent flex items-center justify-center border border-[var(--border)] shrink-0`}>
+                  <CardBody className="flex flex-col gap-2 p-3 sm:p-5 sm:flex-row sm:items-start sm:gap-3">
+                    <div className={`h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-gradient-to-br ${colors[i % colors.length]} to-transparent flex items-center justify-center border border-border shrink-0`}>
                       {f.icon}
                     </div>
-                    <div>
-                      <p className="text-[10px] uppercase tracking-widest text-[var(--muted-2)] font-bold">{f.label}</p>
-                      <p className="mt-0.5 text-base font-bold leading-snug">{f.value}</p>
+                    <div className="min-w-0">
+                      <p className="text-[9px] sm:text-[10px] uppercase tracking-wide sm:tracking-widest text-muted font-bold">{f.label}</p>
+                      <p className="mt-0.5 text-sm sm:text-base font-bold leading-snug">{f.value}</p>
                     </div>
                   </CardBody>
                 </Card>
@@ -415,13 +415,13 @@ export default function PressPage() {
                 include your outlet, deadline, and topic.
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
-                <a href="mailto:press@eduportal.app">
-                  <Button size="lg" className="bg-white text-[var(--primary)] hover:bg-white/90 shadow-lg shadow-black/20 font-semibold">
+                <a href="mailto:press@eduportal.app" className="w-full sm:w-auto">
+                  <Button size="lg" className="w-full sm:w-auto bg-white text-primary hover:bg-white/90 shadow-lg shadow-black/20 font-semibold">
                     <Icon.Mail size={16} /> press@eduportal.app
                   </Button>
                 </a>
-                <Link href="/contact?reason=Press">
-                  <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10">
+                <Link href="/contact?reason=Press" className="w-full sm:w-auto">
+                  <Button size="lg" variant="outline" className="w-full sm:w-auto border-white/30 bg-transparent text-white hover:bg-white/10">
                     Use contact form
                   </Button>
                 </Link>

@@ -123,17 +123,17 @@ export default function FAQPage() {
                 key={c.id}
                 onClick={() => { setActiveCat(c.id); setOpenIdx(null); }}
                 className={cn(
-                  "inline-flex items-center gap-1.5 px-4 h-10 rounded-full text-sm font-semibold transition-all",
+                  "inline-flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 h-8 sm:h-10 rounded-full text-xs sm:text-sm font-semibold transition-all",
                   active
                     ? "bg-[var(--primary)] text-white shadow-sm shadow-green-500/20"
-                    : "bg-[var(--surface)] border border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)] hover:border-[var(--border-strong)]",
+                    : "bg-surface border border-border text-muted hover:text-foreground hover:border-border-strong",
                 )}
               >
                 <span className={active ? "text-white" : "text-[var(--primary)]"}>{c.icon}</span>
                 {c.label}
                 <span className={cn(
                   "text-[10px] px-1.5 py-0.5 rounded-full font-bold ml-0.5",
-                  active ? "bg-white/20 text-white" : "bg-[var(--surface-2)] text-[var(--muted-2)]",
+                  active ? "bg-white/20 text-white" : "bg-surface-2 text-muted",
                 )}>
                   {countFor(c.id)}
                 </span>

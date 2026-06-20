@@ -414,6 +414,7 @@ export function Navbar() {
                 <p className="px-3 py-1.5 text-[10px] uppercase tracking-widest text-[var(--muted-2)] font-bold">
                   {group.title}
                 </p>
+                <div className="grid grid-cols-2 gap-1">
                 {group.items.map((item) => {
                   const active = pathname.startsWith(item.href);
                   return (
@@ -421,20 +422,21 @@ export function Navbar() {
                       key={item.href}
                       href={item.href}
                       className={cn(
-                        "px-3 h-11 rounded-xl text-sm font-medium inline-flex items-center gap-2.5 transition-all",
+                        "px-3 h-11 rounded-xl text-sm font-medium flex items-center gap-2 transition-all min-w-0",
                         active
                           ? "bg-[var(--primary-soft)] text-[var(--primary)]"
                           : "text-[var(--foreground)] hover:bg-[var(--surface-2)]",
                       )}
                     >
-                      <span className="h-7 w-7 rounded-lg bg-[var(--primary-soft)] text-[var(--primary)] inline-flex items-center justify-center shrink-0">
+                      <span className="h-7 w-7 rounded-lg bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center shrink-0">
                         {item.icon}
                       </span>
-                      {item.label}
+                      <span className="truncate">{item.label}</span>
                       <LinkPending report={reportPending} />
                     </Link>
                   );
                 })}
+                </div>
               </div>
             ))}
             <div className="h-px bg-[var(--border)] my-2" />

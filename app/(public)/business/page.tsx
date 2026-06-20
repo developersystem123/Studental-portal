@@ -96,13 +96,13 @@ export default function BusinessPage() {
               Trusted by teams from 10 to 10,000.
             </p>
             <div className="mt-7 flex flex-col sm:flex-row gap-3">
-              <Link href="/contact?reason=Partnership">
-                <Button size="lg">
+              <Link href="/contact?reason=Partnership" className="w-full sm:w-auto">
+                <Button size="lg" className="w-full sm:w-auto">
                   Talk to sales <Icon.ChevronRight size={18} />
                 </Button>
               </Link>
-              <Link href="/pricing">
-                <Button size="lg" variant="outline">
+              <Link href="/pricing" className="w-full sm:w-auto">
+                <Button size="lg" variant="outline" className="w-full sm:w-auto">
                   See pricing
                 </Button>
               </Link>
@@ -293,13 +293,13 @@ export default function BusinessPage() {
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 lg:justify-end">
-              <Link href="/contact?reason=Partnership">
-                <Button size="lg" className="bg-white text-[var(--primary)] hover:bg-white/90">
+              <Link href="/contact?reason=Partnership" className="w-full sm:w-auto">
+                <Button size="lg" className="w-full sm:w-auto bg-white text-primary hover:bg-white/90">
                   Talk to sales <Icon.ChevronRight size={18} />
                 </Button>
               </Link>
-              <a href="mailto:sales@eduportal.app">
-                <Button size="lg" variant="outline" className="border-white/40 text-white hover:bg-white/10">
+              <a href="mailto:sales@eduportal.app" className="w-full sm:w-auto">
+                <Button size="lg" variant="outline" className="w-full sm:w-auto border-white/40 text-white hover:bg-white/10">
                   <Icon.Mail size={18} /> Email us
                 </Button>
               </a>
