@@ -2,6 +2,16 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Widen the shared page container. `max-w-7xl` is the single container used by
+   the Navbar, Footer, and every public page section. The Tailwind default
+   (80rem / 1280px) leaves big empty margins on large/ultra-wide monitors, so we
+   raise it here in one place — every device scales consistently and the layout
+   stays edge-aligned. Small screens are unaffected (the container still falls
+   back to 100% width via the px-* gutters). */
+@theme {
+  --container-7xl: 96rem; /* 1536px — fills wide screens without over-stretching text */
+}
+
 :root {
   color-scheme: light;
   --background: #f0fdf4;
