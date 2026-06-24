@@ -5,14 +5,21 @@ import { usePathname } from "next/navigation";
 import Icon from "@/components/icons";
 import { cn } from "@/lib/utils";
 
-const BASE_ITEMS = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: typeof Icon.Home;
+  exact?: boolean;
+};
+
+const BASE_ITEMS: NavItem[] = [
   { href: "/dashboard",  label: "Home",     icon: Icon.Home,      exact: true },
   { href: "/my-courses", label: "Courses",  icon: Icon.Book },
   { href: "/schedule",   label: "Schedule", icon: Icon.Calendar },
 ];
 
-const AI_ITEM = { href: "/ai/chat", label: "AI", icon: Icon.Sparkles };
-const MSG_ITEM = { href: "/messages", label: "Messages", icon: Icon.MessageSquare };
+const AI_ITEM: NavItem = { href: "/ai/chat", label: "AI", icon: Icon.Sparkles };
+const MSG_ITEM: NavItem = { href: "/messages", label: "Messages", icon: Icon.MessageSquare };
 
 export function StudentMobileNav({
   onOpenMenu,

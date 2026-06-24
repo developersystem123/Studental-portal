@@ -5,8 +5,12 @@ import Link from "next/link";
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <div className="force-light min-h-screen grid lg:grid-cols-2">
-      {/* Left: Form panel */}
-      <div className="relative flex flex-col p-6 sm:p-10 justify-center gap-10 overflow-hidden bg-[var(--background)]">
+      {/* Left: Form panel — justify-between so the logo pins to the top and the
+          footer to the bottom (mirroring the right panel), with the form
+          centered between them. This fills the full column height on large
+          screens instead of clustering everything in the middle. gap-10 keeps
+          a comfortable minimum spacing on short viewports. */}
+      <div className="relative flex flex-col p-6 sm:p-10 justify-between gap-10 overflow-hidden bg-[var(--background)]">
         {/* Background blobs */}
         <div className="absolute -top-48 -left-48 h-96 w-96 rounded-full bg-[var(--primary)]/7 blur-[100px] pointer-events-none" aria-hidden />
         <div className="absolute -bottom-32 -right-32 h-80 w-80 rounded-full bg-[var(--accent)]/6 blur-[80px] pointer-events-none" aria-hidden />
