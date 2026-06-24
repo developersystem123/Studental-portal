@@ -253,13 +253,6 @@ export default function PricingPage() {
                     >
                       Get {p.name}
                     </button>
-
-                    {!user && (
-                      <p className="mt-2 text-center text-[10px] text-[var(--muted-2)]">
-                        <Link href="/register" className="hover:underline text-[var(--primary)]">Sign up</Link> or{" "}
-                        <Link href="/login" className="hover:underline text-[var(--primary)]">log in</Link> to subscribe
-                      </p>
-                    )}
                   </CardBody>
                 </Card>
               );

@@ -41,10 +41,11 @@ function wordCount(text: string) {
 }
 
 export default function AssignmentHelperPage() {
-  const { push } = useToast();
   const { user } = useAuth();
   const isPro = user?.plan === "pro" || user?.plan === "team";
 
+  // Gate wrapper — keeps all of the helper's hooks in <AssignmentHelperInner>
+  // so this early return never conditionally skips them (rules of hooks).
   if (user && !isPro) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4 space-y-5">
@@ -61,6 +62,11 @@ export default function AssignmentHelperPage() {
       </div>
     );
   }
+  return <AssignmentHelperInner />;
+}
+
+function AssignmentHelperInner() {
+  const { push } = useToast();
 
   // Step 1 inputs
   const [topic, setTopic] = React.useState("");

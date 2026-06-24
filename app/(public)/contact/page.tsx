@@ -396,7 +396,7 @@ export default function ContactPage() {
               </div>
               <div className="pt-1 border-t border-[var(--border)]">
                 <p className="text-xs text-[var(--muted)]">
-                  Timezone: IST (GMT+5:30). Outside hours? Use email — we&apos;ll reply next morning.
+                  Timezone: PKT (GMT+5:00). Outside hours? Use email — we&apos;ll reply next morning.
                 </p>
               </div>
             </CardBody>
@@ -416,17 +416,17 @@ export default function ContactPage() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&h=200&fit=crop&q=80"
-                  alt="EduPortal office in Bengaluru"
+                  alt="EduPortal office in Faisalabad"
                   className="w-full h-full object-cover"
                 />
               </div>
               <div className="text-sm text-[var(--foreground)] leading-relaxed space-y-0.5">
                 <p className="font-semibold">EduPortal HQ</p>
                 <p className="text-[var(--muted)]">14 Innovation Lane</p>
-                <p className="text-[var(--muted)]">Bengaluru, KA 560001, India</p>
+                <p className="text-[var(--muted)]">Faisalabad, Punjab 38000, Pakistan</p>
               </div>
               <a
-                href="https://www.openstreetmap.org/?mlat=12.9716&mlon=77.5946#map=16/12.9716/77.5946"
+                href="https://www.openstreetmap.org/?mlat=31.4504&mlon=73.1350#map=16/31.4504/73.1350"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--primary)] hover:underline"
@@ -519,8 +519,8 @@ export default function ContactPage() {
 }
 
 function ContactMap() {
-  const lat   = 12.9716;
-  const lon   = 77.5946;
+  const lat   = 31.4504;
+  const lon   = 73.1350;
   const delta = 0.012;
   const bbox  = `${lon - delta},${lat - delta},${lon + delta},${lat + delta}`;
   const embedSrc      = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lon}`;
@@ -529,7 +529,7 @@ function ContactMap() {
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
       <div className="text-center mb-8">
-        <h2 className="text-2xl sm:text-3xl font-bold">Find us in Bengaluru</h2>
+        <h2 className="text-2xl sm:text-3xl font-bold">Find us in Faisalabad</h2>
         <p className="mt-2 text-[var(--muted)] text-sm">Drop by, say hi, or schedule a coffee with the team.</p>
       </div>
 
@@ -552,13 +552,13 @@ function ContactMap() {
                 <Icon.Pin size={15} className="text-[var(--primary)] mt-0.5 shrink-0" />
                 <div className="text-[var(--foreground)] leading-relaxed">
                   14 Innovation Lane<br />
-                  Bengaluru, KA 560001<br />
-                  India
+                  Faisalabad, Punjab 38000<br />
+                  Pakistan
                 </div>
               </div>
               <div className="flex items-center gap-2.5">
                 <Icon.Clock size={15} className="text-[var(--primary)] shrink-0" />
-                <span className="text-[var(--foreground)]">Mon–Fri, 9:00 am – 6:00 pm IST</span>
+                <span className="text-[var(--foreground)]">Mon–Fri, 9:00 am – 6:00 pm PKT</span>
               </div>
               <div className="flex items-center gap-2.5">
                 <Icon.Mail size={15} className="text-[var(--primary)] shrink-0" />
@@ -599,7 +599,7 @@ function ContactMap() {
                 </span>
                 <div className="min-w-0">
                   <p className="text-xs font-bold leading-tight">EduPortal HQ</p>
-                  <p className="text-[11px] text-[var(--muted)] leading-snug mt-0.5">14 Innovation Lane, Bengaluru</p>
+                  <p className="text-[11px] text-[var(--muted)] leading-snug mt-0.5">14 Innovation Lane, Faisalabad</p>
                 </div>
               </div>
             </div>

@@ -156,6 +156,8 @@ export function Sparkline({
   height?: number;
   color?: string;
 }) {
+  // useId must run before any early return so hook order stays stable.
+  const id = React.useId();
   if (data.length < 2) {
     return <div style={{ width, height }} />;
   }
@@ -171,7 +173,6 @@ export function Sparkline({
     .map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`))
     .join(" ");
   const areaD = `${pathD} L ${width} ${height} L 0 ${height} Z`;
-  const id = React.useId();
   return (
     <svg width={width} height={height} className="block">
       <defs>

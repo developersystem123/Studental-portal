@@ -1,6 +1,9 @@
 import Link from "next/link";
 import Icon from "@/components/icons";
 import { Badge, Button, Card, CardBody } from "@/components/ui";
+import { FactSheetDownload } from "./FactSheetDownload";
+import { BrandKitButton, ProductScreenshotsButton } from "./BrandAssetsDownload";
+import { CopyEmailButton } from "./CopyEmailButton";
 
 export const metadata = {
   title: "Press & Media — EduPortal",
@@ -185,11 +188,7 @@ export default function PressPage() {
               announcements, facts, and approved brand assets.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
-              <a href="mailto:press@eduportal.app">
-                <Button size="lg">
-                  <Icon.Mail size={16} /> press@eduportal.app
-                </Button>
-              </a>
+              <CopyEmailButton email="press@eduportal.app" size="lg" />
               <Link href="#assets">
                 <Button size="lg" variant="outline">
                   <Icon.Download size={16} /> Brand assets
@@ -242,12 +241,7 @@ export default function PressPage() {
               </div>
               <h2 className="text-2xl font-bold">Quick facts</h2>
             </div>
-            <a
-              href="mailto:press@eduportal.app?subject=Fact sheet (PDF) request"
-              className="text-sm text-[var(--primary)] hover:underline font-semibold inline-flex items-center gap-1.5"
-            >
-              <Icon.Download size={14} /> Download PDF
-            </a>
+            <FactSheetDownload facts={facts.map((f) => ({ label: f.label, value: f.value }))} />
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {facts.map((f, i) => {
@@ -379,16 +373,8 @@ export default function PressPage() {
             </div>
 
             <div className="mt-7 flex flex-wrap gap-3">
-              <a href="mailto:press@eduportal.app?subject=Brand kit request">
-                <Button>
-                  <Icon.Download size={15} /> Download brand kit (ZIP)
-                </Button>
-              </a>
-              <a href="mailto:press@eduportal.app?subject=Screenshot pack request">
-                <Button variant="outline">
-                  <Icon.Camera size={15} /> Product screenshots
-                </Button>
-              </a>
+              <BrandKitButton />
+              <ProductScreenshotsButton />
             </div>
           </div>
 

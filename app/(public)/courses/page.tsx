@@ -556,8 +556,8 @@ export default function PublicCoursesPage() {
                   <Button
                     size="lg"
                     variant="outline"
-                    className="border-white/30 text-white hover:bg-white/10 hover:border-white/50
-                      dark:border-green-500/30 dark:text-green-300 dark:hover:bg-green-500/10 dark:hover:border-green-400/50"
+                    className="bg-transparent border-white/30 text-white hover:bg-white/10 hover:border-white/50
+                      dark:bg-transparent dark:border-green-500/30 dark:text-green-300 dark:hover:bg-green-500/10 dark:hover:border-green-400/50"
                   >
                     Talk to us
                   </Button>

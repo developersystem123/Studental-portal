@@ -176,7 +176,7 @@ export default function TestimonialsPage() {
             <p className="mt-3 text-white/85">Join 48,000+ learners building real skills with EduPortal.</p>
             <div className="mt-6 flex justify-center gap-3 flex-wrap">
               <Link href="/register"><Button variant="secondary">Start free</Button></Link>
-              <Link href="/courses"><Button variant="outline" className="text-white border-white/30 hover:bg-white/10">Browse courses</Button></Link>
+              <Link href="/courses"><Button variant="outline" className="bg-transparent text-white border-white/30 hover:bg-white/10">Browse courses</Button></Link>
             </div>
           </CardBody>
         </Card>

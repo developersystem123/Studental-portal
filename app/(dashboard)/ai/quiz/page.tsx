@@ -77,10 +77,11 @@ function TimerCircle({ remaining, total }: { remaining: number; total: number })
 }
 
 export default function AiQuizPage() {
-  const toast = useToast();
   const { user } = useAuth();
   const isPro = user?.plan === "pro" || user?.plan === "team";
 
+  // Gate wrapper — keeps all of the quiz's hooks in <AiQuizInner> so this early
+  // return never conditionally skips them (rules of hooks).
   if (user && !isPro) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4 space-y-5">
@@ -97,6 +98,11 @@ export default function AiQuizPage() {
       </div>
     );
   }
+  return <AiQuizInner />;
+}
+
+function AiQuizInner() {
+  const toast = useToast();
 
   // Setup state
   const [topic, setTopic] = React.useState("");

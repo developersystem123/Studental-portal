@@ -184,16 +184,6 @@ export default function HomePage() {
                 </Button>
               </Link>
             </div>
-            <div className="mt-8 flex items-center gap-6 text-sm text-[var(--muted)]">
-              <div className="flex items-center gap-2">
-                <Icon.Check size={16} className="text-emerald-500" />
-                <span>No credit card</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Icon.Check size={16} className="text-emerald-500" />
-                <span>Cancel anytime</span>
-              </div>
-            </div>
           </div>
 
           {/* Hero visual — real photo */}
@@ -502,7 +492,7 @@ export default function HomePage() {
                 </Link>
               )}
               <Link href="/contact">
-                <Button size="lg" variant="outline" className="!border-white/40 text-white hover:bg-white/10">
+                <Button size="lg" variant="outline" className="bg-transparent !border-white/40 text-white hover:bg-white/10">
                   Talk to us
                 </Button>
               </Link>

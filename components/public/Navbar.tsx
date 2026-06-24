@@ -236,19 +236,37 @@ export function Navbar() {
                         {group.title}
                       </p>
                       <ul className="space-y-0.5">
-                        {group.items.map((item) => (
+                        {group.items.map((item) => {
+                          const active = pathname.startsWith(item.href);
+                          return (
                           <li key={item.href}>
                             <Link
                               role="menuitem"
+                              aria-current={active ? "page" : undefined}
                               href={item.href}
                               onClick={() => setMoreOpen(false)}
-                              className="flex items-start gap-3 px-2.5 py-2.5 rounded-xl hover:bg-[var(--surface-2)] transition-colors group/item"
+                              className={cn(
+                                "flex items-start gap-3 px-2.5 py-2.5 rounded-xl transition-colors group/item",
+                                active ? "bg-[var(--primary-soft)]" : "hover:bg-[var(--surface-2)]",
+                              )}
                             >
-                              <span className="shrink-0 h-8 w-8 rounded-lg bg-[var(--primary-soft)] text-[var(--primary)] inline-flex items-center justify-center group-hover/item:bg-[var(--primary)] group-hover/item:text-white transition-colors">
+                              <span
+                                className={cn(
+                                  "shrink-0 h-8 w-8 rounded-lg inline-flex items-center justify-center transition-colors",
+                                  active
+                                    ? "bg-[var(--primary)] text-white"
+                                    : "bg-[var(--primary-soft)] text-[var(--primary)] group-hover/item:bg-[var(--primary)] group-hover/item:text-white",
+                                )}
+                              >
                                 {item.icon}
                               </span>
                               <span className="min-w-0">
-                                <span className="block text-sm font-medium text-[var(--foreground)] leading-tight">
+                                <span
+                                  className={cn(
+                                    "block text-sm font-medium leading-tight",
+                                    active ? "text-[var(--primary)]" : "text-[var(--foreground)]",
+                                  )}
+                                >
                                   {item.label}
                                   <LinkPending report={reportPending} />
                                 </span>
@@ -258,7 +276,8 @@ export function Navbar() {
                               </span>
                             </Link>
                           </li>
-                        ))}
+                          );
+                        })}
                       </ul>
                     </div>
                   ))}

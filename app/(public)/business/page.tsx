@@ -299,7 +299,7 @@ export default function BusinessPage() {
                 </Button>
               </Link>
               <a href="mailto:sales@eduportal.app" className="w-full sm:w-auto">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto border-white/40 text-white hover:bg-white/10">
+                <Button size="lg" variant="outline" className="w-full sm:w-auto bg-transparent border-white/40 text-white hover:bg-white/10">
                   <Icon.Mail size={18} /> Email us
                 </Button>
               </a>

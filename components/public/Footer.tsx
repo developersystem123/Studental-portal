@@ -131,19 +131,8 @@ export function Footer() {
         {/* Bottom bar */}
         <div className="relative">
           <div className="h-px bg-gradient-to-r from-transparent via-[var(--border)] to-transparent" />
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[var(--muted)]">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex items-center justify-center gap-3 text-xs text-[var(--muted)]">
             <p>© {new Date().getFullYear()} EduPortal. All rights reserved.</p>
-            <div className="flex items-center gap-4">
-              <p className="flex items-center gap-1.5">
-                Made with{" "}
-                <span className="gradient-text font-semibold">passion</span>{" "}
-                for learners worldwide
-              </p>
-              <div className="flex items-center gap-1.5">
-                <span className="status-dot online" />
-                <span>All systems operational</span>
-              </div>
-            </div>
           </div>
         </div>
       </div>

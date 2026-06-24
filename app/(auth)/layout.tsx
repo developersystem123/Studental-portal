@@ -34,7 +34,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
 
           <Link
             href="/"
-            className="hidden sm:flex items-center gap-1.5 text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
+            className="hidden sm:flex items-center gap-1.5 text-xs text-[var(--muted)] border border-[var(--border)] rounded-full px-3 py-1.5 hover:text-[var(--foreground)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-2)] transition-colors"
           >
             <Icon.ArrowLeft size={13} /> Back to home
           </Link>

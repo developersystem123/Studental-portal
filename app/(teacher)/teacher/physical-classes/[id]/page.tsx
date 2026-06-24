@@ -285,16 +285,16 @@ export default function TeacherPhysicalClassDetailPage() {
     (s) => s.sessionsHeld > 0 && s.attendanceRate < AT_RISK_THRESHOLD,
   );
 
-  // Session summary for the selected date (from current marks)
-  const sessionSummary = React.useMemo(() => {
-    const vals = Object.values(marks).filter((v) => v !== null) as AttendanceStatus[];
-    return {
-      present: vals.filter((v) => v === "present").length,
-      late: vals.filter((v) => v === "late").length,
-      absent: vals.filter((v) => v === "absent").length,
-      excused: vals.filter((v) => v === "excused").length,
-    };
-  }, [marks]);
+  // Session summary for the selected date (from current marks).
+  // Plain const (not useMemo) so it sits safely after the loading/not-found
+  // gates without conditionally calling a hook.
+  const sessionMarks = Object.values(marks).filter((v) => v !== null) as AttendanceStatus[];
+  const sessionSummary = {
+    present: sessionMarks.filter((v) => v === "present").length,
+    late: sessionMarks.filter((v) => v === "late").length,
+    absent: sessionMarks.filter((v) => v === "absent").length,
+    excused: sessionMarks.filter((v) => v === "excused").length,
+  };
 
   // Trend: absent rate for last 8 sessions
   const overallAvgRate = detail.roster.length === 0
@@ -303,23 +303,21 @@ export default function TeacherPhysicalClassDetailPage() {
         detail.roster.reduce((s, r) => s + r.attendanceRate, 0) / detail.roster.length,
       );
 
-  // Filtered visible roster
-  const visibleRoster = React.useMemo(() => {
-    let list = detail.roster;
-    if (studentSearch.trim()) {
-      const q = studentSearch.toLowerCase();
-      list = list.filter(
-        (s) =>
-          s.studentName.toLowerCase().includes(q) ||
-          s.studentEmail.toLowerCase().includes(q),
-      );
-    }
-    if (showAtRisk) {
-      const ids = new Set(atRiskRoster.map((s) => s.studentId));
-      list = list.filter((s) => ids.has(s.studentId));
-    }
-    return list;
-  }, [detail.roster, studentSearch, showAtRisk, atRiskRoster]);
+  // Filtered visible roster — plain const (not useMemo) so it sits safely after
+  // the loading/not-found gates without conditionally calling a hook.
+  let visibleRoster = detail.roster;
+  if (studentSearch.trim()) {
+    const q = studentSearch.toLowerCase();
+    visibleRoster = visibleRoster.filter(
+      (s) =>
+        s.studentName.toLowerCase().includes(q) ||
+        s.studentEmail.toLowerCase().includes(q),
+    );
+  }
+  if (showAtRisk) {
+    const ids = new Set(atRiskRoster.map((s) => s.studentId));
+    visibleRoster = visibleRoster.filter((s) => ids.has(s.studentId));
+  }
 
   return (
     <div className="space-y-6 fade-in">

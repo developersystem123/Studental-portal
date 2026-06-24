@@ -76,10 +76,12 @@ function freshSession(): Session {
 
 export default function AiChatPage() {
   const { user } = useAuth();
-  const { enrollments } = useData();
   const isPro = user?.plan === "pro" || user?.plan === "team";
 
-  // Gate: non-Pro users see an upgrade paywall instead of the AI chat.
+  // Gate: non-Pro users see an upgrade paywall instead of the AI chat. This is
+  // a thin wrapper so all of the chat's hooks live in <AiChatInner> and are
+  // never skipped by this early return (which would violate the rules of hooks
+  // once `user` loads asynchronously).
   if (user && !isPro) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4 space-y-5">
@@ -96,6 +98,12 @@ export default function AiChatPage() {
       </div>
     );
   }
+  return <AiChatInner />;
+}
+
+function AiChatInner() {
+  const { user } = useAuth();
+  const { enrollments } = useData();
   const { push: pushToast } = useToast();
   const enrolledCourses = COURSES.filter((c) => enrollments.find((e) => e.courseId === c.id));
 
