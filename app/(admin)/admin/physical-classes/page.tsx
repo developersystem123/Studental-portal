@@ -78,6 +78,7 @@ export default function AdminPhysicalClassesPage() {
   const [loading, setLoading] = React.useState(true);
   const [filter, setFilter] = React.useState<Filter>("all");
   const [query, setQuery] = React.useState("");
+  const [campusFilter, setCampusFilter] = React.useState("all");
 
   const [formOpen, setFormOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<PhysicalClass | null>(null);
@@ -112,10 +113,16 @@ export default function AdminPhysicalClassesPage() {
     [classes],
   );
 
+  const campusOptions = React.useMemo(
+    () => Array.from(new Set(classes.map((c) => c.campus))).sort((a, b) => a.localeCompare(b)),
+    [classes],
+  );
+
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
     return classes.filter((c) => {
       if (filter !== "all" && c.status !== filter) return false;
+      if (campusFilter !== "all" && c.campus !== campusFilter) return false;
       if (!q) return true;
       return (
         c.title.toLowerCase().includes(q) ||
@@ -124,7 +131,23 @@ export default function AdminPhysicalClassesPage() {
         c.campus.toLowerCase().includes(q)
       );
     });
-  }, [classes, filter, query]);
+  }, [classes, filter, campusFilter, query]);
+
+  function exportCSV(rows: PhysicalClass[]) {
+    const header = ["Batch", "Course", "Instructor", "Campus", "Room", "Timing", "Days", "Start", "End", "Seats", "Capacity", "Status"];
+    const data = rows.map((c) => [
+      `"${c.title}"`, `"${c.courseTitle}"`, `"${c.instructorName}"`,
+      `"${c.campus}"`, `"${c.room}"`, `"${c.batch}"`, `"${c.daysOfWeek.join(" ")}"`,
+      c.startDate.slice(0, 10), c.endDate.slice(0, 10),
+      c.enrolledCount, c.capacity, c.status,
+    ]);
+    const csv = [header, ...data].map((row) => row.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "physical-classes.csv"; a.click();
+    URL.revokeObjectURL(url);
+  }
 
   function openCreate() {
     setEditing(null);
@@ -230,33 +253,49 @@ export default function AdminPhysicalClassesPage() {
 
   return (
     <div className="space-y-6 fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Manage</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">Physical Classes</h1>
-          <p className="mt-1 text-[var(--muted)]">
-            Create and manage in-person class batches, then place approved students into them.
-          </p>
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-gradient-to-br from-[var(--primary)]/10 via-[var(--surface)] to-[var(--surface)] px-5 sm:px-7 py-6">
+        <div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-[var(--primary)]/10 blur-2xl" />
+        <div className="pointer-events-none absolute -right-24 bottom-0 h-40 w-40 rounded-full bg-[var(--accent)]/10 blur-2xl" />
+        <div className="relative flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">
+              <Icon.Calendar size={12} /> Manage
+            </div>
+            <h1 className="mt-1.5 text-3xl font-bold tracking-tight">Physical Classes</h1>
+            <p className="mt-1 text-[var(--muted)] max-w-md">
+              Create and manage in-person class batches, then place approved students into them.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => { exportCSV(filtered); toast.push({ title: "CSV exported", tone: "success" }); }}
+              disabled={classes.length === 0}
+              className="bg-[var(--surface)]/80 backdrop-blur"
+            >
+              <Icon.Download size={15} /> Export CSV
+            </Button>
+            <Button onClick={openCreate} className="shadow-lg shadow-[var(--primary)]/25">
+              <Icon.Plus size={16} /> New batch
+            </Button>
+          </div>
         </div>
-        <Button onClick={openCreate}>
-          <Icon.Plus size={16} /> New batch
-        </Button>
       </div>
 
       {classes.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "Total batches", value: classStats.total, icon: <Icon.Calendar size={16} />, tint: "bg-[var(--primary-soft)] text-[var(--primary)]" },
-            { label: "Ongoing", value: classStats.ongoing, icon: <Icon.PlayCircle size={16} />, tint: classStats.ongoing > 0 ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-[var(--surface-2)] text-[var(--muted)]" },
-            { label: "Upcoming", value: classStats.upcoming, icon: <Icon.Clock size={16} />, tint: "bg-sky-500/10 text-sky-600 dark:text-sky-400" },
-            { label: "Total enrolled", value: classStats.totalEnrolled, icon: <Icon.Users size={16} />, tint: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
+            { label: "Total batches", value: classStats.total, icon: <Icon.Calendar size={18} />, tint: "bg-[var(--primary-soft)] text-[var(--primary)]" },
+            { label: "Ongoing", value: classStats.ongoing, icon: <Icon.PlayCircle size={18} />, tint: classStats.ongoing > 0 ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-[var(--surface-2)] text-[var(--muted)]" },
+            { label: "Upcoming", value: classStats.upcoming, icon: <Icon.Clock size={18} />, tint: "bg-sky-500/10 text-sky-600 dark:text-sky-400" },
+            { label: "Total enrolled", value: classStats.totalEnrolled, icon: <Icon.Users size={18} />, tint: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
           ].map((s) => (
-            <Card key={s.label}>
-              <CardBody className="flex items-center gap-3 !py-3">
-                <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${s.tint}`}>{s.icon}</div>
+            <Card key={s.label} className="transition hover:-translate-y-0.5 hover:shadow-md">
+              <CardBody className="flex items-center gap-3 !py-4">
+                <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${s.tint}`}>{s.icon}</div>
                 <div className="min-w-0">
-                  <p className="text-[11px] text-[var(--muted)]">{s.label}</p>
-                  <p className="text-xl font-bold tracking-tight">{s.value}</p>
+                  <p className="text-[11px] text-[var(--muted)] uppercase tracking-wide truncate">{s.label}</p>
+                  <p className="text-2xl font-bold tracking-tight leading-tight">{s.value}</p>
                 </div>
               </CardBody>
             </Card>
@@ -278,13 +317,21 @@ export default function AdminPhysicalClassesPage() {
             ]}
           />
         </div>
-        <div className="md:w-80">
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by batch, course, instructor, campus…"
-            icon={<Icon.Search size={16} />}
-          />
+        <div className="flex flex-col sm:flex-row gap-2 md:shrink-0">
+          <div className="w-full sm:w-64">
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by batch, course, instructor, campus…"
+              icon={<Icon.Search size={16} />}
+            />
+          </div>
+          <Select value={campusFilter} onChange={(e) => setCampusFilter(e.target.value)} className="w-full sm:!w-40 sm:shrink-0">
+            <option value="all">All campuses</option>
+            {campusOptions.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </Select>
         </div>
       </div>
 
@@ -317,9 +364,9 @@ export default function AdminPhysicalClassesPage() {
         </Card>
       ) : (
         <Card>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-[var(--surface-2)] text-[var(--muted)] text-xs uppercase tracking-wider">
+          <div className="overflow-x-auto rounded-xl">
+            <table className="w-full text-sm border-collapse">
+              <thead className="bg-[var(--surface-2)]/70 text-[var(--muted)] text-[11px] uppercase tracking-wide">
                 <tr>
                   <Th>Batch</Th>
                   <Th className="hidden md:table-cell">Instructor</Th>
@@ -331,12 +378,16 @@ export default function AdminPhysicalClassesPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((c) => {
+                {filtered.map((c, i) => {
                   const full = c.enrolledCount >= c.capacity;
+                  const pct = c.capacity > 0 ? Math.min(100, Math.round((c.enrolledCount / c.capacity) * 100)) : 0;
                   return (
                     <tr
                       key={c.id}
-                      className="border-t border-[var(--border)] hover:bg-[var(--surface-2)]/50"
+                      className={cn(
+                        "border-t border-[var(--border)] hover:bg-[var(--primary-soft)]/40 transition-colors",
+                        i % 2 === 1 && "bg-[var(--surface-2)]/25",
+                      )}
                     >
                       <Td>
                         <div className="font-medium truncate max-w-[24ch]">{c.title}</div>
@@ -361,10 +412,21 @@ export default function AdminPhysicalClassesPage() {
                           {formatDate(c.startDate)} – {formatDate(c.endDate)}
                         </div>
                       </Td>
-                      <Td className="hidden sm:table-cell">
-                        <span className={full ? "text-amber-500 font-medium" : ""}>
-                          {c.enrolledCount} / {c.capacity}
-                        </span>
+                      <Td className="hidden sm:table-cell w-32">
+                        <div className="space-y-1">
+                          <span className={cn("text-xs font-medium", full && "text-amber-500")}>
+                            {c.enrolledCount} / {c.capacity}
+                          </span>
+                          <div className="h-1.5 rounded-full bg-[var(--surface-2)] overflow-hidden">
+                            <div
+                              className={cn(
+                                "h-full rounded-full transition-all",
+                                full ? "bg-amber-500" : "bg-gradient-to-r from-[var(--primary)] to-[var(--accent)]",
+                              )}
+                              style={{ width: `${Math.max(pct, c.enrolledCount > 0 ? 4 : 0)}%` }}
+                            />
+                          </div>
+                        </div>
                       </Td>
                       <Td>
                         <Badge variant={STATUS_BADGE[c.status]} className="capitalize">
@@ -402,8 +464,10 @@ export default function AdminPhysicalClassesPage() {
               </tbody>
             </table>
           </div>
-          <p className="text-xs text-[var(--muted)] px-4 py-2.5 border-t border-[var(--border)]">
-            Showing {filtered.length} of {classes.length} batch{classes.length !== 1 ? "es" : ""}
+          <p className="text-xs text-[var(--muted)] px-4 py-3 border-t border-[var(--border)]">
+            Showing{" "}
+            <span className="font-medium text-[var(--foreground)]">{filtered.length}</span> of{" "}
+            <span className="font-medium text-[var(--foreground)]">{classes.length}</span> batch{classes.length !== 1 ? "es" : ""}
           </p>
         </Card>
       )}

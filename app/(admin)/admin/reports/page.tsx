@@ -80,6 +80,93 @@ function exportFullCSV(data: ReportData, range: string, toast: ReturnType<typeof
   toast.push({ title: "Full report exported", tone: "success" });
 }
 
+const SECTION_LABELS: Record<string, string> = {
+  overview: "Overview",
+  revenue: "Revenue",
+  learning: "Learning",
+  courses: "Top courses",
+};
+
+// Exports only the data backing the currently-viewed section tab, using the
+// report payload already fetched client-side (no extra API calls needed).
+function exportSectionCSV(section: string, data: ReportData, range: string, toast: ReturnType<typeof useToast>) {
+  const netRevenue = data.totals.revenue - data.totals.refunded;
+  const lines: string[] = [];
+
+  if (section === "revenue") {
+    const avgOrder = data.totals.transactions ? data.totals.revenue / data.totals.transactions : 0;
+    lines.push(
+      "=== REVENUE SUMMARY ===",
+      `Gross Revenue,$${(data.totals.revenue / 100).toFixed(2)}`,
+      `Refunded,$${(data.totals.refunded / 100).toFixed(2)}`,
+      `Net Revenue,$${(netRevenue / 100).toFixed(2)}`,
+      `Transactions,${data.totals.transactions}`,
+      `Avg Order,$${(avgOrder / 100).toFixed(2)}`,
+      "",
+      "=== MONTHLY REVENUE ===",
+      "Month,Revenue,Enrollments,Signups,Completions",
+      ...data.monthly.map((m) => `${m.label},$${(m.revenue / 100).toFixed(2)},${m.enrollments},${m.signups},${m.completions}`),
+      "",
+      "=== PAYMENTS BY METHOD ===",
+      "Method,Count",
+      ...data.paymentMethods.map((p) => `${p.label},${p.value}`),
+    );
+  } else if (section === "learning") {
+    const certRate = data.totals.enrollments ? Math.round((data.totals.certificates / data.totals.enrollments) * 100) : 0;
+    lines.push(
+      "=== LEARNING SUMMARY ===",
+      `Enrollments,${data.totals.enrollments}`,
+      `Completions,${data.totals.completions}`,
+      `Completion Rate,${data.totals.completionRate}%`,
+      `Certificates,${data.totals.certificates}`,
+      `Certification Rate,${certRate}%`,
+      `Avg Rating,${data.totals.avgRating}`,
+      "",
+      "=== MONTHLY LEARNING ACTIVITY ===",
+      "Month,Enrollments,Completions,Signups",
+      ...data.monthly.map((m) => `${m.label},${m.enrollments},${m.completions},${m.signups}`),
+    );
+  } else if (section === "courses") {
+    lines.push(
+      "=== TOP COURSES ===",
+      "Rank,Title,Enrollments,Revenue",
+      ...data.topCourses.map((c, i) => `${i + 1},"${c.title}",${c.enrollments},$${(c.revenue / 100).toFixed(2)}`),
+      "",
+      "=== ENROLLMENTS BY CATEGORY ===",
+      "Category,Enrollments",
+      ...data.categoryMix.map((c) => `${c.label},${c.value}`),
+    );
+  } else {
+    lines.push(
+      "=== OVERVIEW SUMMARY ===",
+      `Gross Revenue,$${(data.totals.revenue / 100).toFixed(2)}`,
+      `Net Revenue,$${(netRevenue / 100).toFixed(2)}`,
+      `Enrollments,${data.totals.enrollments}`,
+      `Completion Rate,${data.totals.completionRate}%`,
+      `Certificates,${data.totals.certificates}`,
+      `Avg Rating,${data.totals.avgRating}`,
+      `Students,${data.totals.students}`,
+      `Teachers,${data.totals.teachers}`,
+      `Total Courses,${data.totals.courses}`,
+      "",
+      "=== MONTHLY BREAKDOWN ===",
+      "Month,Enrollments,Signups,Completions,Revenue",
+      ...data.monthly.map((m) => `${m.label},${m.enrollments},${m.signups},${m.completions},$${(m.revenue / 100).toFixed(2)}`),
+      "",
+      "=== ENROLLMENTS BY CATEGORY ===",
+      "Category,Enrollments",
+      ...data.categoryMix.map((c) => `${c.label},${c.value}`),
+    );
+  }
+
+  const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href = url; a.download = `eduportal-report-${section}-${range}mo-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+  URL.revokeObjectURL(url);
+  toast.push({ title: `${SECTION_LABELS[section] ?? "View"} data exported`, tone: "success" });
+}
+
 export default function AdminReportsPage() {
   const toast = useToast();
   const [range,   setRange]   = React.useState("6");
@@ -125,45 +212,62 @@ export default function AdminReportsPage() {
   return (
     <div className="space-y-6 fade-in">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Manage</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">Reports &amp; analytics</h1>
-          <p className="mt-1 text-[var(--muted)]">Platform-wide trends for growth, revenue, and learning outcomes.</p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Tabs value={range} onChange={(v) => setRange(v)} options={[
-            { value: "3",  label: "3 mo" },
-            { value: "6",  label: "6 mo" },
-            { value: "12", label: "12 mo" },
-          ]} />
-          <Button variant="outline" onClick={() => data && exportFullCSV(data, range, toast)} disabled={!data}>
-            <Icon.Download size={15} /> Export CSV
-          </Button>
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-gradient-to-br from-[var(--primary)]/10 via-[var(--surface)] to-[var(--surface)] px-5 sm:px-7 py-6">
+        <div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-[var(--primary)]/10 blur-2xl" />
+        <div className="pointer-events-none absolute -right-24 bottom-0 h-40 w-40 rounded-full bg-[var(--accent)]/10 blur-2xl" />
+        <div className="relative flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">
+              <Icon.BarChart3 size={12} /> Manage
+            </div>
+            <h1 className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight">Reports &amp; analytics</h1>
+            <p className="mt-1 text-sm text-[var(--muted)] max-w-md">Platform-wide trends for growth, revenue, and learning outcomes.</p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Tabs value={range} onChange={(v) => setRange(v)} options={[
+              { value: "3",  label: "3 mo" },
+              { value: "6",  label: "6 mo" },
+              { value: "12", label: "12 mo" },
+            ]} />
+            <Button variant="outline" onClick={() => data && exportFullCSV(data, range, toast)} disabled={!data} className="bg-[var(--surface)]/80 backdrop-blur">
+              <Icon.Download size={15} /> Export CSV
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Section tabs */}
-      <div className="flex gap-1 flex-wrap">
-        {[
-          { value: "overview", label: "Overview", icon: Icon.BarChart3 },
-          { value: "revenue",  label: "Revenue",  icon: Icon.DollarSign },
-          { value: "learning", label: "Learning", icon: Icon.Book },
-          { value: "courses",  label: "Top courses", icon: Icon.Award },
-        ].map(({ value, label, icon: Ic }) => (
-          <button
-            key={value}
-            onClick={() => setSection(value)}
-            className={cn(
-              "flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition",
-              section === value
-                ? "bg-[var(--primary)] text-white shadow-sm"
-                : "text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)]",
-            )}
-          >
-            <Ic size={14} /> {label}
-          </button>
-        ))}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex gap-1 flex-wrap">
+          {[
+            { value: "overview", label: "Overview", icon: Icon.BarChart3 },
+            { value: "revenue",  label: "Revenue",  icon: Icon.DollarSign },
+            { value: "learning", label: "Learning", icon: Icon.Book },
+            { value: "courses",  label: "Top courses", icon: Icon.Award },
+          ].map(({ value, label, icon: Ic }) => (
+            <button
+              key={value}
+              onClick={() => setSection(value)}
+              className={cn(
+                "flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition",
+                section === value
+                  ? "bg-[var(--primary)] text-white shadow-sm"
+                  : "text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)]",
+              )}
+            >
+              <Ic size={14} /> {label}
+            </button>
+          ))}
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => data && exportSectionCSV(section, data, range, toast)}
+          disabled={!data}
+          className="shrink-0 text-[var(--muted)] hover:text-[var(--foreground)]"
+        >
+          <Icon.Download size={13} /> Export {SECTION_LABELS[section] ?? "view"} data
+        </Button>
       </div>
 
       {loading && !data ? (
@@ -213,13 +317,13 @@ export default function AdminReportsPage() {
                   { label: "Teachers",     value: totals?.teachers ?? 0,             tone: "bg-violet-500/10 text-violet-600 dark:text-violet-400", icon: Icon.Users },
                   { label: "Total courses",value: totals?.courses ?? 0,              tone: "bg-amber-500/10 text-amber-600 dark:text-amber-400", icon: Icon.Book },
                 ].map((s) => (
-                  <Card key={s.label}>
+                  <Card key={s.label} className="hover:-translate-y-0.5 hover:shadow-md transition">
                     <CardBody className="flex items-center gap-3 !py-3">
-                      <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${s.tone}`}>
+                      <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${s.tone}`}>
                         <s.icon size={16} />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[11px] text-[var(--muted)]">{s.label}</p>
+                        <p className="text-[11px] uppercase tracking-wide text-[var(--muted)] font-semibold">{s.label}</p>
                         <p className="text-lg font-bold tracking-tight">{s.value}</p>
                       </div>
                     </CardBody>
@@ -229,7 +333,7 @@ export default function AdminReportsPage() {
 
               {/* Enrollment + completion */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <Card className="lg:col-span-2">
+                <Card className="lg:col-span-2 hover:shadow-md transition-shadow">
                   <CardBody>
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div>
@@ -247,7 +351,7 @@ export default function AdminReportsPage() {
                     </div>
                   </CardBody>
                 </Card>
-                <Card>
+                <Card className="hover:shadow-md transition-shadow">
                   <CardBody>
                     <div className="flex items-center justify-between mb-1">
                       <h2 className="font-semibold">Completion</h2>
@@ -272,19 +376,6 @@ export default function AdminReportsPage() {
                   </CardBody>
                 </Card>
               </div>
-
-              {/* Category mix */}
-              <Card>
-                <CardBody>
-                  <h2 className="font-semibold">Enrollments by category</h2>
-                  <p className="text-xs text-[var(--muted)] mb-3">Where learners are spending time</p>
-                  {(data?.categoryMix ?? []).length === 0 ? <Empty /> : (
-                    <div className="h-[200px]">
-                      <BarChart data={data!.categoryMix} height={200} />
-                    </div>
-                  )}
-                </CardBody>
-              </Card>
             </>
           )}
 
@@ -301,7 +392,7 @@ export default function AdminReportsPage() {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <Card>
+                <Card className="hover:shadow-md transition-shadow">
                   <CardBody>
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div>
@@ -319,7 +410,7 @@ export default function AdminReportsPage() {
                     </div>
                   </CardBody>
                 </Card>
-                <Card>
+                <Card className="hover:shadow-md transition-shadow">
                   <CardBody>
                     <h2 className="font-semibold">Payments by method</h2>
                     <p className="text-xs text-[var(--muted)] mb-3">Completed charges by payment type</p>
@@ -388,7 +479,7 @@ export default function AdminReportsPage() {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <Card>
+                <Card className="hover:shadow-md transition-shadow">
                   <CardBody>
                     <h2 className="font-semibold">Completions per month</h2>
                     <p className="text-xs text-[var(--muted)] mb-3">Courses fully completed by students</p>
@@ -397,7 +488,7 @@ export default function AdminReportsPage() {
                     </div>
                   </CardBody>
                 </Card>
-                <Card>
+                <Card className="hover:shadow-md transition-shadow">
                   <CardBody>
                     <h2 className="font-semibold">New signups per month</h2>
                     <p className="text-xs text-[var(--muted)] mb-3">Student &amp; instructor registrations</p>
@@ -409,7 +500,7 @@ export default function AdminReportsPage() {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <Card className="lg:col-span-2">
+                <Card className="lg:col-span-2 hover:shadow-md transition-shadow">
                   <CardBody>
                     <h2 className="font-semibold">Enrollment vs completion trend</h2>
                     <p className="text-xs text-[var(--muted)] mb-3">Monthly enrollments (line) and completions (bars)</p>
@@ -418,7 +509,7 @@ export default function AdminReportsPage() {
                     </div>
                   </CardBody>
                 </Card>
-                <Card>
+                <Card className="hover:shadow-md transition-shadow">
                   <CardBody>
                     <h2 className="font-semibold mb-1">Platform health</h2>
                     <p className="text-xs text-[var(--muted)] mb-4">Key quality metrics</p>
@@ -507,7 +598,7 @@ export default function AdminReportsPage() {
               )}
 
               {/* Category bar */}
-              <Card>
+              <Card className="hover:shadow-md transition-shadow">
                 <CardBody>
                   <h2 className="font-semibold">Enrollments by category</h2>
                   <p className="text-xs text-[var(--muted)] mb-3">Distribution across course categories</p>

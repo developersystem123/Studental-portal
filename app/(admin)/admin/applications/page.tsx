@@ -63,6 +63,7 @@ export default function AdminApplicationsPage() {
   const [filter,        setFilter]        = React.useState<Filter>("all");
   const [query,         setQuery]         = React.useState("");
   const [courseFilter,  setCourseFilter]  = React.useState("all");
+  const [campusFilter,  setCampusFilter]  = React.useState("all");
   const [sortKey,       setSortKey]       = React.useState<SortKey>("submitted");
   const [sortDir,       setSortDir]       = React.useState<SortDir>("desc");
   const [page,          setPage]          = React.useState(1);
@@ -98,6 +99,10 @@ export default function AdminApplicationsPage() {
     return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
   }, [rows]);
 
+  const campusOptions = React.useMemo(() => {
+    return Array.from(new Set(rows.map((r) => r.campus))).sort((a, b) => a.localeCompare(b));
+  }, [rows]);
+
   const counts = React.useMemo(() => ({
     all:      rows.length,
     pending:  rows.filter((r) => r.status === "pending").length,
@@ -111,6 +116,7 @@ export default function AdminApplicationsPage() {
       .filter((r) => {
         if (filter !== "all" && r.status !== filter) return false;
         if (courseFilter !== "all" && r.courseId !== courseFilter) return false;
+        if (campusFilter !== "all" && r.campus !== campusFilter) return false;
         if (!q) return true;
         return (
           r.studentName.toLowerCase().includes(q)  ||
@@ -128,9 +134,9 @@ export default function AdminApplicationsPage() {
         if (sortKey === "status")    cmp = STATUS_ORDER[a.status] - STATUS_ORDER[b.status];
         return sortDir === "asc" ? cmp : -cmp;
       });
-  }, [rows, filter, query, courseFilter, sortKey, sortDir]);
+  }, [rows, filter, query, courseFilter, campusFilter, sortKey, sortDir]);
 
-  React.useEffect(() => { setPage(1); setSelected(new Set()); }, [query, filter, courseFilter, sortKey, sortDir]);
+  React.useEffect(() => { setPage(1); setSelected(new Set()); }, [query, filter, courseFilter, campusFilter, sortKey, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -227,16 +233,37 @@ export default function AdminApplicationsPage() {
   return (
     <div className="space-y-6 fade-in">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Manage</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">In-Person Applications</h1>
-          <p className="mt-1 text-[var(--muted)]">Review applications and place approved students into a physical class batch.</p>
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-gradient-to-br from-[var(--primary)]/10 via-[var(--surface)] to-[var(--surface)] px-5 sm:px-7 py-6">
+        <div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-[var(--primary)]/10 blur-2xl" />
+        <div className="pointer-events-none absolute -right-24 bottom-0 h-40 w-40 rounded-full bg-[var(--accent)]/10 blur-2xl" />
+        <div className="relative flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">
+              <Icon.Tag size={12} /> Manage
+            </div>
+            <h1 className="mt-1.5 text-3xl font-bold tracking-tight">In-Person Applications</h1>
+            <p className="mt-1 text-[var(--muted)] max-w-md">Review applications and place approved students into a physical class batch.</p>
+          </div>
+          <Button variant="outline" onClick={() => { exportCSV(filtered); toast.push({ title: "CSV exported", tone: "success" }); }} className="bg-[var(--surface)]/80 backdrop-blur">
+            <Icon.Download size={15} /> Export CSV
+          </Button>
         </div>
-        <Button variant="outline" onClick={() => { exportCSV(filtered); toast.push({ title: "CSV exported", tone: "success" }); }}>
-          <Icon.Download size={15} /> Export CSV
-        </Button>
       </div>
+
+      {/* Urgent: pending review banner */}
+      {counts.pending > 0 && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/25 flex-wrap">
+          <div className="h-8 w-8 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+            <Icon.Clock size={15} />
+          </div>
+          <p className="text-sm">
+            <span className="font-semibold">{counts.pending}</span> application{counts.pending !== 1 ? "s" : ""} awaiting review.
+          </p>
+          <Button size="sm" variant="outline" className="ml-auto" onClick={() => setFilter("pending")}>
+            Review now
+          </Button>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -263,21 +290,57 @@ export default function AdminApplicationsPage() {
               />
             </div>
             <div className="flex flex-col sm:flex-row gap-2 lg:ml-auto lg:shrink-0">
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search name, email, CNIC…"
-                icon={<Icon.Search size={15} />}
-                className="!h-9 w-full sm:!w-52"
-              />
+              <div className="w-full sm:w-52">
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search name, email, CNIC…"
+                  icon={<Icon.Search size={15} />}
+                  className="!h-9"
+                />
+              </div>
               <Select value={courseFilter} onChange={(e) => setCourseFilter(e.target.value)} className="!h-9 w-full sm:!w-40 sm:shrink-0">
                 <option value="all">All courses</option>
                 {courseOptions.map(([id, title]) => (
                   <option key={id} value={id}>{title.length > 28 ? title.slice(0, 26) + "…" : title}</option>
                 ))}
               </Select>
+              <Select value={campusFilter} onChange={(e) => setCampusFilter(e.target.value)} className="!h-9 w-full sm:!w-40 sm:shrink-0">
+                <option value="all">All campuses</option>
+                {campusOptions.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </Select>
             </div>
           </div>
+
+          {/* Active filter chips */}
+          {(query.trim() || courseFilter !== "all" || campusFilter !== "all") && (
+            <div className="flex items-center gap-2 flex-wrap text-xs">
+              <span className="text-[var(--muted)]">Filters:</span>
+              {query.trim() && (
+                <button onClick={() => setQuery("")} className="inline-flex items-center gap-1 px-2 h-6 rounded-full bg-[var(--primary-soft)] text-[var(--primary)] font-semibold hover:brightness-95">
+                  &ldquo;{query.trim()}&rdquo; <Icon.X size={10} />
+                </button>
+              )}
+              {courseFilter !== "all" && (
+                <button onClick={() => setCourseFilter("all")} className="inline-flex items-center gap-1 px-2 h-6 rounded-full bg-[var(--primary-soft)] text-[var(--primary)] font-semibold hover:brightness-95">
+                  {courseOptions.find(([id]) => id === courseFilter)?.[1]?.slice(0, 20) ?? "Course"} <Icon.X size={10} />
+                </button>
+              )}
+              {campusFilter !== "all" && (
+                <button onClick={() => setCampusFilter("all")} className="inline-flex items-center gap-1 px-2 h-6 rounded-full bg-[var(--primary-soft)] text-[var(--primary)] font-semibold hover:brightness-95">
+                  {campusFilter} <Icon.X size={10} />
+                </button>
+              )}
+              <button
+                onClick={() => { setQuery(""); setCourseFilter("all"); setCampusFilter("all"); }}
+                className="text-[var(--muted)] hover:text-[var(--danger)] transition"
+              >
+                Clear all
+              </button>
+            </div>
+          )}
 
           {/* Bulk action bar */}
           {selected.size > 0 && (
@@ -305,10 +368,10 @@ export default function AdminApplicationsPage() {
             />
           ) : (
             <>
-              <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
-                <table className="w-full text-sm">
+              <div className="overflow-x-auto rounded-xl border border-[var(--border)] shadow-sm">
+                <table className="w-full text-sm border-collapse">
                   <thead>
-                    <tr className="border-b border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted)] text-xs uppercase tracking-wider">
+                    <tr className="border-b border-[var(--border)] bg-[var(--surface-2)]/70 text-[var(--muted)] text-[11px] uppercase tracking-wide">
                       <th className="px-4 py-3 w-10">
                         <input
                           type="checkbox"
@@ -342,12 +405,13 @@ export default function AdminApplicationsPage() {
                       <th className="px-4 py-3 text-right font-semibold">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[var(--border)]">
-                    {paginated.map((row) => (
+                  <tbody>
+                    {paginated.map((row, i) => (
                       <tr
                         key={row.id}
                         className={cn(
-                          "hover:bg-[var(--surface-2)]/60 transition-colors group",
+                          "border-b border-[var(--border)] last:border-0 hover:bg-[var(--primary-soft)]/40 transition-colors group",
+                          i % 2 === 1 && !selected.has(row.id) && "bg-[var(--surface-2)]/25",
                           selected.has(row.id) && "bg-[var(--primary-soft)]/40",
                         )}
                       >
@@ -363,7 +427,7 @@ export default function AdminApplicationsPage() {
                         {/* Student */}
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2.5">
-                            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white text-xs font-bold shrink-0">
+                            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm ring-2 ring-[var(--surface)]">
                               {row.studentName.charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0">
@@ -443,7 +507,7 @@ export default function AdminApplicationsPage() {
               </div>
 
               {/* Pagination */}
-              <div className="flex items-center justify-between gap-4 pt-1 flex-wrap">
+              <div className="flex items-center justify-between gap-4 pt-3 border-t border-[var(--border)] flex-wrap">
                 <p className="text-xs text-[var(--muted)]">
                   Showing <span className="font-semibold text-[var(--foreground)]">{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)}</span> of{" "}
                   <span className="font-semibold text-[var(--foreground)]">{filtered.length}</span> applications

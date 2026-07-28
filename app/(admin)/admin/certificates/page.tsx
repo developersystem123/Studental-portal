@@ -147,6 +147,9 @@ export default function AdminCertificatesPage() {
   const [score,        setScore]        = React.useState("80");
   const [saving,       setSaving]       = React.useState(false);
   const [revoking,     setRevoking]     = React.useState<CertRow | null>(null);
+  const [selected,     setSelected]     = React.useState<Set<string>>(new Set());
+  const [bulkRevoke,   setBulkRevoke]   = React.useState(false);
+  const [bulkBusy,     setBulkBusy]     = React.useState(false);
 
   const load = React.useCallback(async () => {
     try {
@@ -202,10 +205,46 @@ export default function AdminCertificatesPage() {
       });
   }, [certs, query, scoreFilter, courseFilter, sortKey, sortDir]);
 
-  React.useEffect(() => { setPage(1); }, [query, scoreFilter, courseFilter, sortKey, sortDir]);
+  React.useEffect(() => { setPage(1); setSelected(new Set()); }, [query, scoreFilter, courseFilter, sortKey, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const allPageSelected = paginated.length > 0 && paginated.every((r) => selected.has(r.id));
+
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+  function toggleSelectAll() {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allPageSelected) paginated.forEach((r) => next.delete(r.id));
+      else paginated.forEach((r) => next.add(r.id));
+      return next;
+    });
+  }
+
+  async function confirmBulkRevoke() {
+    setBulkBusy(true);
+    const ids = Array.from(selected);
+    for (const id of ids) {
+      await fetch(`/api/admin/certificates/${id}`, { method: "DELETE" });
+    }
+    setBulkBusy(false);
+    setBulkRevoke(false);
+    setSelected(new Set());
+    toast.push({ title: `${ids.length} certificate${ids.length > 1 ? "s" : ""} revoked`, tone: "info" });
+    load();
+  }
+
+  function copyVerifyLink(code: string) {
+    const link = `${window.location.origin}/verify?code=${encodeURIComponent(code)}`;
+    navigator.clipboard.writeText(link).then(() => toast.push({ title: "Verify link copied", tone: "success" })).catch(() => {});
+  }
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) setSortDir((d) => d === "asc" ? "desc" : "asc");
@@ -256,19 +295,25 @@ export default function AdminCertificatesPage() {
   return (
     <div className="space-y-6 fade-in">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Manage</p>
-          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">Certificates</h1>
-          <p className="mt-1 text-sm text-[var(--muted)]">Every certificate issued across the platform — issue, preview, download or revoke.</p>
-        </div>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <Button variant="outline" onClick={() => { exportCSV(filtered); toast.push({ title: "CSV exported", tone: "success" }); }} className="flex-1 sm:flex-none justify-center">
-            <Icon.Download size={15} /> Export CSV
-          </Button>
-          <Button onClick={() => setIssueOpen(true)} className="flex-1 sm:flex-none justify-center">
-            <Icon.Plus size={16} /> Issue certificate
-          </Button>
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-gradient-to-br from-[var(--primary)]/10 via-[var(--surface)] to-[var(--surface)] px-5 sm:px-7 py-6">
+        <div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-[var(--primary)]/10 blur-2xl" />
+        <div className="pointer-events-none absolute -right-24 bottom-0 h-40 w-40 rounded-full bg-[var(--accent)]/10 blur-2xl" />
+        <div className="relative flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">
+              <Icon.Award size={12} /> Manage
+            </div>
+            <h1 className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight">Certificates</h1>
+            <p className="mt-1 text-sm text-[var(--muted)] max-w-md">Every certificate issued across the platform — issue, preview, download or revoke.</p>
+          </div>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button variant="outline" onClick={() => { exportCSV(filtered); toast.push({ title: "CSV exported", tone: "success" }); }} className="flex-1 sm:flex-none justify-center bg-[var(--surface)]/80 backdrop-blur">
+              <Icon.Download size={15} /> Export CSV
+            </Button>
+            <Button onClick={() => setIssueOpen(true)} className="flex-1 sm:flex-none justify-center shadow-lg shadow-[var(--primary)]/25">
+              <Icon.Plus size={16} /> Issue certificate
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -285,54 +330,74 @@ export default function AdminCertificatesPage() {
         <CardBody className="space-y-4">
           {/* Filters */}
           <div className="space-y-3">
-            {/* Scrollable tab bar */}
-            <div className="overflow-x-auto pb-1">
-              <div className="flex p-1 rounded-xl bg-[var(--surface-2)] gap-1 w-max min-w-full">
-                {([
-                  { value: "all",         label: "All",         count: certs.length },
-                  { value: "distinction", label: "Distinction", count: stats.distinction },
-                  { value: "pass",        label: "Pass",        count: stats.pass },
-                  { value: "fail",        label: "Fail",        count: certs.filter((c) => c.score < 60).length },
-                ] as { value: ScoreFilter; label: string; count: number }[]).map((o) => (
-                  <button
-                    key={o.value}
-                    onClick={() => setScoreFilter(o.value)}
-                    className={`px-3 h-9 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
-                      scoreFilter === o.value
-                        ? "bg-[var(--surface)] text-[var(--foreground)] shadow-sm"
-                        : "text-[var(--muted)] hover:text-[var(--foreground)]"
-                    }`}
-                  >
-                    {o.label}
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                      scoreFilter === o.value
-                        ? "bg-[var(--primary-soft)] text-[var(--primary)]"
-                        : "bg-[var(--surface-2)]"
-                    }`}>
-                      {o.count}
-                    </span>
-                  </button>
-                ))}
+            {/* Tabs + search + course filter — one row on large screens */}
+            <div className="flex flex-col lg:flex-row lg:items-center gap-2">
+              {/* Scrollable tab bar */}
+              <div className="overflow-x-auto pb-1 lg:pb-0 lg:shrink-0">
+                <div className="flex p-1 rounded-xl bg-[var(--surface-2)]/70 border border-[var(--border)]/60 gap-1 w-max min-w-full lg:min-w-0">
+                  {([
+                    { value: "all",         label: "All",         count: certs.length },
+                    { value: "distinction", label: "Distinction", count: stats.distinction },
+                    { value: "pass",        label: "Pass",        count: stats.pass },
+                    { value: "fail",        label: "Fail",        count: certs.filter((c) => c.score < 60).length },
+                  ] as { value: ScoreFilter; label: string; count: number }[]).map((o) => (
+                    <button
+                      key={o.value}
+                      onClick={() => setScoreFilter(o.value)}
+                      className={`px-3 h-9 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
+                        scoreFilter === o.value
+                          ? "bg-[var(--primary)] text-white shadow-sm"
+                          : "text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--foreground)]"
+                      }`}
+                    >
+                      {o.label}
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                        scoreFilter === o.value
+                          ? "bg-white/20 text-white"
+                          : "bg-[var(--surface)]"
+                      }`}>
+                        {o.count}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Search + course filter */}
+              <div className="flex flex-col sm:flex-row gap-2 lg:flex-1 lg:min-w-0 lg:justify-end">
+                <div className="w-full sm:w-56 lg:w-64 lg:shrink-0">
+                  <Input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search student, course, code…"
+                    icon={<Icon.Search size={15} />}
+                    className="!h-9"
+                  />
+                </div>
+                <Select value={courseFilter} onChange={(e) => setCourseFilter(e.target.value)} className="!h-9 w-full sm:!w-40 lg:shrink-0">
+                  <option value="all">All courses</option>
+                  {courseOptions.map(([id, title]) => (
+                    <option key={id} value={id}>{title.length > 28 ? title.slice(0, 26) + "…" : title}</option>
+                  ))}
+                </Select>
               </div>
             </div>
-
-            {/* Search + course filter */}
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search student, course, code…"
-                icon={<Icon.Search size={15} />}
-                className="!h-9 flex-1"
-              />
-              <Select value={courseFilter} onChange={(e) => setCourseFilter(e.target.value)} className="!h-9 w-full sm:!w-40">
-                <option value="all">All courses</option>
-                {courseOptions.map(([id, title]) => (
-                  <option key={id} value={id}>{title.length > 28 ? title.slice(0, 26) + "…" : title}</option>
-                ))}
-              </Select>
-            </div>
           </div>
+
+          {/* Bulk action bar */}
+          {selected.size > 0 && (
+            <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-[var(--primary-soft)] border border-[var(--primary)]/20 flex-wrap">
+              <span className="text-sm font-semibold text-[var(--primary)]">{selected.size} selected</span>
+              <div className="flex gap-2 ml-auto flex-wrap">
+                <Button size="sm" variant="ghost" className="text-[var(--danger)] hover:bg-red-500/10" onClick={() => setBulkRevoke(true)}>
+                  <Icon.Trash size={13} /> Revoke selected
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
+                  Clear
+                </Button>
+              </div>
+            </div>
+          )}
 
           {loading ? (
             <div className="flex items-center justify-center py-12">
@@ -347,10 +412,18 @@ export default function AdminCertificatesPage() {
             />
           ) : (
             <>
-              <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
-                <table className="w-full text-sm">
+              <div className="overflow-x-auto rounded-xl border border-[var(--border)] shadow-sm">
+                <table className="w-full text-sm border-collapse">
                   <thead>
-                    <tr className="border-b border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted)] text-xs uppercase tracking-wider">
+                    <tr className="border-b border-[var(--border)] bg-[var(--surface-2)]/70 text-[var(--muted)] text-[11px] uppercase tracking-wide">
+                      <th className="px-4 py-3 w-10">
+                        <input
+                          type="checkbox"
+                          checked={allPageSelected}
+                          onChange={toggleSelectAll}
+                          className="rounded accent-[var(--primary)] cursor-pointer"
+                        />
+                      </th>
                       <th className="px-4 py-3 text-left font-semibold">
                         <button onClick={() => toggleSort("student")} className="flex items-center gap-1 hover:text-[var(--foreground)] transition">
                           Student <SortIcon col="student" />
@@ -375,15 +448,31 @@ export default function AdminCertificatesPage() {
                       <th className="px-4 py-3 text-right font-semibold">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[var(--border)]">
-                    {paginated.map((c) => {
+                  <tbody>
+                    {paginated.map((c, i) => {
                       const sb = scoreBadge(c.score);
                       return (
-                        <tr key={c.id} className="hover:bg-[var(--surface-2)]/60 transition-colors group">
+                        <tr
+                          key={c.id}
+                          className={cn(
+                            "border-b border-[var(--border)] last:border-0 hover:bg-[var(--primary-soft)]/40 transition-colors group",
+                            i % 2 === 1 && !selected.has(c.id) && "bg-[var(--surface-2)]/25",
+                            selected.has(c.id) && "bg-[var(--primary-soft)]/40",
+                          )}
+                        >
+                          {/* Checkbox */}
+                          <td className="px-4 py-3">
+                            <input
+                              type="checkbox"
+                              checked={selected.has(c.id)}
+                              onChange={() => toggleSelect(c.id)}
+                              className="rounded accent-[var(--primary)] cursor-pointer"
+                            />
+                          </td>
                           {/* Student */}
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2.5">
-                              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white text-xs font-bold shrink-0">
+                              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm ring-2 ring-[var(--surface)]">
                                 {c.studentName.charAt(0).toUpperCase()}
                               </div>
                               <div className="min-w-0">
@@ -425,6 +514,13 @@ export default function AdminCertificatesPage() {
                               >
                                 <Icon.Copy size={13} />
                               </button>
+                              <button
+                                onClick={() => copyVerifyLink(c.verifyCode)}
+                                className="p-1 rounded text-[var(--muted)] hover:text-[var(--primary)] transition opacity-0 group-hover:opacity-100"
+                                title="Copy verify link"
+                              >
+                                <Icon.Globe size={13} />
+                              </button>
                             </div>
                           </td>
                           {/* Actions */}
@@ -461,7 +557,7 @@ export default function AdminCertificatesPage() {
               </div>
 
               {/* Pagination */}
-              <div className="flex items-center justify-between gap-4 pt-1 flex-wrap">
+              <div className="flex items-center justify-between gap-4 pt-3 border-t border-[var(--border)] flex-wrap">
                 <p className="text-xs text-[var(--muted)]">
                   Showing <span className="font-semibold text-[var(--foreground)]">{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)}</span> of{" "}
                   <span className="font-semibold text-[var(--foreground)]">{filtered.length}</span> certificates
@@ -553,9 +649,12 @@ export default function AdminCertificatesPage() {
                 </div>
               </div>
             </div>
-            <div className="flex gap-2 justify-end">
+            <div className="flex gap-2 justify-end flex-wrap">
               <Button variant="outline" onClick={() => copyCode(preview.verifyCode)}>
                 <Icon.Copy size={14} /> Copy code
+              </Button>
+              <Button variant="outline" onClick={() => copyVerifyLink(preview.verifyCode)}>
+                <Icon.Globe size={14} /> Copy verify link
               </Button>
               <Button onClick={() => { downloadCertificate(preview); toast.push({ title: "Certificate downloaded", tone: "success" }); }}>
                 <Icon.Download size={14} /> Download HTML
@@ -691,6 +790,23 @@ export default function AdminCertificatesPage() {
             </Button>
             <Button onClick={issue} loading={saving} disabled={!studentId || !courseId} className="w-full sm:w-auto">
               <Icon.Award size={15} /> Issue certificate
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Bulk revoke confirm */}
+      <Modal open={bulkRevoke} onClose={() => setBulkRevoke(false)} size="sm" title={`Revoke ${selected.size} certificates?`}>
+        <div className="p-5 space-y-4">
+          <p className="text-sm text-[var(--muted)]">
+            This will revoke <strong className="text-[var(--foreground)]">{selected.size}</strong> selected
+            certificate{selected.size > 1 ? "s" : ""}. Their verification codes will stop working immediately.
+            This cannot be undone.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setBulkRevoke(false)} disabled={bulkBusy}>Cancel</Button>
+            <Button variant="danger" loading={bulkBusy} onClick={confirmBulkRevoke}>
+              <Icon.Trash size={14} /> Revoke all
             </Button>
           </div>
         </div>

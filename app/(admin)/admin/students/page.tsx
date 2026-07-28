@@ -28,6 +28,21 @@ type SortKey = "name" | "enrolled" | "completed";
 
 const PAGE_SIZE = 10;
 
+const AVATAR_GRADIENTS = [
+  "from-[var(--primary)] to-[var(--accent)]",
+  "from-sky-500 to-indigo-500",
+  "from-violet-500 to-fuchsia-500",
+  "from-amber-500 to-orange-500",
+  "from-rose-500 to-pink-500",
+  "from-teal-500 to-cyan-500",
+];
+
+function avatarGradient(name: string) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash + name.charCodeAt(i)) % AVATAR_GRADIENTS.length;
+  return AVATAR_GRADIENTS[hash];
+}
+
 export default function AdminStudentsPage() {
   const admin = useAdmin();
   const toast = useToast();
@@ -115,37 +130,44 @@ export default function AdminStudentsPage() {
 
   return (
     <div className="space-y-6 fade-in">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Manage</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">Students</h1>
-          <p className="mt-1 text-[var(--muted)]">
-            Onboard learners from the office, edit details, reset passwords.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={exportCsv} disabled={allStudents.length === 0}>
-            <Icon.Download size={16} /> Export CSV
-          </Button>
-          <Button onClick={startCreate}>
-            <Icon.Plus size={16} /> Add student
-          </Button>
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-gradient-to-br from-[var(--primary)]/10 via-[var(--surface)] to-[var(--surface)] px-5 sm:px-7 py-6">
+        <div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-[var(--primary)]/10 blur-2xl" />
+        <div className="pointer-events-none absolute -right-24 bottom-0 h-40 w-40 rounded-full bg-[var(--accent)]/10 blur-2xl" />
+        <div className="relative flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">
+              <Icon.User size={12} /> Manage
+            </div>
+            <h1 className="mt-1.5 text-3xl font-bold tracking-tight">Students</h1>
+            <p className="mt-1 text-[var(--muted)] max-w-md">
+              Onboard learners from the office, edit details, reset passwords.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={exportCsv} disabled={allStudents.length === 0} className="bg-[var(--surface)]/80 backdrop-blur">
+              <Icon.Download size={16} /> Export CSV
+            </Button>
+            <Button onClick={startCreate} className="shadow-lg shadow-[var(--primary)]/25">
+              <Icon.Plus size={16} /> Add student
+            </Button>
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: "Total students", value: stats.total, icon: <Icon.User size={16} />, tint: "bg-[var(--primary-soft)] text-[var(--primary)]" },
-          { label: "Complete profiles", value: stats.complete, icon: <Icon.CheckCircle size={16} />, tint: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" },
-          { label: "Total enrollments", value: stats.totalEnrolled, icon: <Icon.ListChecks size={16} />, tint: "bg-sky-500/10 text-sky-600 dark:text-sky-400" },
-          { label: "Certificates earned", value: stats.totalCerts, icon: <Icon.Award size={16} />, tint: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
+          { label: "Total students", value: stats.total, icon: <Icon.User size={18} />, tint: "bg-[var(--primary-soft)] text-[var(--primary)]", bar: "bg-[var(--primary)]" },
+          { label: "Complete profiles", value: stats.complete, icon: <Icon.CheckCircle size={18} />, tint: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400", bar: "bg-emerald-500" },
+          { label: "Total enrollments", value: stats.totalEnrolled, icon: <Icon.ListChecks size={18} />, tint: "bg-sky-500/10 text-sky-600 dark:text-sky-400", bar: "bg-sky-500" },
+          { label: "Certificates earned", value: stats.totalCerts, icon: <Icon.Award size={18} />, tint: "bg-amber-500/10 text-amber-600 dark:text-amber-400", bar: "bg-amber-500" },
         ].map((s) => (
-          <Card key={s.label}>
-            <CardBody className="flex items-center gap-3 !py-3">
-              <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${s.tint}`}>{s.icon}</div>
+          <Card key={s.label} className="relative overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lg">
+            <span className={`absolute left-0 top-0 h-full w-1 ${s.bar}`} />
+            <CardBody className="flex items-center gap-3 !py-4 pl-4">
+              <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${s.tint}`}>{s.icon}</div>
               <div className="min-w-0">
-                <p className="text-[11px] text-[var(--muted)]">{s.label}</p>
-                <p className="text-xl font-bold tracking-tight">{s.value}</p>
+                <p className="text-[11px] text-[var(--muted)] truncate uppercase tracking-wide">{s.label}</p>
+                <p className="text-2xl font-bold tracking-tight leading-tight">{s.value}</p>
               </div>
             </CardBody>
           </Card>
@@ -162,13 +184,13 @@ export default function AdminStudentsPage() {
               onChange={(e) => setQuery(e.target.value)}
               className="w-full sm:flex-1 sm:max-w-xs"
             />
-            <div className="flex flex-nowrap items-center gap-2 overflow-x-auto sm:shrink-0">
-              <span className="text-xs text-[var(--muted)] shrink-0">Sort by:</span>
+            <div className="flex flex-nowrap items-center gap-1 overflow-x-auto sm:shrink-0 bg-[var(--surface-2)]/70 rounded-xl p-1 border border-[var(--border)]/60">
+              <span className="text-xs text-[var(--muted)] shrink-0 pl-2 pr-1">Sort by</span>
               {(["name", "enrolled", "completed"] as SortKey[]).map((k) => (
                 <button
                   key={k}
                   onClick={() => setSortKey(k)}
-                  className={`px-3 h-8 rounded-lg text-xs font-medium capitalize transition border ${sortKey === k ? "bg-[var(--primary)] text-white border-[var(--primary)]" : "bg-transparent text-[var(--muted)] border-[var(--border)] hover:border-[var(--primary)] hover:text-[var(--primary)]"}`}
+                  className={`px-3 h-8 rounded-lg text-xs font-medium capitalize transition-all ${sortKey === k ? "bg-[var(--primary)] text-white shadow-sm" : "bg-transparent text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--foreground)]"}`}
                 >
                   {k}
                 </button>
@@ -185,25 +207,30 @@ export default function AdminStudentsPage() {
             />
           ) : (
             <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
+              <table className="w-full text-sm border-collapse">
                 <thead>
-                  <tr className="text-left text-[var(--muted)] border-b border-[var(--border)]">
-                    <th className="font-medium py-2.5 px-3">Student</th>
-                    <th className="font-medium py-2.5 px-3 hidden md:table-cell">Phone</th>
-                    <th className="font-medium py-2.5 px-3 text-center hidden lg:table-cell">Profile</th>
-                    <th className="font-medium py-2.5 px-3 text-center">Enrolled</th>
-                    <th className="font-medium py-2.5 px-3 text-center hidden sm:table-cell">Completed</th>
-                    <th className="font-medium py-2.5 px-3 text-center hidden sm:table-cell">Certificates</th>
-                    <th className="font-medium py-2.5 px-3 text-right">Actions</th>
+                  <tr className="text-left text-[var(--muted)] bg-[var(--surface-2)]/70 border-b border-[var(--border)]">
+                    <th className="font-semibold text-[11px] uppercase tracking-wide py-3 px-3">Student</th>
+                    <th className="font-semibold text-[11px] uppercase tracking-wide py-3 px-3 hidden md:table-cell">Phone</th>
+                    <th className="font-semibold text-[11px] uppercase tracking-wide py-3 px-3 text-center hidden lg:table-cell">Profile</th>
+                    <th className="font-semibold text-[11px] uppercase tracking-wide py-3 px-3 text-center">Enrolled</th>
+                    <th className="font-semibold text-[11px] uppercase tracking-wide py-3 px-3 text-center hidden sm:table-cell">Completed</th>
+                    <th className="font-semibold text-[11px] uppercase tracking-wide py-3 px-3 text-center hidden sm:table-cell">Certificates</th>
+                    <th className="font-semibold text-[11px] uppercase tracking-wide py-3 px-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {paginated.map((s) => (
-                    <tr key={s.id} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)]/50 transition">
+                  {paginated.map((s, i) => {
+                    const incomplete = !s.phone?.trim() || !s.education || s.education === "None";
+                    return (
+                    <tr
+                      key={s.id}
+                      className={`border-b border-[var(--border)] last:border-0 hover:bg-[var(--primary-soft)]/40 transition-colors ${i % 2 === 1 ? "bg-[var(--surface-2)]/25" : ""}`}
+                    >
                       <td className="py-3 px-3">
                         <div className="flex items-center gap-3">
-                          <div className="h-9 w-9 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white font-semibold inline-flex items-center justify-center text-sm shrink-0">
+                          <div className={`h-9 w-9 rounded-full bg-gradient-to-br ${avatarGradient(s.name)} text-white font-semibold inline-flex items-center justify-center text-sm shrink-0 shadow-sm ring-2 ring-[var(--surface)]`}>
                             {s.name.slice(0, 1).toUpperCase()}
                           </div>
                           <div className="min-w-0">
@@ -214,10 +241,10 @@ export default function AdminStudentsPage() {
                       </td>
                       <td className="py-3 px-3 hidden md:table-cell text-[var(--muted)]">{s.phone || "—"}</td>
                       <td className="py-3 px-3 text-center hidden lg:table-cell">
-                        {(!s.phone?.trim() || !s.education || s.education === "None") ? (
-                          <Badge variant="warning">Incomplete</Badge>
+                        {incomplete ? (
+                          <Badge variant="warning"><span className="mr-1 h-1.5 w-1.5 rounded-full bg-amber-500 inline-block" />Incomplete</Badge>
                         ) : (
-                          <Badge variant="success">Complete</Badge>
+                          <Badge variant="success"><span className="mr-1 h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />Complete</Badge>
                         )}
                       </td>
                       <td className="py-3 px-3 text-center"><Badge variant="default">{s.enrolledCount}</Badge></td>
@@ -228,28 +255,29 @@ export default function AdminStudentsPage() {
                           <button
                             onClick={() => startEdit(s)}
                             title="Edit"
-                            className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)] transition"
+                            className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--primary)] hover:shadow-sm transition"
                           >
                             <Icon.FilePen size={14} />
                           </button>
                           <button
                             onClick={() => startReset(s)}
                             title="Reset password"
-                            className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)] transition"
+                            className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-[var(--surface)] text-[var(--muted)] hover:text-amber-500 hover:shadow-sm transition"
                           >
                             <Icon.Lock size={14} />
                           </button>
                           <button
                             onClick={() => setConfirmDeleteId(s.id)}
                             title="Delete"
-                            className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-red-500/10 text-[var(--muted)] hover:text-[var(--danger)] transition"
+                            className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-red-500/10 text-[var(--muted)] hover:text-[var(--danger)] hover:shadow-sm transition"
                           >
                             <Icon.Trash size={14} />
                           </button>
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

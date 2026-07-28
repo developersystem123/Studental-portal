@@ -1,18 +1,34 @@
+"use client";
+
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import Icon from "@/components/icons";
 import { Badge, Card, CardBody } from "@/components/ui";
 import { MediaCard } from "@/components/MediaCard";
-import { BLOG_POSTS } from "@/lib/blogPosts";
+import { BLOG_POSTS, type BlogPost } from "@/lib/blogPosts";
 import { formatDate } from "@/lib/utils";
 
-export const metadata = {
-  title: "Blog — EduPortal",
-  description: "Stories about learning, product updates, career tips, and community.",
-};
+const CATEGORIES = ["All", "Product", "Learning", "Careers", "AI"] as const;
+
+function matchesCategory(post: BlogPost, category: (typeof CATEGORIES)[number]) {
+  if (category === "All") return true;
+  if (category === "Careers") return post.category === "Career";
+  if (category === "AI") return /\bai\b/i.test(post.title) || /\bai\b/i.test(post.excerpt);
+  return post.category === category;
+}
 
 export default function BlogPage() {
-  const sorted = [...BLOG_POSTS].sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+  const [activeCategory, setActiveCategory] = useState<(typeof CATEGORIES)[number]>("All");
+
+  const sorted = useMemo(
+    () => [...BLOG_POSTS].sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()),
+    []
+  );
   const [featured, ...rest] = sorted;
+  const filteredRest = useMemo(
+    () => rest.filter((p) => matchesCategory(p, activeCategory)),
+    [rest, activeCategory]
+  );
 
   return (
     <div className="overflow-hidden">
@@ -35,14 +51,20 @@ export default function BlogPage() {
                 Tutorials, product updates, career advice, and reflections on the science of learning.
               </p>
               <div className="mt-6 flex flex-wrap justify-center sm:justify-start items-center gap-3">
-                {["All", "Product", "Learning", "Careers", "AI"].map((cat) => (
-                  <span key={cat} className={`px-3 h-8 rounded-full text-xs font-semibold border transition-all cursor-pointer whitespace-nowrap ${
-                    cat === "All"
-                      ? "bg-[var(--primary)] text-white border-transparent"
-                      : "bg-surface border-border text-muted hover:text-foreground hover:border-border-strong"
-                  }`}>
+                {CATEGORIES.map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setActiveCategory(cat)}
+                    aria-pressed={activeCategory === cat}
+                    className={`px-3 h-8 rounded-full text-xs font-semibold border transition-all cursor-pointer whitespace-nowrap ${
+                      activeCategory === cat
+                        ? "bg-[var(--primary)] text-white border-transparent"
+                        : "bg-surface border-border text-muted hover:text-foreground hover:border-border-strong"
+                    }`}
+                  >
                     {cat}
-                  </span>
+                  </button>
                 ))}
               </div>
             </div>
@@ -101,11 +123,15 @@ export default function BlogPage() {
 
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-xl font-bold">Latest posts</h2>
-          <span className="text-sm text-[var(--muted)]">{BLOG_POSTS.length} articles</span>
+          <span className="text-sm text-[var(--muted)]">{filteredRest.length} articles</span>
         </div>
 
+        {filteredRest.length === 0 && (
+          <div className="text-center py-16 text-muted text-sm">No posts in this category yet.</div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {rest.map((p) => (
+          {filteredRest.map((p) => (
             <MediaCard
               key={p.slug}
               href={`/blog/${p.slug}`}

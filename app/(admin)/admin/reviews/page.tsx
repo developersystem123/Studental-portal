@@ -192,20 +192,24 @@ export default function AdminReviewsPage() {
   return (
     <div className="space-y-6 fade-in">
       {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">
-            Manage
-          </p>
-          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">Reviews moderation</h1>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            Browse every course review and hide anything inappropriate. Hidden reviews stop counting
-            toward a course&apos;s public rating.
-          </p>
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-gradient-to-br from-[var(--primary)]/10 via-[var(--surface)] to-[var(--surface)] px-5 sm:px-7 py-6">
+        <div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-[var(--primary)]/10 blur-2xl" />
+        <div className="pointer-events-none absolute -right-24 bottom-0 h-40 w-40 rounded-full bg-[var(--accent)]/10 blur-2xl" />
+        <div className="relative flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">
+              <Icon.Star size={12} /> Manage
+            </div>
+            <h1 className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight">Reviews moderation</h1>
+            <p className="mt-1 text-sm text-[var(--muted)] max-w-md">
+              Browse every course review and hide anything inappropriate. Hidden reviews stop counting
+              toward a course&apos;s public rating.
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => exportCSV(filtered)} className="shrink-0 bg-[var(--surface)]/80 backdrop-blur">
+            <Icon.Download size={15} /> Export CSV
+          </Button>
         </div>
-        <Button variant="outline" onClick={() => exportCSV(filtered)} className="shrink-0">
-          <Icon.Download size={15} /> Export CSV
-        </Button>
       </div>
 
       {/* ── StatCards ── */}
@@ -282,56 +286,60 @@ export default function AdminReviewsPage() {
 
       {/* ── Toolbar: tabs + search + sort ── */}
       <div className="space-y-3">
-        {/* Scrollable tab bar */}
-        <div className="overflow-x-auto pb-1">
-          <div className="flex p-1 rounded-xl bg-[var(--surface-2)] gap-1 w-max min-w-full">
-            {([
-              { value: "all",     label: "All",        count: counts.all },
-              { value: "visible", label: "Visible",    count: counts.visible },
-              { value: "hidden",  label: "Hidden",     count: counts.hidden },
-              { value: "low",     label: "Low-rated",  count: counts.low },
-            ] as { value: Filter; label: string; count: number }[]).map((o) => (
-              <button
-                key={o.value}
-                onClick={() => setFilter(o.value)}
-                className={`px-3 h-9 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
-                  filter === o.value
-                    ? "bg-[var(--surface)] text-[var(--foreground)] shadow-sm"
-                    : "text-[var(--muted)] hover:text-[var(--foreground)]"
-                }`}
-              >
-                {o.label}
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                  filter === o.value
-                    ? "bg-[var(--primary-soft)] text-[var(--primary)]"
-                    : "bg-[var(--surface-2)]"
-                }`}>
-                  {o.count}
-                </span>
-              </button>
-            ))}
+        <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+          {/* Scrollable tab bar */}
+          <div className="overflow-x-auto pb-1 lg:pb-0 lg:shrink-0">
+            <div className="flex p-1 rounded-xl bg-[var(--surface-2)]/70 border border-[var(--border)]/60 gap-1 w-max min-w-full lg:min-w-0">
+              {([
+                { value: "all",     label: "All",        count: counts.all },
+                { value: "visible", label: "Visible",    count: counts.visible },
+                { value: "hidden",  label: "Hidden",     count: counts.hidden },
+                { value: "low",     label: "Low-rated",  count: counts.low },
+              ] as { value: Filter; label: string; count: number }[]).map((o) => (
+                <button
+                  key={o.value}
+                  onClick={() => setFilter(o.value)}
+                  className={`px-3 h-9 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
+                    filter === o.value
+                      ? "bg-[var(--primary)] text-white shadow-sm"
+                      : "text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--foreground)]"
+                  }`}
+                >
+                  {o.label}
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                    filter === o.value
+                      ? "bg-white/20 text-white"
+                      : "bg-[var(--surface)]"
+                  }`}>
+                    {o.count}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Search + sort */}
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search reviews…"
-            icon={<Icon.Search size={16} />}
-            className="flex-1 !h-9"
-          />
-          <Select
-            value={sortKey}
-            onChange={(e) => setSortKey(e.target.value as SortKey)}
-            className="!h-9 text-xs !py-0 w-full sm:w-[145px]"
-          >
-            <option value="newest">Newest first</option>
-            <option value="oldest">Oldest first</option>
-            <option value="high">Highest rated</option>
-            <option value="low-rating">Lowest rated</option>
-          </Select>
+          {/* Search + sort */}
+          <div className="flex flex-col sm:flex-row gap-2 lg:ml-auto lg:shrink-0">
+            <div className="w-full sm:w-56 lg:w-64">
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search reviews…"
+                icon={<Icon.Search size={16} />}
+                className="!h-9"
+              />
+            </div>
+            <Select
+              value={sortKey}
+              onChange={(e) => setSortKey(e.target.value as SortKey)}
+              className="!h-9 text-xs !py-0 w-full sm:w-[145px] sm:shrink-0"
+            >
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+              <option value="high">Highest rated</option>
+              <option value="low-rating">Lowest rated</option>
+            </Select>
+          </div>
         </div>
 
         {/* Star filter chips */}

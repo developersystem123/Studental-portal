@@ -175,28 +175,33 @@ export default function AdminLearningPathsPage() {
   return (
     <div className="space-y-6 fade-in">
       {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">
-            Manage
-          </p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">Learning Paths</h1>
-          <p className="mt-1 text-[var(--muted)]">
-            Curate ordered tracks of courses for students to follow.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="outline" onClick={() => exportCSV(filtered)}>
-            <Icon.Download size={15} /> Export CSV
-          </Button>
-          <Button
-            onClick={() => {
-              setEditing(null);
-              setMode("create");
-            }}
-          >
-            <Icon.Plus size={16} /> New path
-          </Button>
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-gradient-to-br from-[var(--primary)]/10 via-[var(--surface)] to-[var(--surface)] px-5 sm:px-7 py-6">
+        <div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-[var(--primary)]/10 blur-2xl" />
+        <div className="pointer-events-none absolute -right-24 bottom-0 h-40 w-40 rounded-full bg-[var(--accent)]/10 blur-2xl" />
+        <div className="relative flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">
+              <Icon.Route size={12} /> Manage
+            </div>
+            <h1 className="mt-1.5 text-3xl font-bold tracking-tight">Learning Paths</h1>
+            <p className="mt-1 text-[var(--muted)] max-w-md">
+              Curate ordered tracks of courses for students to follow.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button variant="outline" onClick={() => exportCSV(filtered)} className="bg-[var(--surface)]/80 backdrop-blur">
+              <Icon.Download size={15} /> Export CSV
+            </Button>
+            <Button
+              onClick={() => {
+                setEditing(null);
+                setMode("create");
+              }}
+              className="shadow-lg shadow-[var(--primary)]/25"
+            >
+              <Icon.Plus size={16} /> New path
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -262,14 +267,14 @@ export default function AdminLearningPathsPage() {
                 <option value="title">A → Z</option>
               </Select>
               {/* View toggle */}
-              <div className="flex shrink-0 rounded-lg overflow-hidden border border-[var(--border)]">
+              <div className="flex shrink-0 rounded-xl overflow-hidden border border-[var(--border)] bg-[var(--surface-2)]/70 p-1 gap-0.5">
                 <button
                   onClick={() => setViewMode("grid")}
                   title="Grid view"
-                  className={`h-9 w-9 flex items-center justify-center transition ${
+                  className={`h-8 w-8 rounded-lg flex items-center justify-center transition-all ${
                     viewMode === "grid"
-                      ? "bg-[var(--primary)] text-white"
-                      : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                      ? "bg-[var(--primary)] text-white shadow-sm"
+                      : "text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--foreground)]"
                   }`}
                 >
                   <Icon.BarChart3 size={15} className="rotate-90" />
@@ -277,10 +282,10 @@ export default function AdminLearningPathsPage() {
                 <button
                   onClick={() => setViewMode("list")}
                   title="List view"
-                  className={`h-9 w-9 flex items-center justify-center transition ${
+                  className={`h-8 w-8 rounded-lg flex items-center justify-center transition-all ${
                     viewMode === "list"
-                      ? "bg-[var(--primary)] text-white"
-                      : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                      ? "bg-[var(--primary)] text-white shadow-sm"
+                      : "text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--foreground)]"
                   }`}
                 >
                   <Icon.ListChecks size={15} />
@@ -295,10 +300,10 @@ export default function AdminLearningPathsPage() {
               <button
                 key={cat}
                 onClick={() => setCategoryFilter(cat)}
-                className={`px-3 h-7 rounded-full text-xs font-medium transition ${
+                className={`px-3 h-7 rounded-full text-xs font-medium transition-all border ${
                   categoryFilter === cat
-                    ? "bg-[var(--primary)] text-white"
-                    : "bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)]"
+                    ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-sm"
+                    : "bg-[var(--surface-2)]/70 text-[var(--muted)] border-transparent hover:border-[var(--border)] hover:text-[var(--foreground)]"
                 }`}
               >
                 {cat === "all" ? "All categories" : cat}
@@ -330,11 +335,11 @@ export default function AdminLearningPathsPage() {
             />
           ) : viewMode === "grid" ? (
             /* ── GRID VIEW ── */
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {filtered.map((p) => (
                 <Card
                   key={p.id}
-                  className="overflow-hidden group hover:-translate-y-0.5 transition-all duration-200 hover:shadow-md"
+                  className="overflow-hidden group hover:-translate-y-1 transition-all duration-200 hover:shadow-lg"
                 >
                   {/* Thumbnail */}
                   <div className="aspect-video relative overflow-hidden">
@@ -448,27 +453,27 @@ export default function AdminLearningPathsPage() {
             </div>
           ) : (
             /* ── LIST VIEW ── */
-            <div className="overflow-x-auto -mx-1">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
+              <table className="w-full text-sm border-collapse">
                 <thead>
-                  <tr className="text-left text-[var(--muted)] border-b border-[var(--border)]">
-                    <th className="font-medium py-2.5 px-3">Path</th>
-                    <th className="font-medium py-2.5 px-3 hidden md:table-cell">Category</th>
-                    <th className="font-medium py-2.5 px-3 hidden sm:table-cell">Level</th>
-                    <th className="font-medium py-2.5 px-3 text-center">Courses</th>
-                    <th className="font-medium py-2.5 px-3 text-center">Learners</th>
-                    <th className="font-medium py-2.5 px-3 text-right">Actions</th>
+                  <tr className="text-left text-[var(--muted)] bg-[var(--surface-2)]/70 border-b border-[var(--border)]">
+                    <th className="font-semibold text-[11px] uppercase tracking-wide py-3 px-3">Path</th>
+                    <th className="font-semibold text-[11px] uppercase tracking-wide py-3 px-3 hidden md:table-cell">Category</th>
+                    <th className="font-semibold text-[11px] uppercase tracking-wide py-3 px-3 hidden sm:table-cell">Level</th>
+                    <th className="font-semibold text-[11px] uppercase tracking-wide py-3 px-3 text-center">Courses</th>
+                    <th className="font-semibold text-[11px] uppercase tracking-wide py-3 px-3 text-center">Learners</th>
+                    <th className="font-semibold text-[11px] uppercase tracking-wide py-3 px-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((p) => (
+                  {filtered.map((p, i) => (
                     <tr
                       key={p.id}
-                      className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)]/50 transition group"
+                      className={`border-b border-[var(--border)] last:border-0 hover:bg-[var(--primary-soft)]/40 transition-colors group ${i % 2 === 1 ? "bg-[var(--surface-2)]/25" : ""}`}
                     >
                       <td className="py-3 px-3">
                         <div className="flex items-center gap-3">
-                          <div className="h-12 w-20 shrink-0 rounded-lg overflow-hidden hidden sm:block">
+                          <div className="h-12 w-20 shrink-0 rounded-lg overflow-hidden hidden sm:block shadow-sm ring-1 ring-[var(--border)]">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={p.thumbnail}
@@ -532,21 +537,21 @@ export default function AdminLearningPathsPage() {
                           <button
                             onClick={() => openView(p)}
                             title="View details"
-                            className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)] transition"
+                            className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-[var(--surface)] text-[var(--muted)] hover:text-sky-500 hover:shadow-sm transition"
                           >
                             <Icon.Eye size={14} />
                           </button>
                           <button
                             onClick={() => { setEditing(p); setMode("edit"); }}
                             title="Edit"
-                            className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)] transition"
+                            className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--primary)] hover:shadow-sm transition"
                           >
                             <Icon.FilePen size={14} />
                           </button>
                           <button
                             onClick={() => setConfirmDeleteId(p.id)}
                             title="Delete"
-                            className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-red-500/10 text-[var(--muted)] hover:text-[var(--danger)] transition"
+                            className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-red-500/10 text-[var(--muted)] hover:text-[var(--danger)] hover:shadow-sm transition"
                           >
                             <Icon.Trash size={14} />
                           </button>
@@ -561,8 +566,11 @@ export default function AdminLearningPathsPage() {
 
           {/* Count */}
           {!loading && filtered.length > 0 && (
-            <p className="text-xs text-[var(--muted)]">
-              Showing {filtered.length} of {paths.length} path{paths.length !== 1 ? "s" : ""}
+            <p className="text-xs text-[var(--muted)] pt-3 border-t border-[var(--border)]">
+              Showing{" "}
+              <span className="font-medium text-[var(--foreground)]">{filtered.length}</span> of{" "}
+              <span className="font-medium text-[var(--foreground)]">{paths.length}</span> path
+              {paths.length !== 1 ? "s" : ""}
             </p>
           )}
         </CardBody>

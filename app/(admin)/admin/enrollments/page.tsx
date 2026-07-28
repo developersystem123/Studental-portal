@@ -142,15 +142,21 @@ export default function AdminEnrollmentsPage() {
   return (
     <div className="space-y-6 fade-in">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Manage</p>
-          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">Enrollments</h1>
-          <p className="mt-1 text-sm text-[var(--muted)]">See who&apos;s taking what, award certificates, revoke when needed.</p>
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-gradient-to-br from-[var(--primary)]/10 via-[var(--surface)] to-[var(--surface)] px-5 sm:px-7 py-6">
+        <div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-[var(--primary)]/10 blur-2xl" />
+        <div className="pointer-events-none absolute -right-24 bottom-0 h-40 w-40 rounded-full bg-[var(--accent)]/10 blur-2xl" />
+        <div className="relative flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">
+              <Icon.ListChecks size={12} /> Manage
+            </div>
+            <h1 className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight">Enrollments</h1>
+            <p className="mt-1 text-sm text-[var(--muted)] max-w-md">See who&apos;s taking what, award certificates, revoke when needed.</p>
+          </div>
+          <Button variant="outline" onClick={() => { exportCSV(filtered); toast.push({ title: "CSV exported", tone: "success" }); }} className="bg-[var(--surface)]/80 backdrop-blur">
+            <Icon.Download size={15} /> Export CSV
+          </Button>
         </div>
-        <Button variant="outline" onClick={() => { exportCSV(filtered); toast.push({ title: "CSV exported", tone: "success" }); }}>
-          <Icon.Download size={15} /> Export CSV
-        </Button>
       </div>
 
       {/* Stats */}
@@ -166,56 +172,61 @@ export default function AdminEnrollmentsPage() {
         <CardBody className="space-y-4">
           {/* Filters row */}
           <div className="flex flex-col gap-3">
-            {/* Scrollable tab bar */}
-            <div className="overflow-x-auto pb-1">
-              <div className="flex p-1 rounded-xl bg-[var(--surface-2)] gap-1 w-max min-w-full">
-                {([
-                  { value: "all",         label: "All",         count: counts.all },
-                  { value: "in-progress", label: "In progress", count: counts["in-progress"] },
-                  { value: "completed",   label: "Completed",   count: counts.completed },
-                  { value: "certified",   label: "Certified",   count: counts.certified },
-                ] as { value: Filter; label: string; count: number }[]).map((o) => (
-                  <button
-                    key={o.value}
-                    onClick={() => setFilter(o.value)}
-                    className={`px-3 h-9 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
-                      filter === o.value
-                        ? "bg-[var(--surface)] text-[var(--foreground)] shadow-sm"
-                        : "text-[var(--muted)] hover:text-[var(--foreground)]"
-                    }`}
-                  >
-                    {o.label}
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                      filter === o.value
-                        ? "bg-[var(--primary-soft)] text-[var(--primary)]"
-                        : "bg-[var(--surface-2)]"
-                    }`}>
-                      {o.count}
-                    </span>
-                  </button>
-                ))}
+            {/* Tabs + search + course filter — one row on large screens */}
+            <div className="flex flex-col lg:flex-row lg:items-center gap-2">
+              {/* Scrollable tab bar */}
+              <div className="overflow-x-auto pb-1 lg:pb-0 lg:shrink-0">
+                <div className="flex p-1 rounded-xl bg-[var(--surface-2)]/70 border border-[var(--border)]/60 gap-1 w-max min-w-full lg:min-w-0">
+                  {([
+                    { value: "all",         label: "All",         count: counts.all },
+                    { value: "in-progress", label: "In progress", count: counts["in-progress"] },
+                    { value: "completed",   label: "Completed",   count: counts.completed },
+                    { value: "certified",   label: "Certified",   count: counts.certified },
+                  ] as { value: Filter; label: string; count: number }[]).map((o) => (
+                    <button
+                      key={o.value}
+                      onClick={() => setFilter(o.value)}
+                      className={`px-3 h-9 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
+                        filter === o.value
+                          ? "bg-[var(--primary)] text-white shadow-sm"
+                          : "text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--foreground)]"
+                      }`}
+                    >
+                      {o.label}
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                        filter === o.value
+                          ? "bg-white/20 text-white"
+                          : "bg-[var(--surface)]"
+                      }`}>
+                        {o.count}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* Search + course filter */}
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Input
-                icon={<Icon.Search size={15} />}
-                placeholder="Search student or course…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="!h-9 flex-1"
-              />
-              <Select
-                value={courseQ}
-                onChange={(e) => setCourseQ(e.target.value)}
-                className="!h-9 w-full sm:!w-40"
-              >
-                <option value="all">All courses</option>
-                {courseOptions.map(([id, title]) => (
-                  <option key={id} value={id}>{title.length > 28 ? title.slice(0, 26) + "…" : title}</option>
-                ))}
-              </Select>
+              {/* Search + course filter */}
+              <div className="flex flex-col sm:flex-row gap-2 lg:flex-1 lg:min-w-0 lg:justify-end">
+                <div className="w-full sm:w-56 lg:w-64 lg:shrink-0">
+                  <Input
+                    icon={<Icon.Search size={15} />}
+                    placeholder="Search student or course…"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    className="!h-9"
+                  />
+                </div>
+                <Select
+                  value={courseQ}
+                  onChange={(e) => setCourseQ(e.target.value)}
+                  className="!h-9 w-full sm:!w-40 lg:shrink-0"
+                >
+                  <option value="all">All courses</option>
+                  {courseOptions.map(([id, title]) => (
+                    <option key={id} value={id}>{title.length > 28 ? title.slice(0, 26) + "…" : title}</option>
+                  ))}
+                </Select>
+              </div>
             </div>
 
             {/* Active filter chips */}
@@ -244,42 +255,48 @@ export default function AdminEnrollmentsPage() {
             />
           ) : (
             <>
-              <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
-                <table className="w-full text-sm">
+              <div className="overflow-x-auto rounded-xl border border-[var(--border)] shadow-sm">
+                <table className="w-full text-sm border-collapse">
                   <thead>
-                    <tr className="text-left border-b border-[var(--border)] bg-[var(--surface-2)]">
-                      <th className="py-3 px-4 font-semibold text-[var(--muted)] text-xs uppercase tracking-wider">
+                    <tr className="text-left border-b border-[var(--border)] bg-[var(--surface-2)]/70">
+                      <th className="py-3 px-4 font-semibold text-[var(--muted)] text-[11px] uppercase tracking-wide">
                         <button onClick={() => toggleSort("student")} className="flex items-center gap-1 hover:text-[var(--foreground)] transition">
                           Student <SortIcon col="student" />
                         </button>
                       </th>
-                      <th className="py-3 px-4 font-semibold text-[var(--muted)] text-xs uppercase tracking-wider">
+                      <th className="py-3 px-4 font-semibold text-[var(--muted)] text-[11px] uppercase tracking-wide">
                         <button onClick={() => toggleSort("course")} className="flex items-center gap-1 hover:text-[var(--foreground)] transition">
                           Course <SortIcon col="course" />
                         </button>
                       </th>
-                      <th className="py-3 px-4 font-semibold text-[var(--muted)] text-xs uppercase tracking-wider hidden lg:table-cell">Instructor</th>
-                      <th className="py-3 px-4 font-semibold text-[var(--muted)] text-xs uppercase tracking-wider hidden md:table-cell">
+                      <th className="py-3 px-4 font-semibold text-[var(--muted)] text-[11px] uppercase tracking-wide hidden lg:table-cell">Instructor</th>
+                      <th className="py-3 px-4 font-semibold text-[var(--muted)] text-[11px] uppercase tracking-wide hidden md:table-cell">
                         <button onClick={() => toggleSort("enrolled")} className="flex items-center gap-1 hover:text-[var(--foreground)] transition">
                           Enrolled <SortIcon col="enrolled" />
                         </button>
                       </th>
-                      <th className="py-3 px-4 font-semibold text-[var(--muted)] text-xs uppercase tracking-wider">
+                      <th className="py-3 px-4 font-semibold text-[var(--muted)] text-[11px] uppercase tracking-wide">
                         <button onClick={() => toggleSort("progress")} className="flex items-center gap-1 hover:text-[var(--foreground)] transition">
                           Progress <SortIcon col="progress" />
                         </button>
                       </th>
-                      <th className="py-3 px-4 font-semibold text-[var(--muted)] text-xs uppercase tracking-wider">Status</th>
-                      <th className="py-3 px-4 font-semibold text-[var(--muted)] text-xs uppercase tracking-wider text-right">Action</th>
+                      <th className="py-3 px-4 font-semibold text-[var(--muted)] text-[11px] uppercase tracking-wide">Status</th>
+                      <th className="py-3 px-4 font-semibold text-[var(--muted)] text-[11px] uppercase tracking-wide text-right">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[var(--border)]">
-                    {paginated.map((r) => (
-                      <tr key={`${r.userId}-${r.courseId}`} className="hover:bg-[var(--surface-2)]/60 transition-colors group">
+                  <tbody>
+                    {paginated.map((r, i) => (
+                      <tr
+                        key={`${r.userId}-${r.courseId}`}
+                        className={cn(
+                          "border-b border-[var(--border)] last:border-0 hover:bg-[var(--primary-soft)]/40 transition-colors group",
+                          i % 2 === 1 && "bg-[var(--surface-2)]/25",
+                        )}
+                      >
                         {/* Student */}
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2.5">
-                            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white text-xs font-bold shrink-0">
+                            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm ring-2 ring-[var(--surface)]">
                               {r.userName.charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0">
@@ -357,7 +374,7 @@ export default function AdminEnrollmentsPage() {
               </div>
 
               {/* Pagination */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-3 border-t border-[var(--border)]">
                 <p className="text-xs text-[var(--muted)]">
                   Showing <span className="font-semibold text-[var(--foreground)]">{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)}</span> of{" "}
                   <span className="font-semibold text-[var(--foreground)]">{filtered.length}</span> enrollments

@@ -1,20 +1,17 @@
 import { prisma } from "@/lib/db";
 import { errorResponse, requireAdmin } from "@/lib/auth-server";
+import { audienceSize, getAudienceSizes } from "@/lib/audience";
 
-const AUDIENCE_REACH: Record<string, number> = {
-  all: 12400,
-  students: 8600,
-  teachers: 340,
-  pro: 1240,
-};
-
-// GET /api/admin/announcements — all announcements, newest first
+// GET /api/admin/announcements — all announcements, newest first, plus live
+// audience segment sizes (computed from real users/subscriptions) so the
+// admin UI can show an accurate recipient-count preview.
 export async function GET() {
   try {
     await requireAdmin();
-    const rows = await prisma.adminAnnouncement.findMany({
-      orderBy: { createdAt: "desc" },
-    });
+    const [rows, audienceSizes] = await Promise.all([
+      prisma.adminAnnouncement.findMany({ orderBy: { createdAt: "desc" } }),
+      getAudienceSizes(),
+    ]);
     const announcements = rows.map((a) => ({
       id: a.id,
       title: a.title,
@@ -27,7 +24,7 @@ export async function GET() {
       reach: a.reach,
       createdAt: a.createdAt.toISOString(),
     }));
-    return Response.json({ announcements });
+    return Response.json({ announcements, audienceSizes });
   } catch (err) {
     return errorResponse(err);
   }
@@ -48,6 +45,8 @@ export async function POST(req: Request) {
     const isSent = status === "sent";
     const isScheduled = status === "scheduled";
 
+    const reach = isSent ? audienceSize(await getAudienceSizes(), audience) : 0;
+
     const ann = await prisma.adminAnnouncement.create({
       data: {
         title: title.trim(),
@@ -57,7 +56,7 @@ export async function POST(req: Request) {
         status,
         sentAt: isSent ? now : null,
         scheduledAt: isScheduled && scheduledAt ? new Date(scheduledAt) : null,
-        reach: isSent ? (AUDIENCE_REACH[audience] ?? 0) : 0,
+        reach,
       },
     });
 

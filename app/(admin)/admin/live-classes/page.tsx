@@ -54,6 +54,15 @@ const STATUSES: LiveStatus[] = ["upcoming", "live", "ended", "cancelled"];
 type Filter = "all" | LiveStatus;
 type SortKey = "date-desc" | "date-asc" | "attendees";
 
+function DuplicateIcon({ size = 14, className }: { size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <rect x="8" y="8" width="13" height="13" rx="2" />
+      <path d="M4 16V5a2 2 0 0 1 2-2h11" />
+    </svg>
+  );
+}
+
 type FormState = {
   courseId: string;
   title: string;
@@ -83,6 +92,41 @@ function daysUntil(iso: string): string | null {
   if (days === 0) return "Today";
   if (days === 1) return "Tomorrow";
   return `In ${days}d`;
+}
+
+function icsEscape(text: string) {
+  return text.replace(/\\/g, "\\\\").replace(/,/g, "\\,").replace(/;/g, "\\;").replace(/\n/g, "\\n");
+}
+
+function toIcsDate(iso: string) {
+  return new Date(iso).toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+}
+
+function downloadIcs(c: LiveClass) {
+  const start = toIcsDate(c.scheduledAt);
+  const end = toIcsDate(new Date(new Date(c.scheduledAt).getTime() + c.durationMinutes * 60000).toISOString());
+  const ics = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//EduPortal//Live Classes//EN",
+    "BEGIN:VEVENT",
+    `UID:${c.id}@eduportal`,
+    `DTSTAMP:${toIcsDate(new Date().toISOString())}`,
+    `DTSTART:${start}`,
+    `DTEND:${end}`,
+    `SUMMARY:${icsEscape(c.title)}`,
+    `DESCRIPTION:${icsEscape(`${c.description}\n\nJoin: ${c.meetingUrl}`)}`,
+    `LOCATION:${icsEscape(c.meetingUrl)}`,
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+  const blob = new Blob([ics], { type: "text/calendar" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${c.title.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.ics`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function exportCSV(classes: LiveClass[]) {
@@ -120,6 +164,8 @@ export default function AdminLiveClassesPage() {
   const [filter, setFilter] = React.useState<Filter>("all");
   const [query, setQuery] = React.useState("");
   const [sortKey, setSortKey] = React.useState<SortKey>("date-desc");
+  const [courseFilter, setCourseFilter] = React.useState<string>("all");
+  const [duplicatingId, setDuplicatingId] = React.useState<string | null>(null);
 
   const [formOpen, setFormOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<LiveClass | null>(null);
@@ -165,6 +211,7 @@ export default function AdminLiveClassesPage() {
     const q = query.trim().toLowerCase();
     return classes
       .filter((c) => filter === "all" || c.status === filter)
+      .filter((c) => courseFilter === "all" || c.courseId === courseFilter)
       .filter(
         (c) =>
           !q ||
@@ -178,7 +225,9 @@ export default function AdminLiveClassesPage() {
         if (sortKey === "attendees") return b.attendees - a.attendees;
         return new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime();
       });
-  }, [classes, filter, query, sortKey]);
+  }, [classes, filter, courseFilter, query, sortKey]);
+
+  const liveNowClasses = React.useMemo(() => classes.filter((c) => c.status === "live"), [classes]);
 
   function openCreate() {
     setEditing(null);
@@ -262,6 +311,35 @@ export default function AdminLiveClassesPage() {
     }
   }
 
+  async function handleDuplicate(c: LiveClass) {
+    setDuplicatingId(c.id);
+    const nextWeek = new Date(c.scheduledAt);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    const payload = {
+      courseId: c.courseId,
+      title: `${c.title} (Copy)`,
+      description: c.description,
+      meetingUrl: c.meetingUrl,
+      scheduledAt: nextWeek.toISOString(),
+      durationMinutes: c.durationMinutes,
+      status: "upcoming" as LiveStatus,
+      maxAttendees: c.maxAttendees ?? null,
+    };
+    const r = await fetch("/api/admin/live-classes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    setDuplicatingId(null);
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({}));
+      toast.push({ title: "Couldn't duplicate session", description: e.error, tone: "danger" });
+      return;
+    }
+    toast.push({ title: "Session duplicated", description: "Scheduled 7 days later — edit as needed.", tone: "success" });
+    load();
+  }
+
   function copyUrl(url: string) {
     navigator.clipboard.writeText(url).then(() => {
       toast.push({ title: "Meeting URL copied", tone: "success" });
@@ -280,25 +358,60 @@ export default function AdminLiveClassesPage() {
   return (
     <div className="space-y-6 fade-in">
       {/* ── Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">
-            Manage
-          </p>
-          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">Live Classes</h1>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            Schedule and manage live online sessions across all courses.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Button variant="outline" onClick={() => exportCSV(filtered)} className="flex-1 sm:flex-none justify-center">
-            <Icon.Download size={15} /> Export CSV
-          </Button>
-          <Button onClick={openCreate} className="flex-1 sm:flex-none justify-center">
-            <Icon.Plus size={16} /> Schedule class
-          </Button>
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-gradient-to-br from-[var(--primary)]/10 via-[var(--surface)] to-[var(--surface)] px-5 sm:px-7 py-6">
+        <div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-[var(--primary)]/10 blur-2xl" />
+        <div className="pointer-events-none absolute -right-24 bottom-0 h-40 w-40 rounded-full bg-[var(--accent)]/10 blur-2xl" />
+        <div className="relative flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="hidden sm:flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--primary)] to-emerald-400 text-white shadow-lg shadow-[var(--primary)]/20">
+              <Icon.Video size={20} />
+            </div>
+            <div>
+              <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">
+                <Icon.Video size={12} /> Manage
+              </div>
+              <h1 className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight">Live Classes</h1>
+              <p className="mt-1 text-sm text-[var(--muted)] max-w-md">
+                Schedule and manage live online sessions across all courses.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button variant="outline" onClick={() => exportCSV(filtered)} className="flex-1 sm:flex-none justify-center bg-[var(--surface)]/80 backdrop-blur">
+              <Icon.Download size={15} /> Export CSV
+            </Button>
+            <Button onClick={openCreate} className="flex-1 sm:flex-none justify-center shadow-lg shadow-[var(--primary)]/25">
+              <Icon.Plus size={16} /> Schedule class
+            </Button>
+          </div>
         </div>
       </div>
+
+      {/* ── Live now banner ── */}
+      {liveNowClasses.length > 0 && (
+        <div className="flex items-center gap-3 rounded-2xl border border-rose-500/25 bg-gradient-to-r from-rose-500/10 to-red-500/5 px-4 py-3 flex-wrap">
+          <span className="relative flex h-2.5 w-2.5 shrink-0">
+            <span className="absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75 animate-ping" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-rose-500" />
+          </span>
+          <p className="text-sm font-semibold text-rose-600 dark:text-rose-400 flex-1 min-w-0">
+            {liveNowClasses.length} session{liveNowClasses.length !== 1 ? "s" : ""} live right now
+          </p>
+          <div className="flex items-center gap-2 flex-wrap">
+            {liveNowClasses.slice(0, 3).map((c) => (
+              <a
+                key={c.id}
+                href={c.meetingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 h-8 rounded-full bg-rose-500 text-white hover:opacity-90 transition"
+              >
+                <Icon.PlayCircle size={12} /> {c.title}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Stats ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -329,10 +442,10 @@ export default function AdminLiveClassesPage() {
       </div>
 
       {/* ── Tabs + search/sort toolbar ── */}
-      <div className="space-y-3">
+      <div className="flex flex-col lg:flex-row lg:items-center gap-3">
         {/* Scrollable tab bar */}
-        <div className="overflow-x-auto pb-1">
-          <div className="flex p-1 rounded-xl bg-[var(--surface-2)] gap-1 w-max min-w-full">
+        <div className="overflow-x-auto pb-1 lg:pb-0 lg:shrink-0">
+          <div className="flex p-1 rounded-xl bg-[var(--surface-2)]/70 border border-[var(--border)]/60 gap-1 w-max min-w-full lg:min-w-0">
             {([
               { value: "all",       label: "All",       count: counts.all },
               { value: "upcoming",  label: "Upcoming",  count: counts.upcoming },
@@ -345,15 +458,15 @@ export default function AdminLiveClassesPage() {
                 onClick={() => setFilter(o.value)}
                 className={`px-3 h-9 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
                   filter === o.value
-                    ? "bg-[var(--surface)] text-[var(--foreground)] shadow-sm"
-                    : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                    ? "bg-[var(--primary)] text-white shadow-sm"
+                    : "text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--foreground)]"
                 }`}
               >
                 {o.label}
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
                   filter === o.value
-                    ? "bg-[var(--primary-soft)] text-[var(--primary)]"
-                    : "bg-[var(--surface-2)]"
+                    ? "bg-white/20 text-white"
+                    : "bg-[var(--surface)]"
                 }`}>
                   {o.count}
                 </span>
@@ -362,19 +475,31 @@ export default function AdminLiveClassesPage() {
           </div>
         </div>
 
-        {/* Search + sort */}
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Input
-            icon={<Icon.Search size={16} />}
-            placeholder="Search by title, course, instructor…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="flex-1 !h-9"
-          />
+        {/* Search + filters */}
+        <div className="flex flex-col sm:flex-row gap-2 lg:ml-auto lg:shrink-0">
+          <div className="w-full sm:w-56 lg:w-64">
+            <Input
+              icon={<Icon.Search size={16} />}
+              placeholder="Search by title, course, instructor…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="!h-9"
+            />
+          </div>
+          <Select
+            value={courseFilter}
+            onChange={(e) => setCourseFilter(e.target.value)}
+            className="!h-9 text-xs !py-0 w-full sm:w-[180px] sm:shrink-0"
+          >
+            <option value="all">All courses</option>
+            {courses.map((c) => (
+              <option key={c.id} value={c.id}>{c.title}</option>
+            ))}
+          </Select>
           <Select
             value={sortKey}
             onChange={(e) => setSortKey(e.target.value as SortKey)}
-            className="!h-9 text-xs !py-0 w-full sm:w-[155px]"
+            className="!h-9 text-xs !py-0 w-full sm:w-[155px] sm:shrink-0"
           >
             <option value="date-desc">Newest first</option>
             <option value="date-asc">Oldest first</option>
@@ -415,9 +540,9 @@ export default function AdminLiveClassesPage() {
         </Card>
       ) : (
         <Card>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-[var(--surface-2)] text-[var(--muted)] text-xs uppercase tracking-wider">
+          <div className="overflow-x-auto rounded-xl">
+            <table className="w-full text-sm border-collapse">
+              <thead className="bg-[var(--surface-2)]/70 text-[var(--muted)] text-[11px] uppercase tracking-wide">
                 <tr>
                   <Th>Session</Th>
                   <Th className="hidden md:table-cell">Course</Th>
@@ -428,7 +553,7 @@ export default function AdminLiveClassesPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((c) => {
+                {filtered.map((c, i) => {
                   const capacityPct =
                     c.maxAttendees && c.maxAttendees > 0
                       ? Math.min(100, Math.round((c.attendees / c.maxAttendees) * 100))
@@ -438,7 +563,11 @@ export default function AdminLiveClassesPage() {
                   return (
                     <tr
                       key={c.id}
-                      className={`border-t border-[var(--border)] hover:bg-[var(--surface-2)]/50 transition border-l-2 ${STATUS_BORDER[c.status]} group cursor-pointer`}
+                      className={cn(
+                        "border-t border-[var(--border)] hover:bg-[var(--primary-soft)]/40 transition-colors border-l-2 group cursor-pointer",
+                        STATUS_BORDER[c.status],
+                        i % 2 === 1 && "bg-[var(--surface-2)]/25",
+                      )}
                       onClick={() => setViewing(c)}
                     >
                       {/* Session */}
@@ -545,6 +674,14 @@ export default function AdminLiveClassesPage() {
                           >
                             <Icon.Copy size={14} />
                           </button>
+                          {/* Add to calendar */}
+                          <button
+                            onClick={() => downloadIcs(c)}
+                            title="Add to calendar"
+                            className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)] transition"
+                          >
+                            <Icon.Calendar size={14} />
+                          </button>
                           {/* Join link */}
                           <a
                             href={c.meetingUrl}
@@ -564,6 +701,14 @@ export default function AdminLiveClassesPage() {
                             <Icon.Edit size={14} />
                           </button>
                           <button
+                            onClick={() => handleDuplicate(c)}
+                            disabled={duplicatingId === c.id}
+                            title="Duplicate session"
+                            className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)] disabled:opacity-50 transition"
+                          >
+                            {duplicatingId === c.id ? <Icon.Loader size={14} /> : <DuplicateIcon size={14} />}
+                          </button>
+                          <button
                             onClick={() => setDeleting(c)}
                             title="Delete"
                             className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-red-500/10 text-[var(--muted)] hover:text-[var(--danger)] transition"
@@ -578,9 +723,11 @@ export default function AdminLiveClassesPage() {
               </tbody>
             </table>
           </div>
-          <div className="px-4 py-2.5 border-t border-[var(--border)]">
+          <div className="px-4 py-3 border-t border-[var(--border)]">
             <p className="text-xs text-[var(--muted)]">
-              Showing {filtered.length} of {classes.length} session{classes.length !== 1 ? "s" : ""}
+              Showing{" "}
+              <span className="font-medium text-[var(--foreground)]">{filtered.length}</span> of{" "}
+              <span className="font-medium text-[var(--foreground)]">{classes.length}</span> session{classes.length !== 1 ? "s" : ""}
             </p>
           </div>
         </Card>
@@ -591,11 +738,13 @@ export default function AdminLiveClassesPage() {
         <SessionDetailModal
           cls={viewing}
           quickStatusId={quickStatusId}
+          duplicatingId={duplicatingId}
           onClose={() => setViewing(null)}
           onEdit={(c) => { setViewing(null); setTimeout(() => openEdit(c), 60); }}
           onDelete={(c) => { setViewing(null); setTimeout(() => setDeleting(c), 60); }}
           onQuickStatus={quickStatus}
           onCopyUrl={copyUrl}
+          onDuplicate={handleDuplicate}
         />
       )}
 
@@ -887,19 +1036,23 @@ function LiveSectionLabel({ icon, label }: { icon: React.ReactNode; label: strin
 function SessionDetailModal({
   cls,
   quickStatusId,
+  duplicatingId,
   onClose,
   onEdit,
   onDelete,
   onQuickStatus,
   onCopyUrl,
+  onDuplicate,
 }: {
   cls: LiveClass;
   quickStatusId: string | null;
+  duplicatingId: string | null;
   onClose: () => void;
   onEdit: (c: LiveClass) => void;
   onDelete: (c: LiveClass) => void;
   onQuickStatus: (c: LiveClass, s: LiveStatus) => void;
   onCopyUrl: (url: string) => void;
+  onDuplicate: (c: LiveClass) => void;
 }) {
   const capacityPct =
     cls.maxAttendees && cls.maxAttendees > 0
@@ -1019,6 +1172,13 @@ function SessionDetailModal({
             >
               <Icon.Copy size={13} />
             </button>
+            <button
+              onClick={() => downloadIcs(cls)}
+              title="Add to calendar"
+              className="shrink-0 h-7 w-7 rounded-lg flex items-center justify-center hover:bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)] transition"
+            >
+              <Icon.Calendar size={13} />
+            </button>
             <a
               href={cls.meetingUrl}
               target="_blank"
@@ -1074,6 +1234,14 @@ function SessionDetailModal({
         <div className="flex gap-2 pt-1 border-t border-[var(--border)]">
           <Button variant="outline" onClick={onClose} className="flex-1">
             Close
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => onDuplicate(cls)}
+            loading={duplicatingId === cls.id}
+            title="Duplicate session"
+          >
+            <DuplicateIcon size={14} />
           </Button>
           <Button
             variant="outline"

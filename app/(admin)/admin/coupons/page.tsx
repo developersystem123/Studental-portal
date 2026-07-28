@@ -98,6 +98,7 @@ export default function AdminCouponsPage() {
   const [page,     setPage]     = React.useState(1);
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const [formOpen, setFormOpen] = React.useState(false);
+  const [editing,  setEditing]  = React.useState<Coupon | null>(null);
   const [deleting, setDeleting] = React.useState<Coupon | null>(null);
   const [bulkDel,  setBulkDel]  = React.useState(false);
 
@@ -177,7 +178,18 @@ export default function AdminCouponsPage() {
   }
 
   function openCreate() {
+    setEditing(null);
     setCode(""); setType("percent"); setValue("20"); setMaxUses(""); setExpiresAt("");
+    setFormOpen(true);
+  }
+
+  function openEdit(c: Coupon) {
+    setEditing(c);
+    setCode(c.code);
+    setType(c.type);
+    setValue(c.type === "fixed" ? String(c.value / 100) : String(c.value));
+    setMaxUses(c.maxUses ? String(c.maxUses) : "");
+    setExpiresAt(c.expiresAt ? c.expiresAt.slice(0, 10) : "");
     setFormOpen(true);
   }
 
@@ -186,19 +198,26 @@ export default function AdminCouponsPage() {
     const numVal = type === "fixed" ? Math.round(Number(value) * 100) : Math.round(Number(value));
     if (!Number.isFinite(numVal) || numVal <= 0) { toast.push({ title: "Enter a valid discount value", tone: "danger" }); return; }
     setSaving(true);
-    const r = await fetch("/api/admin/coupons", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code, type, value: numVal, maxUses: maxUses ? Number(maxUses) : null, expiresAt: expiresAt || null }),
-    });
+    const payload = { code, type, value: numVal, maxUses: maxUses ? Number(maxUses) : null, expiresAt: expiresAt || null };
+    const r = editing
+      ? await fetch(`/api/admin/coupons/${editing.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+      : await fetch("/api/admin/coupons", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
     setSaving(false);
     if (!r.ok) {
       const e = await r.json().catch(() => ({})) as { error?: string };
-      toast.push({ title: "Couldn't create coupon", description: e.error, tone: "danger" });
+      toast.push({ title: editing ? "Couldn't save coupon" : "Couldn't create coupon", description: e.error, tone: "danger" });
       return;
     }
-    toast.push({ title: "Coupon created", tone: "success" });
-    setFormOpen(false); load();
+    toast.push({ title: editing ? "Coupon updated" : "Coupon created", tone: "success" });
+    setFormOpen(false); setEditing(null); load();
   }
 
   async function toggleActive(c: Coupon) {
@@ -230,19 +249,25 @@ export default function AdminCouponsPage() {
   return (
     <div className="space-y-6 fade-in">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Manage</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">Coupons</h1>
-          <p className="mt-1 text-[var(--muted)]">Create and manage discount codes students can apply at checkout.</p>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" onClick={() => { exportCSV(filtered); toast.push({ title: "CSV exported", tone: "success" }); }}>
-            <Icon.Download size={15} /> Export CSV
-          </Button>
-          <Button onClick={openCreate}>
-            <Icon.Plus size={16} /> New coupon
-          </Button>
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-gradient-to-br from-[var(--primary)]/10 via-[var(--surface)] to-[var(--surface)] px-5 sm:px-7 py-6">
+        <div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-[var(--primary)]/10 blur-2xl" />
+        <div className="pointer-events-none absolute -right-24 bottom-0 h-40 w-40 rounded-full bg-[var(--accent)]/10 blur-2xl" />
+        <div className="relative flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">
+              <Icon.Tag size={12} /> Manage
+            </div>
+            <h1 className="mt-1.5 text-3xl font-bold tracking-tight">Coupons</h1>
+            <p className="mt-1 text-[var(--muted)] max-w-md">Create and manage discount codes students can apply at checkout.</p>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <Button variant="outline" onClick={() => { exportCSV(filtered); toast.push({ title: "CSV exported", tone: "success" }); }} className="bg-[var(--surface)]/80 backdrop-blur">
+              <Icon.Download size={15} /> Export CSV
+            </Button>
+            <Button onClick={openCreate} className="shadow-lg shadow-[var(--primary)]/25">
+              <Icon.Plus size={16} /> New coupon
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -426,13 +451,22 @@ export default function AdminCouponsPage() {
                           </td>
                           {/* Actions */}
                           <td className="px-4 py-3 text-right">
-                            <button
-                              onClick={() => setDeleting(c)}
-                              className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-                              title="Delete"
-                            >
-                              <Icon.Trash size={14} />
-                            </button>
+                            <div className="inline-flex items-center gap-1">
+                              <button
+                                onClick={() => openEdit(c)}
+                                className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--primary)] hover:bg-[var(--primary-soft)] transition opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                                title="Edit"
+                              >
+                                <Icon.Edit size={14} />
+                              </button>
+                              <button
+                                onClick={() => setDeleting(c)}
+                                className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                                title="Delete"
+                              >
+                                <Icon.Trash size={14} />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -484,12 +518,12 @@ export default function AdminCouponsPage() {
         </CardBody>
       </Card>
 
-      {/* Create modal */}
+      {/* Create / edit modal */}
       <Modal
         open={formOpen}
-        onClose={() => setFormOpen(false)}
+        onClose={() => { setFormOpen(false); setEditing(null); }}
         size="md"
-        title="New coupon"
+        title={editing ? "Edit coupon" : "New coupon"}
       >
         <div>
           {/* Live preview header */}
@@ -613,11 +647,11 @@ export default function AdminCouponsPage() {
           </div>
 
           <div className="px-5 sm:px-6 pb-5 pt-4 flex flex-col-reverse sm:flex-row justify-end gap-2 border-t border-[var(--border)]">
-            <Button variant="outline" onClick={() => setFormOpen(false)} disabled={saving} className="w-full sm:w-auto">
+            <Button variant="outline" onClick={() => { setFormOpen(false); setEditing(null); }} disabled={saving} className="w-full sm:w-auto">
               Cancel
             </Button>
             <Button onClick={create} loading={saving} disabled={code.length < 3} className="w-full sm:w-auto">
-              <Icon.CheckCircle size={15} /> Create coupon
+              {editing ? <><Icon.Check size={15} /> Save changes</> : <><Icon.CheckCircle size={15} /> Create coupon</>}
             </Button>
           </div>
         </div>

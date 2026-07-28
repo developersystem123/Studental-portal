@@ -135,21 +135,27 @@ export default function AdminTeachersPage() {
   return (
     <div className="space-y-6 fade-in">
       {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Manage</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">Teachers</h1>
-          <p className="mt-1 text-[var(--muted)]">
-            Onboard instructors, edit details, reset passwords.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="outline" onClick={() => exportCSV(teachers)}>
-            <Icon.Download size={15} /> Export CSV
-          </Button>
-          <Button onClick={startCreate}>
-            <Icon.Plus size={16} /> Add teacher
-          </Button>
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-gradient-to-br from-[var(--primary)]/10 via-[var(--surface)] to-[var(--surface)] px-5 sm:px-7 py-6">
+        <div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-[var(--primary)]/10 blur-2xl" />
+        <div className="pointer-events-none absolute -right-24 bottom-0 h-40 w-40 rounded-full bg-[var(--accent)]/10 blur-2xl" />
+        <div className="relative flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">
+              <Icon.Sparkles size={12} /> Manage
+            </div>
+            <h1 className="mt-1.5 text-3xl font-bold tracking-tight">Teachers</h1>
+            <p className="mt-1 text-[var(--muted)] max-w-md">
+              Onboard instructors, edit details, reset passwords.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button variant="outline" onClick={() => exportCSV(teachers)} className="bg-[var(--surface)]/80 backdrop-blur">
+              <Icon.Download size={15} /> Export CSV
+            </Button>
+            <Button onClick={startCreate} className="shadow-lg shadow-[var(--primary)]/25">
+              <Icon.Plus size={16} /> Add teacher
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -193,16 +199,16 @@ export default function AdminTeachersPage() {
               onChange={(e) => setQuery(e.target.value)}
               className="w-full sm:flex-1 sm:max-w-xs"
             />
-            <div className="flex items-center gap-1.5 flex-nowrap overflow-x-auto sm:shrink-0">
-              <span className="text-xs text-[var(--muted)] shrink-0 mr-0.5">Sort:</span>
+            <div className="flex items-center gap-1 flex-nowrap overflow-x-auto sm:shrink-0 bg-[var(--surface-2)]/70 rounded-xl p-1 border border-[var(--border)]/60">
+              <span className="text-xs text-[var(--muted)] shrink-0 pl-2 pr-1">Sort by</span>
               {SORTS.map(({ key, label }) => (
                 <button
                   key={key}
                   onClick={() => setSortKey(key)}
-                  className={`px-2.5 h-8 rounded-lg text-xs font-medium whitespace-nowrap transition ${
+                  className={`px-2.5 h-8 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
                     sortKey === key
-                      ? "bg-[var(--primary)] text-white"
-                      : "bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)]"
+                      ? "bg-[var(--primary)] text-white shadow-sm"
+                      : "bg-transparent text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--foreground)]"
                   }`}
                 >
                   {label}
@@ -230,31 +236,31 @@ export default function AdminTeachersPage() {
             />
           ) : (
             <>
-              <div className="overflow-x-auto -mx-1">
-                <table className="w-full text-sm">
+              <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
+                <table className="w-full text-sm border-collapse">
                   <thead>
-                    <tr className="text-left text-[var(--muted)] border-b border-[var(--border)]">
-                      <th className="font-medium py-2.5 px-3">Teacher</th>
-                      <th className="font-medium py-2.5 px-3 hidden md:table-cell">Phone</th>
-                      <th className="font-medium py-2.5 px-3 text-center">Courses</th>
-                      <th className="font-medium py-2.5 px-3 text-center hidden sm:table-cell">Students</th>
-                      <th className="font-medium py-2.5 px-3 hidden lg:table-cell">Joined</th>
-                      <th className="font-medium py-2.5 px-3 text-right">Actions</th>
+                    <tr className="text-left text-[var(--muted)] bg-[var(--surface-2)]/70 border-b border-[var(--border)]">
+                      <th className="font-semibold text-[11px] uppercase tracking-wide py-3 px-3">Teacher</th>
+                      <th className="font-semibold text-[11px] uppercase tracking-wide py-3 px-3 hidden md:table-cell">Phone</th>
+                      <th className="font-semibold text-[11px] uppercase tracking-wide py-3 px-3 text-center">Courses</th>
+                      <th className="font-semibold text-[11px] uppercase tracking-wide py-3 px-3 text-center hidden sm:table-cell">Students</th>
+                      <th className="font-semibold text-[11px] uppercase tracking-wide py-3 px-3 hidden lg:table-cell">Joined</th>
+                      <th className="font-semibold text-[11px] uppercase tracking-wide py-3 px-3 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {teachers.map((t) => (
+                    {teachers.map((t, i) => (
                       <tr
                         key={t.id}
                         onClick={() => openProfile(t)}
-                        className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)]/60 transition cursor-pointer group"
+                        className={`border-b border-[var(--border)] last:border-0 hover:bg-[var(--primary-soft)]/40 transition-colors cursor-pointer group ${i % 2 === 1 ? "bg-[var(--surface-2)]/25" : ""}`}
                       >
                         {/* Teacher info */}
                         <td className="py-3 px-3">
                           <div className="flex items-center gap-3">
                             <div className="relative shrink-0">
                               <div
-                                className={`h-10 w-10 rounded-xl bg-gradient-to-br ${avatarGradient(t.name)} text-white font-bold inline-flex items-center justify-center text-sm shadow-sm`}
+                                className={`h-10 w-10 rounded-xl bg-gradient-to-br ${avatarGradient(t.name)} text-white font-bold inline-flex items-center justify-center text-sm shadow-sm ring-2 ring-[var(--surface)]`}
                               >
                                 {t.name.slice(0, 1).toUpperCase()}
                               </div>
@@ -310,28 +316,28 @@ export default function AdminTeachersPage() {
                             <button
                               onClick={() => openProfile(t)}
                               title="View profile"
-                              className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)] transition"
+                              className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-[var(--surface)] text-[var(--muted)] hover:text-sky-500 hover:shadow-sm transition"
                             >
                               <Icon.User size={14} />
                             </button>
                             <button
                               onClick={() => startEdit(t)}
                               title="Edit"
-                              className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)] transition"
+                              className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--primary)] hover:shadow-sm transition"
                             >
                               <Icon.FilePen size={14} />
                             </button>
                             <button
                               onClick={() => startReset(t)}
                               title="Reset password"
-                              className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)] transition"
+                              className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-[var(--surface)] text-[var(--muted)] hover:text-amber-500 hover:shadow-sm transition"
                             >
                               <Icon.Lock size={14} />
                             </button>
                             <button
                               onClick={() => setConfirmDeleteId(t.id)}
                               title="Remove"
-                              className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-red-500/10 text-[var(--muted)] hover:text-[var(--danger)] transition"
+                              className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-red-500/10 text-[var(--muted)] hover:text-[var(--danger)] hover:shadow-sm transition"
                             >
                               <Icon.Trash size={14} />
                             </button>
@@ -342,8 +348,10 @@ export default function AdminTeachersPage() {
                   </tbody>
                 </table>
               </div>
-              <p className="text-xs text-[var(--muted)] pt-1">
-                Showing {teachers.length} of {allTeachers.length} teacher
+              <p className="text-xs text-[var(--muted)] pt-3 border-t border-[var(--border)]">
+                Showing{" "}
+                <span className="font-medium text-[var(--foreground)]">{teachers.length}</span> of{" "}
+                <span className="font-medium text-[var(--foreground)]">{allTeachers.length}</span> teacher
                 {allTeachers.length !== 1 ? "s" : ""}
               </p>
             </>

@@ -102,6 +102,25 @@ export default function AdminOverviewPage() {
   const [trendView, setTrendView] = React.useState<"enrollments" | "signups" | "revenue">("enrollments");
   const [chartPeriod, setChartPeriod] = React.useState<6 | 12>(6);
 
+  /* Floating quick-actions launcher */
+  const [fabOpen, setFabOpen] = React.useState(false);
+  const fabRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    if (!fabOpen) return;
+    function onDocClick(e: MouseEvent) {
+      if (fabRef.current && !fabRef.current.contains(e.target as Node)) setFabOpen(false);
+    }
+    function onEsc(e: KeyboardEvent) {
+      if (e.key === "Escape") setFabOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onEsc);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, [fabOpen]);
+
   const doRefresh = React.useCallback(async () => {
     setRefreshing(true);
     try {
@@ -216,6 +235,17 @@ export default function AdminOverviewPage() {
     warning: "bg-amber-500/15 text-amber-600 dark:text-amber-400 ring-amber-500/25",
   };
 
+  const QUICK_ACTIONS = [
+    { href: "/admin/students",      label: "Add student", icon: <Icon.User size={16} />,          tone: "primary" },
+    { href: "/admin/teachers",      label: "Add teacher", icon: <Icon.Sparkles size={16} />,       tone: "emerald" },
+    { href: "/admin/courses",       label: "New course",  icon: <Icon.Book size={16} />,           tone: "sky" },
+    { href: "/admin/live-classes",  label: "Live class",  icon: <Icon.Video size={16} />,          tone: "rose" },
+    { href: "/admin/announcements", label: "Announce",    icon: <Icon.Megaphone size={16} />,      tone: "amber" },
+    { href: "/admin/coupons",       label: "Coupons",     icon: <Icon.Tag size={16} />,             tone: "accent" },
+    { href: "/admin/support",       label: "Support",     icon: <Icon.MessageSquare size={16} />,  tone: "violet", badge: ticketStats.open || undefined },
+    { href: "/admin/reports",       label: "Reports",     icon: <Icon.BarChart3 size={16} />,      tone: "orange" },
+  ];
+
   return (
     <div className="space-y-6 fade-in">
 
@@ -248,60 +278,36 @@ export default function AdminOverviewPage() {
               ))}
             </div>
           </div>
-          <div className="hidden sm:flex items-center gap-2 shrink-0">
-            <Link href="/admin/students" className="inline-flex h-10 items-center gap-2 px-4 rounded-xl bg-white/15 hover:bg-white/25 backdrop-blur text-sm font-semibold transition">
-              <Icon.Plus size={16} /> Add student
-            </Link>
-            <Link href="/admin/courses" className="inline-flex h-10 items-center gap-2 px-4 rounded-xl bg-white text-[var(--primary)] hover:brightness-95 text-sm font-semibold transition">
-              <Icon.Book size={16} /> New course
-            </Link>
+          <div className="hidden sm:flex flex-col items-end gap-3 shrink-0">
+            <div className="flex items-center gap-2">
+              <Link href="/admin/students" className="inline-flex h-10 items-center gap-2 px-4 rounded-xl bg-white/15 hover:bg-white/25 backdrop-blur text-sm font-semibold transition">
+                <Icon.Plus size={16} /> Add student
+              </Link>
+              <Link href="/admin/courses" className="inline-flex h-10 items-center gap-2 px-4 rounded-xl bg-white text-[var(--primary)] hover:brightness-95 text-sm font-semibold transition">
+                <Icon.Book size={16} /> New course
+              </Link>
+            </div>
+
+            {/* Live status */}
+            <div className="flex items-center gap-2.5 rounded-xl bg-white/15 backdrop-blur border border-white/20 px-3.5 py-2">
+              <div className="flex items-center gap-1.5 text-xs text-white/85 whitespace-nowrap">
+                <LivePulse light />
+                <span>
+                  Auto-refreshes every {REFRESH_MS / 1000}s · Updated{" "}
+                  <span className="font-medium text-white">{relativeTime(lastUpdated)}</span>
+                </span>
+              </div>
+              <button
+                onClick={doRefresh}
+                disabled={refreshing}
+                className="inline-flex h-7 items-center gap-1.5 px-2.5 rounded-lg bg-white/15 hover:bg-white/25 text-white text-xs font-semibold transition disabled:opacity-60"
+              >
+                {refreshing ? <Icon.Loader size={13} className="animate-spin" /> : <RefreshIcon size={13} />}
+                {refreshing ? "Updating…" : "Refresh"}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* ── Live status bar ───────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-3 flex-wrap rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5">
-        <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
-          <LivePulse />
-          <span>
-            Auto-refreshes every {REFRESH_MS / 1000}s · Updated{" "}
-            <span className="font-medium text-[var(--foreground)]">{relativeTime(lastUpdated)}</span>
-          </span>
-        </div>
-        <button
-          onClick={doRefresh}
-          disabled={refreshing}
-          className="inline-flex h-8 items-center gap-1.5 px-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-2)] text-xs font-semibold transition disabled:opacity-60"
-        >
-          {refreshing ? <Icon.Loader size={14} className="animate-spin" /> : <RefreshIcon size={14} />}
-          {refreshing ? "Updating…" : "Refresh"}
-        </button>
-      </div>
-
-      {/* ── Quick actions ─────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-        {[
-          { href: "/admin/students",     label: "Add student",    icon: <Icon.User size={16} />,        tint: "from-violet-600 to-indigo-500" },
-          { href: "/admin/teachers",     label: "Add teacher",    icon: <Icon.Sparkles size={16} />,    tint: "from-emerald-600 to-teal-500" },
-          { href: "/admin/courses",      label: "New course",     icon: <Icon.Book size={16} />,        tint: "from-sky-500 to-blue-500" },
-          { href: "/admin/live-classes", label: "Live class",     icon: <Icon.Video size={16} />,       tint: "from-rose-500 to-pink-500" },
-          { href: "/admin/announcements",label: "Announce",       icon: <Icon.Megaphone size={16} />,   tint: "from-amber-500 to-orange-500" },
-          { href: "/admin/coupons",      label: "Coupons",        icon: <Icon.Tag size={16} />,         tint: "from-teal-500 to-cyan-500" },
-          { href: "/admin/support",      label: "Support",        icon: <Icon.MessageSquare size={16} />, tint: "from-fuchsia-500 to-purple-500", badge: ticketStats.open || undefined },
-          { href: "/admin/reports",      label: "Reports",        icon: <Icon.BarChart3 size={16} />,   tint: "from-slate-600 to-slate-700" },
-        ].map((a) => (
-          <Link key={a.href} href={a.href} className="relative block group">
-            <div className={`relative overflow-hidden rounded-xl bg-gradient-to-br ${a.tint} text-white p-3 flex flex-col gap-1.5 hover:shadow-lg transition-all hover:-translate-y-0.5`}>
-              {a.icon}
-              <p className="text-[11px] font-semibold leading-tight">{a.label}</p>
-              {"badge" in a && a.badge !== undefined && a.badge > 0 && (
-                <span className="absolute top-1.5 right-1.5 h-4 min-w-[16px] px-1 rounded-full bg-white text-[var(--primary)] text-[9px] font-bold flex items-center justify-center">
-                  {a.badge}
-                </span>
-              )}
-            </div>
-          </Link>
-        ))}
       </div>
 
       {/* ── 8 Stat cards ─────────────────────────────────────────────────── */}
@@ -598,7 +604,7 @@ export default function AdminOverviewPage() {
               <div className="flex-1 min-h-[220px] flex items-center justify-center text-[var(--muted)]"><Icon.Loader size={18} className="animate-spin" /></div>
             ) : (reports?.categoryMix?.length ?? 0) > 0 ? (
               <div className="flex-1 min-h-[220px] overflow-hidden">
-                <BarChart data={reports!.categoryMix} height={420} />
+                <BarChart data={reports!.categoryMix} height={220} />
               </div>
             ) : (
               <div className="flex-1 min-h-[220px] flex items-center justify-center">
@@ -782,6 +788,57 @@ export default function AdminOverviewPage() {
         </Card>
       </div>
 
+      {/* ── Floating quick-actions launcher (radial) ────────────────────── */}
+      <div ref={fabRef} className="fixed right-16 top-1/2 -translate-y-1/2 z-50 h-16 w-16">
+        {QUICK_ACTIONS.map((a, i) => {
+          const arcStart = 100;
+          const arcEnd = 260;
+          const angle = arcStart + (i * (arcEnd - arcStart)) / (QUICK_ACTIONS.length - 1);
+          const rad = (angle * Math.PI) / 180;
+          const radius = 168;
+          const x = Math.cos(rad) * radius;
+          const y = Math.sin(rad) * radius;
+          return (
+            <Link
+              key={a.href}
+              href={a.href}
+              onClick={() => setFabOpen(false)}
+              style={{
+                transform: fabOpen
+                  ? `translate(calc(-50% + ${x}px), calc(-50% + ${y}px)) scale(1)`
+                  : "translate(-50%, -50%) scale(0)",
+                transitionDelay: fabOpen ? `${i * 30}ms` : "0ms",
+              }}
+              className={`group absolute top-1/2 left-1/2 transition-all duration-300 ease-out ${
+                fabOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+              }`}
+            >
+              <span className="pointer-events-none absolute right-full top-1/2 -translate-y-1/2 mr-2 px-3 py-1.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] shadow-md text-sm font-semibold whitespace-nowrap opacity-0 group-hover:opacity-100 transition">
+                {a.label}
+              </span>
+              <span className={`relative h-16 w-16 shrink-0 rounded-full flex items-center justify-center ring-1 shadow-lg hover:scale-110 transition-transform bg-[var(--surface)] ${TONE_MAP[a.tone]}`}>
+                {React.cloneElement(a.icon, { size: 22 })}
+                {a.badge !== undefined && a.badge > 0 && (
+                  <span className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 rounded-full bg-[var(--primary)] text-white text-[11px] font-bold flex items-center justify-center">
+                    {a.badge}
+                  </span>
+                )}
+              </span>
+            </Link>
+          );
+        })}
+
+        <button
+          type="button"
+          onClick={() => setFabOpen((v) => !v)}
+          aria-expanded={fabOpen}
+          aria-label="Quick actions"
+          className="relative z-10 h-16 w-16 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white shadow-xl shadow-[var(--primary)]/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
+        >
+          <Icon.Plus size={28} className={`transition-transform duration-300 ${fabOpen ? "rotate-45" : "rotate-0"}`} />
+        </button>
+      </div>
+
     </div>
   );
 }
@@ -808,12 +865,12 @@ function RefreshIcon({ size = 14 }: { size?: number }) {
   );
 }
 
-function LivePulse() {
+function LivePulse({ light = false }: { light?: boolean }) {
   return (
-    <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+    <span className={`inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider ${light ? "text-white" : "text-emerald-600 dark:text-emerald-400"}`}>
       <span className="relative flex h-1.5 w-1.5">
-        <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75 animate-ping" />
-        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+        <span className={`absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping ${light ? "bg-white" : "bg-emerald-500"}`} />
+        <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${light ? "bg-white" : "bg-emerald-500"}`} />
       </span>
       Live
     </span>

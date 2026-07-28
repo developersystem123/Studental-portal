@@ -39,8 +39,10 @@ type Ann = {
 const AUDIENCE_LABELS: Record<Audience, string> = {
   all: "All users", students: "Students only", teachers: "Teachers only", pro: "Pro subscribers",
 };
-const AUDIENCE_REACH: Record<Audience, number> = {
-  all: 12400, students: 8600, teachers: 340, pro: 1240,
+// Optimistic placeholder shown for the split second before the real,
+// DB-backed segment sizes load from the server (see `audienceSizes` state).
+const FALLBACK_AUDIENCE_SIZES: Record<Audience, number> = {
+  all: 0, students: 0, teachers: 0, pro: 0,
 };
 const AUDIENCE_CLS: Record<Audience, string> = {
   all: "bg-[var(--primary)]/10 text-[var(--primary)]",
@@ -105,6 +107,11 @@ export default function AdminAnnouncementsPage() {
   const [audienceFilter, setAudienceFilter] = React.useState<Audience | "all">("all");
   const [query, setQuery] = React.useState("");
 
+  // Live audience segment sizes — computed by the API from real users /
+  // subscriptions, not the old hardcoded estimates.
+  const [audienceSizes, setAudienceSizes] = React.useState<Record<Audience, number>>(FALLBACK_AUDIENCE_SIZES);
+  const [refreshingReach, setRefreshingReach] = React.useState(false);
+
   // Compose modal
   const [composeOpen, setComposeOpen] = React.useState(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
@@ -118,19 +125,38 @@ export default function AdminAnnouncementsPage() {
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
 
   // Fetch on mount
-  React.useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch("/api/admin/announcements");
-        const data = await res.json();
-        if (res.ok) setAnns(data.announcements ?? []);
-      } catch {
-        // fail silently — empty list
-      } finally {
-        setLoading(false);
+  const load = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/announcements");
+      const data = await res.json();
+      if (res.ok) {
+        setAnns(data.announcements ?? []);
+        if (data.audienceSizes) setAudienceSizes(data.audienceSizes);
       }
-    })();
+    } catch {
+      // fail silently — empty list
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  React.useEffect(() => { load(); }, [load]);
+
+  // Re-pull just the live segment sizes (e.g. if the compose modal has been
+  // open a while and the admin wants a fresher recipient-count estimate).
+  async function refreshAudienceSizes() {
+    setRefreshingReach(true);
+    try {
+      const res = await fetch("/api/admin/announcements");
+      const data = await res.json();
+      if (res.ok && data.audienceSizes) setAudienceSizes(data.audienceSizes);
+      else toast.push({ title: "Couldn't refresh recipient counts.", tone: "danger" });
+    } catch {
+      toast.push({ title: "Couldn't refresh recipient counts.", tone: "danger" });
+    } finally {
+      setRefreshingReach(false);
+    }
+  }
 
   function openCompose(ann?: Ann) {
     if (ann) {
@@ -254,21 +280,31 @@ export default function AdminAnnouncementsPage() {
   return (
     <div className="space-y-6 fade-in">
       {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Manage</p>
-          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">Announcements</h1>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            Broadcast messages to all users or specific groups via in-app notifications or email.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Button variant="outline" onClick={() => exportCSV(filtered)} className="flex-1 sm:flex-none justify-center">
-            <Icon.Download size={15} /> Export CSV
-          </Button>
-          <Button onClick={() => openCompose()} className="flex-1 sm:flex-none justify-center">
-            <Icon.Megaphone size={16} /> New announcement
-          </Button>
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-gradient-to-br from-[var(--primary)]/10 via-[var(--surface)] to-[var(--surface)] px-5 sm:px-7 py-6">
+        <div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-[var(--primary)]/10 blur-2xl" />
+        <div className="pointer-events-none absolute -right-24 bottom-0 h-40 w-40 rounded-full bg-[var(--accent)]/10 blur-2xl" />
+        <div className="relative flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">
+              <Icon.Megaphone size={12} /> Manage
+            </div>
+            <h1 className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight">Announcements</h1>
+            <p className="mt-1 text-sm text-[var(--muted)] max-w-md">
+              Broadcast messages to all users or specific groups via in-app notifications or email.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              onClick={() => exportCSV(filtered)}
+              className="flex-1 sm:flex-none justify-center bg-[var(--surface)]/80 backdrop-blur"
+            >
+              <Icon.Download size={15} /> Export CSV
+            </Button>
+            <Button onClick={() => openCompose()} className="flex-1 sm:flex-none justify-center shadow-lg shadow-[var(--primary)]/25">
+              <Icon.Megaphone size={16} /> New announcement
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -287,25 +323,30 @@ export default function AdminAnnouncementsPage() {
 
       {/* ── Controls ── */}
       <div className="space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <Tabs
-            value={filter}
-            onChange={(v) => setFilter(v as AnnStatus | "all")}
-            className="overflow-x-auto sm:overflow-visible"
-            options={[
-              { value: "all", label: "All", count: counts.all },
-              { value: "sent", label: "Sent", count: counts.sent },
-              { value: "scheduled", label: "Scheduled", count: counts.scheduled },
-              { value: "draft", label: "Drafts", count: counts.draft },
-            ]}
-          />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search announcements…"
-            icon={<Icon.Search size={16} />}
-            className="w-full sm:w-64 sm:shrink-0"
-          />
+        <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+          <div className="overflow-x-auto pb-1 lg:pb-0 lg:shrink-0">
+            <Tabs
+              value={filter}
+              onChange={(v) => setFilter(v as AnnStatus | "all")}
+              options={[
+                { value: "all", label: "All", count: counts.all },
+                { value: "sent", label: "Sent", count: counts.sent },
+                { value: "scheduled", label: "Scheduled", count: counts.scheduled },
+                { value: "draft", label: "Drafts", count: counts.draft },
+              ]}
+            />
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2 lg:ml-auto lg:shrink-0">
+            <div className="w-full sm:w-56 lg:w-64">
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search announcements…"
+                icon={<Icon.Search size={16} />}
+                className="!h-9"
+              />
+            </div>
+          </div>
         </div>
 
         {/* Audience filter chips */}
@@ -472,7 +513,7 @@ export default function AdminAnnouncementsPage() {
               </p>
               <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                 <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1", AUDIENCE_CLS[form.audience])}>
-                  <Icon.Users size={9} /> {AUDIENCE_LABELS[form.audience]} (~{AUDIENCE_REACH[form.audience].toLocaleString()})
+                  <Icon.Users size={9} /> {AUDIENCE_LABELS[form.audience]} ({audienceSizes[form.audience].toLocaleString()})
                 </span>
                 <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-[var(--surface)] border border-[var(--border)] text-[var(--muted)] flex items-center gap-1">
                   {CHANNEL_ICON[form.channel]} {CHANNEL_LABELS[form.channel]}
@@ -531,10 +572,10 @@ export default function AdminAnnouncementsPage() {
                   value={form.audience}
                   onChange={(e) => setForm((f) => ({ ...f, audience: e.target.value as Audience }))}
                 >
-                  <option value="all">All users (~12,400)</option>
-                  <option value="students">Students only (~8,600)</option>
-                  <option value="teachers">Teachers only (~340)</option>
-                  <option value="pro">Pro subscribers (~1,240)</option>
+                  <option value="all">All users ({audienceSizes.all.toLocaleString()})</option>
+                  <option value="students">Students only ({audienceSizes.students.toLocaleString()})</option>
+                  <option value="teachers">Teachers only ({audienceSizes.teachers.toLocaleString()})</option>
+                  <option value="pro">Pro subscribers ({audienceSizes.pro.toLocaleString()})</option>
                 </Select>
               </div>
               <div>
@@ -609,19 +650,30 @@ export default function AdminAnnouncementsPage() {
               )}>
                 <Icon.Users size={14} />
               </div>
-              <p className="text-xs text-[var(--muted)] leading-relaxed">
-                This will reach approximately{" "}
-                <span className="font-bold text-[var(--foreground)]">
-                  {AUDIENCE_REACH[form.audience].toLocaleString()} users
-                </span>{" "}
-                via{" "}
-                <span className="font-bold text-[var(--foreground)]">
-                  {CHANNEL_LABELS[form.channel].toLowerCase()}
-                </span>.
-                {form.channel === "both" && (
-                  <span className="text-amber-600 dark:text-amber-400"> Email delivery may take a few minutes.</span>
-                )}
-              </p>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-[var(--muted)] leading-relaxed">
+                  This will reach{" "}
+                  <span className="font-bold text-[var(--foreground)]">
+                    {audienceSizes[form.audience].toLocaleString()} users
+                  </span>{" "}
+                  via{" "}
+                  <span className="font-bold text-[var(--foreground)]">
+                    {CHANNEL_LABELS[form.channel].toLowerCase()}
+                  </span>, based on today&apos;s live user count.
+                  {form.channel === "both" && (
+                    <span className="text-amber-600 dark:text-amber-400"> Email delivery may take a few minutes.</span>
+                  )}
+                </p>
+                <button
+                  type="button"
+                  onClick={refreshAudienceSizes}
+                  disabled={refreshingReach}
+                  className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium text-[var(--primary)] hover:underline disabled:opacity-60"
+                >
+                  <Icon.Loader size={11} className={refreshingReach ? "animate-spin" : ""} />
+                  {refreshingReach ? "Refreshing…" : "Refresh count"}
+                </button>
+              </div>
             </div>
           </div>
 

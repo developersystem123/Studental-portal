@@ -48,6 +48,17 @@ const LEVEL_META: Record<CourseLevel, { icon: React.ReactNode; desc: string }> =
   Advanced:     { icon: <Icon.Award size={16} />,      desc: "Deep expertise required" },
 };
 
+const CATEGORY_ICONS: Record<CourseCategory, React.ReactNode> = {
+  "Web Dev":      <Icon.Route size={13} />,
+  "Data Science": <Icon.PieChart size={13} />,
+  "Design":       <Icon.Sparkles size={13} />,
+  "Business":     <Icon.Wallet size={13} />,
+  "Languages":    <Icon.Globe size={13} />,
+  "Math":         <Icon.Compass size={13} />,
+};
+
+const BESTSELLER_RATING = 4.5;
+
 const defaultThumb = (a = "#16a34a", b = "#4ade80") =>
   `data:image/svg+xml;utf8,${encodeURIComponent(
     `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 400'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='${a}'/><stop offset='1' stop-color='${b}'/></linearGradient></defs><rect width='600' height='400' fill='url(%23g)'/></svg>`,
@@ -155,19 +166,30 @@ export default function AdminCoursesPage() {
   return (
     <div className="space-y-6 fade-in">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Manage</p>
-          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">Courses</h1>
-          <p className="mt-1 text-sm text-[var(--muted)]">Add, edit, and remove courses from the catalog.</p>
-        </div>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <Button variant="outline" onClick={() => { exportCSV(filtered); toast.push({ title: "CSV exported", tone: "success" }); }} className="flex-1 sm:flex-none justify-center">
-            <Icon.Download size={15} /> Export CSV
-          </Button>
-          <Button onClick={() => { setEditing(null); setMode("create"); }} className="flex-1 sm:flex-none justify-center">
-            <Icon.Plus size={16} /> New course
-          </Button>
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-gradient-to-br from-[var(--primary)]/10 via-[var(--surface)] to-[var(--surface)] px-5 sm:px-7 py-6">
+        <div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-[var(--primary)]/10 blur-2xl" />
+        <div className="pointer-events-none absolute -right-24 bottom-0 h-40 w-40 rounded-full bg-[var(--accent)]/10 blur-2xl" />
+        <div className="relative flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex items-start gap-3">
+            <div className="hidden sm:flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--primary)] to-emerald-400 text-white shadow-lg shadow-[var(--primary)]/20">
+              <Icon.Book size={20} />
+            </div>
+            <div>
+              <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">
+                <Icon.Book size={12} /> Manage
+              </div>
+              <h1 className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight">Courses</h1>
+              <p className="mt-1 text-sm text-[var(--muted)] max-w-md">Add, edit, and remove courses from the catalog.</p>
+            </div>
+          </div>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button variant="outline" onClick={() => { exportCSV(filtered); toast.push({ title: "CSV exported", tone: "success" }); }} className="flex-1 sm:flex-none justify-center bg-[var(--surface)]/80 backdrop-blur">
+              <Icon.Download size={15} /> Export CSV
+            </Button>
+            <Button onClick={() => { setEditing(null); setMode("create"); }} className="flex-1 sm:flex-none justify-center shadow-lg shadow-[var(--primary)]/25">
+              <Icon.Plus size={16} /> New course
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -193,10 +215,10 @@ export default function AdminCoursesPage() {
               className="!h-9 flex-1"
             />
             {/* View toggle */}
-            <div className="flex shrink-0 border border-[var(--border)] rounded-lg overflow-hidden h-9">
+            <div className="flex shrink-0 rounded-xl overflow-hidden border border-[var(--border)] bg-[var(--surface-2)]/70 p-1 gap-0.5 h-9">
               <button
                 onClick={() => setViewMode("grid")}
-                className={cn("px-2.5 transition", viewMode === "grid" ? "bg-[var(--primary-soft)] text-[var(--primary)]" : "text-[var(--muted)] hover:bg-[var(--surface-2)]")}
+                className={cn("w-7 rounded-lg flex items-center justify-center transition-all", viewMode === "grid" ? "bg-[var(--primary)] text-white shadow-sm" : "text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--foreground)]")}
                 title="Grid view"
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -206,7 +228,7 @@ export default function AdminCoursesPage() {
               </button>
               <button
                 onClick={() => setViewMode("list")}
-                className={cn("px-2.5 border-l border-[var(--border)] transition", viewMode === "list" ? "bg-[var(--primary-soft)] text-[var(--primary)]" : "text-[var(--muted)] hover:bg-[var(--surface-2)]")}
+                className={cn("w-7 rounded-lg flex items-center justify-center transition-all", viewMode === "list" ? "bg-[var(--primary)] text-white shadow-sm" : "text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--foreground)]")}
                 title="List view"
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -214,6 +236,40 @@ export default function AdminCoursesPage() {
                 </svg>
               </button>
             </div>
+          </div>
+
+          {/* Row 1.5: Category quick chips */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 -mx-0.5 px-0.5 scrollbar-none">
+            <button
+              onClick={() => setCategoryFilter("all")}
+              className={cn(
+                "shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold px-3 h-8 rounded-full border transition-all",
+                categoryFilter === "all"
+                  ? "bg-[var(--foreground)] text-[var(--background)] border-[var(--foreground)]"
+                  : "border-[var(--border)] text-[var(--muted)] hover:border-[var(--primary)]/40 hover:text-[var(--foreground)]",
+              )}
+            >
+              <Icon.Sparkles size={12} /> All
+            </button>
+            {CATEGORIES.map((c) => {
+              const active = categoryFilter === c;
+              const count = courses.filter((co) => co.category === c).length;
+              return (
+                <button
+                  key={c}
+                  onClick={() => setCategoryFilter(active ? "all" : c)}
+                  className={cn(
+                    "shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold px-3 h-8 rounded-full border transition-all",
+                    active
+                      ? "border-transparent shadow-sm " + CATEGORY_COLORS[c]
+                      : "border-[var(--border)] text-[var(--muted)] hover:border-[var(--primary)]/40 hover:text-[var(--foreground)]",
+                  )}
+                >
+                  {CATEGORY_ICONS[c]} {c}
+                  <span className={cn("text-[10px] px-1 rounded-full", active ? "bg-black/10 dark:bg-white/10" : "bg-[var(--surface-2)]")}>{count}</span>
+                </button>
+              );
+            })}
           </div>
 
           {/* Row 2: Dropdown filters */}
@@ -271,7 +327,7 @@ export default function AdminCoursesPage() {
             />
           ) : viewMode === "grid" ? (
             <>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filtered.map((c) => (
                   <CourseGridCard
                     key={c.id}
@@ -303,12 +359,19 @@ export default function AdminCoursesPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[var(--border)]">
-                    {filtered.map((c) => (
-                      <tr key={c.id} className="hover:bg-[var(--surface-2)] transition-colors group">
+                    {filtered.map((c, i) => (
+                      <tr key={c.id} className={cn("hover:bg-[var(--surface-2)] transition-colors group", i % 2 === 1 && "bg-[var(--surface-2)]/40")}>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={c.thumbnail} alt={c.title} className="h-10 w-14 rounded-lg object-cover shrink-0 border border-[var(--border)]" />
+                            <div className="relative shrink-0">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={c.thumbnail} alt={c.title} className="h-10 w-14 rounded-lg object-cover border border-[var(--border)]" />
+                              {c.rating >= BESTSELLER_RATING && (
+                                <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center h-4 w-4 rounded-full bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-sm">
+                                  <Icon.Crown size={9} />
+                                </span>
+                              )}
+                            </div>
                             <div className="min-w-0">
                               <p className="font-semibold truncate max-w-[220px]">{c.title}</p>
                               <p className="text-xs text-[var(--muted)] truncate">{c.instructor}</p>
@@ -316,8 +379,8 @@ export default function AdminCoursesPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3 hidden sm:table-cell">
-                          <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-full", CATEGORY_COLORS[c.category])}>
-                            {c.category}
+                          <span className={cn("inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full", CATEGORY_COLORS[c.category])}>
+                            {CATEGORY_ICONS[c.category]} {c.category}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-[var(--muted)] text-xs hidden lg:table-cell">{c.level}</td>
@@ -332,8 +395,8 @@ export default function AdminCoursesPage() {
                           )}
                         </td>
                         <td className="px-4 py-3 hidden md:table-cell">
-                          <span className="flex items-center gap-1 text-xs font-medium">
-                            <Icon.Star size={12} className="text-amber-500" /> {c.rating}
+                          <span className="flex items-center gap-1 text-xs font-semibold text-amber-500">
+                            <Icon.StarFill size={12} /> {c.rating}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-[var(--muted)] text-xs hidden lg:table-cell">{formatHours(c.durationMinutes)}</td>
@@ -402,27 +465,56 @@ function CourseGridCard({
   onDuplicate: () => void;
   onDelete: () => void;
 }) {
+  const isBestseller = c.rating >= BESTSELLER_RATING;
   return (
-    <div className="group rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden hover:border-[var(--primary)]/30 hover:shadow-lg transition-all duration-200">
+    <div className="group relative rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden ring-1 ring-transparent hover:ring-[var(--primary)]/25 hover:border-[var(--primary)]/30 hover:shadow-xl hover:shadow-black/5 hover:-translate-y-1 transition-all duration-300">
       {/* Thumbnail */}
       <div className="relative h-40 overflow-hidden bg-[var(--surface-2)]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={c.thumbnail} alt={c.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+        <img src={c.thumbnail} alt={c.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/5 to-transparent" />
+
         {/* Badges */}
         <div className="absolute top-2.5 left-2.5 flex gap-1.5 flex-wrap">
-          <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full", CATEGORY_COLORS[c.category])}>{c.category}</span>
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-black/30 text-white backdrop-blur-sm">{c.level}</span>
+          <span className={cn("inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm", CATEGORY_COLORS[c.category])}>
+            {CATEGORY_ICONS[c.category]} {c.category}
+          </span>
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-black/35 text-white backdrop-blur-sm">{c.level}</span>
         </div>
+        {isBestseller && (
+          <div className="absolute top-2.5 right-2.5">
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-sm">
+              <Icon.Crown size={11} /> Bestseller
+            </span>
+          </div>
+        )}
+
         {/* Price bottom-right */}
         <div className="absolute bottom-2.5 right-2.5">
           {c.price === 0 ? (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-white">Free</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-white shadow-sm">Free</span>
           ) : (
-            <div className="text-right">
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-black/40 text-white backdrop-blur-sm">${c.price}</span>
-            </div>
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-black/50 text-white backdrop-blur-sm shadow-sm">${c.price}</span>
           )}
+        </div>
+
+        {/* Hover quick-actions */}
+        <div className="absolute inset-x-2.5 bottom-2.5 flex justify-start gap-1.5 opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200">
+          <button
+            onClick={(e) => { e.stopPropagation(); onEdit(); }}
+            title="Edit"
+            className="p-1.5 rounded-lg bg-white/90 text-gray-800 hover:bg-white shadow-sm transition"
+          >
+            <Icon.FilePen size={13} />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDuplicate(); }}
+            disabled={duplicating}
+            title="Duplicate"
+            className="p-1.5 rounded-lg bg-white/90 text-gray-800 hover:bg-white shadow-sm disabled:opacity-50 transition"
+          >
+            {duplicating ? <Icon.Loader size={13} /> : <Icon.Copy size={13} />}
+          </button>
         </div>
       </div>
 
@@ -430,19 +522,19 @@ function CourseGridCard({
       <div className="p-4 space-y-3">
         <div>
           <h3 className="font-semibold leading-snug line-clamp-2 group-hover:text-[var(--primary)] transition">{c.title}</h3>
-          <p className="text-xs text-[var(--muted)] mt-0.5">{c.instructor}</p>
+          <p className="text-xs text-[var(--muted)] mt-0.5 flex items-center gap-1"><Icon.User size={11} />{c.instructor}</p>
         </div>
         <p className="text-xs text-[var(--muted)] line-clamp-2 leading-relaxed">{c.description}</p>
 
         {/* Meta row */}
-        <div className="flex items-center justify-between text-xs text-[var(--muted)]">
+        <div className="flex items-center justify-between text-xs text-[var(--muted)] rounded-lg bg-[var(--surface-2)] px-2.5 py-1.5">
           <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1"><Icon.Star size={11} className="text-amber-500" />{c.rating}</span>
+            <span className="flex items-center gap-1 font-semibold text-amber-500"><Icon.StarFill size={11} />{c.rating}</span>
             <span className="flex items-center gap-1"><Icon.Clock size={11} />{formatHours(c.durationMinutes)}</span>
             <span className="flex items-center gap-1"><Icon.Book size={11} />{c.chapters.length} ch.</span>
           </div>
           {c.price > 0 && (
-            <span className="text-[10px] text-[var(--muted-2)]">₨{(c.price * USD_TO_PKR).toLocaleString()}</span>
+            <span className="text-[10px] text-[var(--muted-2)] font-medium">₨{(c.price * USD_TO_PKR).toLocaleString()}</span>
           )}
         </div>
 
@@ -457,7 +549,7 @@ function CourseGridCard({
             title="Duplicate"
             className="p-2 rounded-lg border border-[var(--border)] text-[var(--muted)] hover:text-[var(--primary)] hover:border-[var(--primary)]/30 hover:bg-[var(--primary-soft)] disabled:opacity-50 transition"
           >
-            <Icon.Copy size={14} />
+            {duplicating ? <Icon.Loader size={14} /> : <Icon.Copy size={14} />}
           </button>
           <button
             onClick={onDelete}

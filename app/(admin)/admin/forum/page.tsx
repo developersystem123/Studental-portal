@@ -32,6 +32,13 @@ type Post = {
   replyCount: number;
 };
 
+type ThreadReply = {
+  id: string;
+  body: string;
+  createdAt: string;
+  author: { id: string; name: string; avatar?: string | null; role: string };
+};
+
 const CATEGORY_BADGE: Record<Category, "default" | "info" | "primary" | "warning"> = {
   general: "default", question: "info", announcement: "warning", discussion: "primary",
 };
@@ -82,6 +89,11 @@ export default function AdminForumPage() {
   const [deleting, setDeleting] = React.useState<Post | null>(null);
   const [bulkDel,  setBulkDel]  = React.useState(false);
   const [busy,     setBusy]     = React.useState<string | null>(null);
+
+  const [threadReplies, setThreadReplies] = React.useState<ThreadReply[]>([]);
+  const [threadLoading, setThreadLoading] = React.useState(false);
+  const [replyBody,     setReplyBody]     = React.useState("");
+  const [posting,       setPosting]       = React.useState(false);
 
   const load = React.useCallback(async () => {
     try {
@@ -174,6 +186,36 @@ export default function AdminForumPage() {
     load();
   }
 
+  function openDetail(p: Post) {
+    setDetail(p);
+    setReplyBody("");
+    setThreadReplies([]);
+    setThreadLoading(true);
+    fetch(`/api/forum/${p.id}`)
+      .then((r) => (r.ok ? r.json() : { post: null }))
+      .then((data) => setThreadReplies(data.post?.replies ?? []))
+      .catch(() => setThreadReplies([]))
+      .finally(() => setThreadLoading(false));
+  }
+
+  async function postReply() {
+    if (!detail || !replyBody.trim()) return;
+    setPosting(true);
+    const r = await fetch(`/api/forum/${detail.id}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: replyBody.trim() }),
+    });
+    setPosting(false);
+    if (!r.ok) { toast.push({ title: "Couldn't post reply", tone: "danger" }); return; }
+    const data = await r.json();
+    setThreadReplies((prev) => [...prev, data.reply]);
+    setDetail((d) => (d ? { ...d, replyCount: d.replyCount + 1 } : d));
+    setReplyBody("");
+    toast.push({ title: "Reply posted", tone: "success" });
+    load();
+  }
+
   async function confirmDelete() {
     if (!deleting) return;
     const r = await fetch(`/api/admin/forum/${deleting.id}`, { method: "DELETE" });
@@ -199,15 +241,21 @@ export default function AdminForumPage() {
   return (
     <div className="space-y-6 fade-in">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Manage</p>
-          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">Forum moderation</h1>
-          <p className="mt-1 text-sm text-[var(--muted)]">Review community posts — pin, moderate, and export.</p>
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-gradient-to-br from-[var(--primary)]/10 via-[var(--surface)] to-[var(--surface)] px-5 sm:px-7 py-6">
+        <div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-[var(--primary)]/10 blur-2xl" />
+        <div className="pointer-events-none absolute -right-24 bottom-0 h-40 w-40 rounded-full bg-[var(--accent)]/10 blur-2xl" />
+        <div className="relative flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">
+              <Icon.MessageSquare size={12} /> Manage
+            </div>
+            <h1 className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight">Forum moderation</h1>
+            <p className="mt-1 text-sm text-[var(--muted)] max-w-md">Review community posts — pin, moderate, and export.</p>
+          </div>
+          <Button variant="outline" onClick={() => { exportCSV(filtered); toast.push({ title: "CSV exported", tone: "success" }); }} className="bg-[var(--surface)]/80 backdrop-blur">
+            <Icon.Download size={15} /> Export CSV
+          </Button>
         </div>
-        <Button variant="outline" onClick={() => { exportCSV(filtered); toast.push({ title: "CSV exported", tone: "success" }); }}>
-          <Icon.Download size={15} /> Export CSV
-        </Button>
       </div>
 
       {/* Stats */}
@@ -222,15 +270,16 @@ export default function AdminForumPage() {
       <Card>
         <CardBody className="space-y-4">
           {/* Filters */}
-          <div className="space-y-3">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-3">
             {/* Scrollable tab bar */}
-            <div className="overflow-x-auto pb-1">
-              <div className="flex p-1 rounded-xl bg-[var(--surface-2)] gap-1 w-max min-w-full">
+            <div className="overflow-x-auto pb-1 lg:pb-0 lg:shrink-0">
+              <div className="flex p-1 rounded-xl bg-[var(--surface-2)]/70 border border-[var(--border)]/60 gap-1 w-max min-w-full lg:min-w-0">
                 {([
                   { value: "all",          label: "All",           count: counts.all },
                   { value: "question",     label: "Questions",     count: counts.question },
                   { value: "discussion",   label: "Discussion",    count: counts.discussion },
                   { value: "announcement", label: "Announcements", count: counts.announcement },
+                  { value: "general",      label: "General",       count: counts.general },
                   { value: "pinned",       label: "Pinned",        count: counts.pinned },
                 ] as { value: Filter; label: string; count: number }[]).map((o) => (
                   <button
@@ -238,15 +287,15 @@ export default function AdminForumPage() {
                     onClick={() => setFilter(o.value)}
                     className={`px-3 h-9 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
                       filter === o.value
-                        ? "bg-[var(--surface)] text-[var(--foreground)] shadow-sm"
-                        : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                        ? "bg-[var(--primary)] text-white shadow-sm"
+                        : "text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--foreground)]"
                     }`}
                   >
                     {o.label}
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
                       filter === o.value
-                        ? "bg-[var(--primary-soft)] text-[var(--primary)]"
-                        : "bg-[var(--surface-2)]"
+                        ? "bg-white/20 text-white"
+                        : "bg-[var(--surface)]"
                     }`}>
                       {o.count}
                     </span>
@@ -256,16 +305,18 @@ export default function AdminForumPage() {
             </div>
 
             {/* Search + filters */}
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search posts or authors…"
-                icon={<Icon.Search size={15} />}
-                className="!h-9 flex-1"
-              />
+            <div className="flex flex-col sm:flex-row gap-2 lg:ml-auto lg:shrink-0">
+              <div className="w-full sm:w-56 lg:w-64">
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search posts or authors…"
+                  icon={<Icon.Search size={15} />}
+                  className="!h-9"
+                />
+              </div>
               <div className="flex gap-2">
-                <Select value={course} onChange={(e) => setCourse(e.target.value)} className="!h-9 flex-1 sm:!w-40">
+                <Select value={course} onChange={(e) => setCourse(e.target.value)} className="!h-9 flex-1 sm:!w-40 sm:shrink-0">
                   <option value="all">All courses</option>
                   {courseOptions.map(([id, title]) => (
                     <option key={id} value={id}>{title.length > 28 ? title.slice(0, 26) + "…" : title}</option>
@@ -277,7 +328,7 @@ export default function AdminForumPage() {
                     const [k, d] = e.target.value.split("-");
                     setSortKey(k as SortKey); setSortDir(d as SortDir);
                   }}
-                  className="!h-9 flex-1 sm:!w-36"
+                  className="!h-9 flex-1 sm:!w-36 sm:shrink-0"
                 >
                   <option value="date-desc">Latest first</option>
                   <option value="date-asc">Oldest first</option>
@@ -347,7 +398,7 @@ export default function AdminForumPage() {
                       />
 
                       {/* Avatar */}
-                      <div className="h-9 w-9 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5">
+                      <div className="h-9 w-9 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5 shadow-sm ring-2 ring-[var(--surface)]">
                         {p.authorName.charAt(0).toUpperCase()}
                       </div>
 
@@ -372,7 +423,7 @@ export default function AdminForumPage() {
 
                         <button
                           className="text-left font-semibold text-[var(--foreground)] hover:text-[var(--primary)] transition line-clamp-1 w-full"
-                          onClick={() => setDetail(p)}
+                          onClick={() => openDetail(p)}
                         >
                           {p.title}
                         </button>
@@ -394,7 +445,7 @@ export default function AdminForumPage() {
                       {/* Actions */}
                       <div className="flex items-center gap-1 shrink-0">
                         <button
-                          onClick={() => setDetail(p)}
+                          onClick={() => openDetail(p)}
                           className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--primary)] hover:bg-[var(--primary-soft)] transition opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                           title="View post"
                         >
@@ -427,7 +478,7 @@ export default function AdminForumPage() {
               </div>
 
               {/* Pagination */}
-              <div className="flex items-center justify-between gap-4 pt-1 flex-wrap">
+              <div className="flex items-center justify-between gap-4 pt-3 border-t border-[var(--border)] flex-wrap">
                 <p className="text-xs text-[var(--muted)]">
                   Showing <span className="font-semibold text-[var(--foreground)]">{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)}</span> of{" "}
                   <span className="font-semibold text-[var(--foreground)]">{filtered.length}</span> posts
@@ -503,6 +554,65 @@ export default function AdminForumPage() {
             <div className="flex items-center gap-4 text-sm text-[var(--muted)]">
               <span className="flex items-center gap-1.5"><Icon.MessageSquare size={14} /> {detail.replyCount} replies</span>
               <span className="flex items-center gap-1.5"><Icon.Eye size={14} /> {detail.views.toLocaleString()} views</span>
+            </div>
+
+            {/* Replies thread */}
+            <div className="border-t border-[var(--border)] pt-4 space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-2)]">
+                Replies {threadReplies.length > 0 && `(${threadReplies.length})`}
+              </p>
+
+              {threadLoading ? (
+                <div className="flex items-center justify-center py-6">
+                  <Icon.Loader size={18} className="animate-spin text-[var(--primary)]" />
+                </div>
+              ) : threadReplies.length === 0 ? (
+                <p className="text-sm text-[var(--muted)] italic py-2">No replies yet.</p>
+              ) : (
+                <div className="space-y-3 max-h-64 overflow-y-auto scrollbar-thin pr-1">
+                  {threadReplies.map((r) => (
+                    <div key={r.id} className="flex items-start gap-2.5">
+                      <div className={cn(
+                        "h-7 w-7 rounded-full flex items-center justify-center text-white text-[11px] font-bold shrink-0",
+                        r.author.role === "Admin" ? "bg-gradient-to-br from-amber-500 to-orange-400" : "bg-gradient-to-br from-[var(--primary)] to-[var(--accent)]",
+                      )}>
+                        {r.author.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0 flex-1 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] px-3 py-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-xs font-semibold">{r.author.name}</span>
+                          {r.author.role === "Admin" && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400">Staff</span>
+                          )}
+                          <span className="text-[10px] text-[var(--muted-2)]">{relativeTime(r.createdAt)}</span>
+                        </div>
+                        <p className="text-sm text-[var(--foreground)] mt-0.5 whitespace-pre-wrap">{r.body}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Reply composer */}
+              <div className="flex items-start gap-2.5 pt-1">
+                <div className="h-7 w-7 rounded-full bg-gradient-to-br from-amber-500 to-orange-400 flex items-center justify-center text-white text-[11px] font-bold shrink-0">
+                  <Icon.Shield size={12} />
+                </div>
+                <div className="min-w-0 flex-1 space-y-2">
+                  <textarea
+                    value={replyBody}
+                    onChange={(e) => setReplyBody(e.target.value)}
+                    placeholder="Reply as EduPortal staff…"
+                    rows={2}
+                    className="w-full rounded-xl bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] placeholder:text-[var(--muted-2)] px-3 py-2 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-transparent"
+                  />
+                  <div className="flex justify-end">
+                    <Button size="sm" loading={posting} disabled={!replyBody.trim()} onClick={postReply}>
+                      <Icon.Send size={13} /> Post reply
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="flex justify-end gap-2 pt-2 border-t border-[var(--border)]">

@@ -67,6 +67,43 @@ const DEFAULT_LIMITS = [
   { key: "max_tokens",    label: "Max tokens per response",         value: "4096"     },
 ];
 
+// Moderation decisions (dismiss/remove) are persisted through
+// /api/admin/ai-moderation, which stores them as a JSON log keyed by
+// flagged-item id on the same generic PlatformSetting store that already
+// backs ai-settings (no dedicated Flag/Report model exists yet, so this
+// reuses the established pattern instead of inventing a new one).
+type ModerationAction = "dismiss" | "remove";
+
+type ModerationLogEntry = {
+  action: ModerationAction;
+  at: string;
+  byId: string;
+  byName: string;
+  type?: string;
+  snippet?: string;
+};
+
+type ModerationLog = Record<string, ModerationLogEntry>;
+
+async function postModerationAction(
+  item: FlaggedItem,
+  action: ModerationAction,
+): Promise<{ ok: boolean; entry?: ModerationLogEntry; error?: string }> {
+  try {
+    const res = await fetch("/api/admin/ai-moderation", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ id: item.id, action, type: item.type, snippet: item.content }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { ok: false, error: data.error ?? "Couldn't save moderation action." };
+    return { ok: true, entry: data.entry as ModerationLogEntry };
+  } catch {
+    return { ok: false, error: "Couldn't save moderation action." };
+  }
+}
+
 function exportLogsCSV(flagged: FlaggedItem[], toast: ReturnType<typeof useToast>) {
   const header = ["ID", "Type", "User", "Content", "Severity", "Date"];
   const data   = flagged.map((f) => [
@@ -89,6 +126,8 @@ export default function AdminAiPage() {
   const [tab,          setTab]          = React.useState("overview");
   const [flagged,      setFlagged]      = React.useState<FlaggedItem[]>(MOCK_FLAGGED);
   const [resolving,    setResolving]    = React.useState<string | null>(null);
+  const [dismissingAll, setDismissingAll] = React.useState(false);
+  const [moderationLog, setModerationLog] = React.useState<ModerationLog>({});
   const [sevFilter,    setSevFilter]    = React.useState<"all" | "high" | "medium" | "low">("all");
   const [savingLimits, setSavingLimits] = React.useState(false);
   const [settingsLoaded, setSettingsLoaded] = React.useState(false);
@@ -107,6 +146,21 @@ export default function AdminAiPage() {
         setLimits((prev) => prev.map((l) => ({ ...l, value: data.limits[l.key] ?? l.value })));
       } catch { /* keep defaults */ }
       finally { setSettingsLoaded(true); }
+    })();
+  }, []);
+
+  // Load the persisted moderation log so previously dismissed/removed flags
+  // stay resolved across refreshes instead of reappearing from the fixture list.
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/ai-moderation", { credentials: "same-origin" });
+        if (!res.ok) return;
+        const data = await res.json() as { log: ModerationLog };
+        const log = data.log ?? {};
+        setModerationLog(log);
+        setFlagged((prev) => prev.filter((f) => !log[f.id]));
+      } catch { /* keep full mock queue */ }
     })();
   }, []);
 
@@ -147,13 +201,41 @@ export default function AdminAiPage() {
 
   void settingsLoaded; // used only for future loading state if needed
 
-  async function resolveFlag(id: string, action: "dismiss" | "remove") {
+  async function resolveFlag(id: string, action: ModerationAction) {
+    const item = flagged.find((f) => f.id === id);
+    if (!item) return;
     setResolving(id);
-    await new Promise((r) => setTimeout(r, 600));
-    setFlagged((p) => p.filter((f) => f.id !== id));
+    const result = await postModerationAction(item, action);
+    if (result.ok && result.entry) {
+      setModerationLog((prev) => ({ ...prev, [id]: result.entry! }));
+      setFlagged((p) => p.filter((f) => f.id !== id));
+      toast.push({ title: action === "dismiss" ? "Flag dismissed" : "Content removed", tone: action === "dismiss" ? "info" : "success" });
+    } else {
+      toast.push({ title: result.error ?? "Couldn't save moderation action", tone: "danger" });
+    }
     setResolving(null);
-    toast.push({ title: action === "dismiss" ? "Flag dismissed" : "Content removed", tone: action === "dismiss" ? "info" : "success" });
   }
+
+  async function dismissAllFlags() {
+    if (flagged.length === 0) return;
+    setDismissingAll(true);
+    const items = flagged;
+    const results = await Promise.all(items.map((item) => postModerationAction(item, "dismiss")));
+    const newEntries: ModerationLog = {};
+    results.forEach((r, i) => { if (r.ok && r.entry) newEntries[items[i].id] = r.entry; });
+    setModerationLog((prev) => ({ ...prev, ...newEntries }));
+    setFlagged((prev) => prev.filter((f) => !newEntries[f.id]));
+    setDismissingAll(false);
+    const failed = results.length - Object.keys(newEntries).length;
+    toast.push(failed > 0
+      ? { title: `Dismissed ${Object.keys(newEntries).length} of ${items.length} — ${failed} failed`, tone: "danger" }
+      : { title: "All flags dismissed", tone: "info" });
+  }
+
+  const recentActions = React.useMemo(() => Object.entries(moderationLog)
+    .map(([id, entry]) => ({ id, ...entry }))
+    .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+    .slice(0, 6), [moderationLog]);
 
   const flaggedFiltered = flagged
     .filter((f) => sevFilter === "all" || f.severity === sevFilter)
@@ -175,25 +257,31 @@ export default function AdminAiPage() {
   return (
     <div className="space-y-6 fade-in">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Manage</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">AI Management</h1>
-          <p className="mt-1 text-[var(--muted)]">Monitor AI usage, moderate flagged content, and configure platform settings.</p>
-        </div>
-        <div className="flex flex-col items-stretch sm:items-end gap-2">
-          {tab === "moderation" && flagged.length > 0 && (
-            <Button variant="outline" size="sm" className="justify-center" onClick={() => exportLogsCSV(flagged, toast)}>
-              <Icon.Download size={14} /> Export logs
-            </Button>
-          )}
-          <div className="overflow-x-auto max-w-full">
-            <Tabs value={tab} onChange={setTab} options={[
-              { value: "overview",    label: "Overview"    },
-              { value: "moderation",  label: "Moderation", count: flagCounts.high > 0 ? flagCounts.high : undefined },
-              { value: "models",      label: "Models"      },
-              { value: "config",      label: "Config"      },
-            ]} />
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-gradient-to-br from-[var(--primary)]/10 via-[var(--surface)] to-[var(--surface)] px-5 sm:px-7 py-6">
+        <div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-[var(--primary)]/10 blur-2xl" />
+        <div className="pointer-events-none absolute -right-24 bottom-0 h-40 w-40 rounded-full bg-[var(--accent)]/10 blur-2xl" />
+        <div className="relative flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">
+              <Icon.Sparkles size={12} /> Manage
+            </div>
+            <h1 className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight">AI Management</h1>
+            <p className="mt-1 text-sm text-[var(--muted)] max-w-md">Monitor AI usage, moderate flagged content, and configure platform settings.</p>
+          </div>
+          <div className="flex flex-col items-stretch sm:items-end gap-2">
+            {tab === "moderation" && flagged.length > 0 && (
+              <Button variant="outline" size="sm" className="justify-center bg-[var(--surface)]/80 backdrop-blur" onClick={() => exportLogsCSV(flagged, toast)}>
+                <Icon.Download size={14} /> Export logs
+              </Button>
+            )}
+            <div className="overflow-x-auto max-w-full">
+              <Tabs value={tab} onChange={setTab} options={[
+                { value: "overview",    label: "Overview"    },
+                { value: "moderation",  label: "Moderation", count: flagCounts.high > 0 ? flagCounts.high : undefined },
+                { value: "models",      label: "Models"      },
+                { value: "config",      label: "Config"      },
+              ]} />
+            </div>
           </div>
         </div>
       </div>
@@ -216,11 +304,11 @@ export default function AdminAiPage() {
               { label: "Active models",   value: AI_MODELS.length, tone: "bg-violet-500/10 text-violet-600 dark:text-violet-400", icon: Icon.Sparkles },
               { label: "Features on",     value: features.filter((f) => f.on).length, tone: "bg-amber-500/10 text-amber-600 dark:text-amber-400", icon: Icon.CheckCircle },
             ].map((s) => (
-              <Card key={s.label}>
+              <Card key={s.label} className="hover:-translate-y-0.5 hover:shadow-md transition">
                 <CardBody className="flex items-center gap-3 !py-3">
-                  <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${s.tone}`}><s.icon size={16} /></div>
+                  <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${s.tone}`}><s.icon size={16} /></div>
                   <div className="min-w-0">
-                    <p className="text-[11px] text-[var(--muted)] truncate">{s.label}</p>
+                    <p className="text-[11px] uppercase tracking-wide text-[var(--muted)] truncate">{s.label}</p>
                     <p className="text-lg font-bold truncate">{s.value}</p>
                   </div>
                 </CardBody>
@@ -274,8 +362,8 @@ export default function AdminAiPage() {
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                 {features.map((f) => (
-                  <div key={f.key} className={cn("rounded-xl p-3 border text-center transition-all", f.on ? "bg-emerald-500/8 border-emerald-500/20" : "bg-[var(--surface-2)] border-[var(--border)] opacity-60")}>
-                    <div className={cn("h-2 w-2 rounded-full mx-auto mb-2", f.on ? "bg-emerald-500" : "bg-[var(--muted-2)]")} />
+                  <div key={f.key} className={cn("rounded-xl p-3 border text-center transition-all hover:shadow-md", f.on ? "bg-emerald-500/8 border-emerald-500/20" : "bg-[var(--surface-2)] border-[var(--border)] opacity-60")}>
+                    <div className={cn("h-2 w-2 rounded-full mx-auto mb-2", f.on ? "bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.15)]" : "bg-[var(--muted-2)]")} />
                     <p className="text-xs font-semibold">{f.label.replace(" (students)", "").replace(" (teachers)", " (T)")}</p>
                     <p className={cn("text-[10px] mt-0.5 font-medium", f.on ? "text-emerald-600 dark:text-emerald-400" : "text-[var(--muted-2)]")}>{f.on ? "Active" : "Off"}</p>
                   </div>
@@ -297,9 +385,9 @@ export default function AdminAiPage() {
               { label: "Medium",        value: flagCounts.medium,    cls: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
               { label: "Low severity",  value: flagCounts.low,       cls: "bg-blue-500/10 text-blue-600 dark:text-blue-400" },
             ].map((s) => (
-              <Card key={s.label}>
+              <Card key={s.label} className="hover:-translate-y-0.5 hover:shadow-md transition">
                 <CardBody className="!py-3 text-center">
-                  <p className="text-[11px] text-[var(--muted)]">{s.label}</p>
+                  <p className="text-[11px] uppercase tracking-wide text-[var(--muted)]">{s.label}</p>
                   <p className={cn("text-xl font-bold mt-0.5", s.cls.split(" ").find((c) => c.startsWith("text-")))}>
                     {s.value}
                   </p>
@@ -319,7 +407,7 @@ export default function AdminAiPage() {
               ]} />
             </div>
             {flagged.length > 0 && (
-              <Button variant="outline" size="sm" className="sm:ml-auto shrink-0" onClick={() => { setFlagged([]); toast.push({ title: "All flags dismissed", tone: "info" }); }}>
+              <Button variant="outline" size="sm" className="sm:ml-auto shrink-0" loading={dismissingAll} onClick={dismissAllFlags}>
                 Dismiss all
               </Button>
             )}
@@ -338,56 +426,90 @@ export default function AdminAiPage() {
               </CardBody>
             </Card>
           ) : (
-            <div className="space-y-3">
-              {flaggedFiltered.map((item) => (
-                <Card key={item.id} className={cn(item.severity === "high" && "border-red-400/30")}>
-                  <CardBody>
-                    <div className="flex items-start gap-4 flex-wrap group">
-                      {/* Severity indicator */}
-                      <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5",
-                        item.severity === "high"   ? "bg-red-500/10 text-red-500" :
-                        item.severity === "medium" ? "bg-amber-500/10 text-amber-500" :
-                        "bg-blue-500/10 text-blue-500"
-                      )}>
-                        <Icon.AlertCircle size={18} />
-                      </div>
+            <div className="overflow-hidden rounded-xl border border-[var(--border)] shadow-sm divide-y divide-[var(--border)]">
+              {flaggedFiltered.map((item, i) => (
+                <div
+                  key={item.id}
+                  className={cn(
+                    "flex items-start gap-4 flex-wrap p-4 transition-colors hover:bg-[var(--primary-soft)]/40",
+                    i % 2 === 1 && "bg-[var(--surface-2)]/25",
+                    item.severity === "high" && "border-l-2 border-l-red-400/60",
+                  )}
+                >
+                  {/* Severity indicator */}
+                  <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5",
+                    item.severity === "high"   ? "bg-red-500/10 text-red-500" :
+                    item.severity === "medium" ? "bg-amber-500/10 text-amber-500" :
+                    "bg-blue-500/10 text-blue-500"
+                  )}>
+                    <Icon.AlertCircle size={18} />
+                  </div>
 
-                      <div className="flex-1 min-w-0 space-y-1.5">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs font-semibold bg-[var(--surface-2)] border border-[var(--border)] px-2 py-0.5 rounded-full">
-                            {item.type}
-                          </span>
-                          <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-full border", SEVERITY_TONE[item.severity])}>
-                            {item.severity} severity
-                          </span>
-                        </div>
-                        <p className="text-sm font-medium">{item.content}</p>
-                        <div className="flex items-center gap-3 text-xs text-[var(--muted)]">
-                          <span className="flex items-center gap-1">
-                            <div className="h-5 w-5 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white text-[9px] font-bold">
-                              {item.user.charAt(0)}
-                            </div>
-                            <span className="font-medium text-[var(--foreground)]">{item.user}</span>
-                          </span>
-                          <span>·</span>
-                          <span>{relativeTime(item.createdAt)}</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Button variant="outline" size="sm" loading={resolving === item.id} onClick={() => resolveFlag(item.id, "dismiss")}>
-                          Dismiss
-                        </Button>
-                        <Button size="sm" loading={resolving === item.id} onClick={() => resolveFlag(item.id, "remove")}
-                          className="bg-red-500 hover:bg-red-600 text-white">
-                          <Icon.Trash size={13} /> Remove
-                        </Button>
-                      </div>
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-semibold bg-[var(--surface-2)] border border-[var(--border)] px-2 py-0.5 rounded-full">
+                        {item.type}
+                      </span>
+                      <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-full border", SEVERITY_TONE[item.severity])}>
+                        {item.severity} severity
+                      </span>
                     </div>
-                  </CardBody>
-                </Card>
+                    <p className="text-sm font-medium">{item.content}</p>
+                    <div className="flex items-center gap-3 text-xs text-[var(--muted)]">
+                      <span className="flex items-center gap-1">
+                        <div className="h-5 w-5 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white text-[9px] font-bold">
+                          {item.user.charAt(0)}
+                        </div>
+                        <span className="font-medium text-[var(--foreground)]">{item.user}</span>
+                      </span>
+                      <span>·</span>
+                      <span>{relativeTime(item.createdAt)}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button variant="outline" size="sm" loading={resolving === item.id} onClick={() => resolveFlag(item.id, "dismiss")}>
+                      Dismiss
+                    </Button>
+                    <Button size="sm" loading={resolving === item.id} onClick={() => resolveFlag(item.id, "remove")}
+                      className="bg-red-500 hover:bg-red-600 text-white">
+                      <Icon.Trash size={13} /> Remove
+                    </Button>
+                  </div>
+                </div>
               ))}
             </div>
+          )}
+
+          {/* Recently actioned — persisted moderation decisions, so this
+              history survives refreshes instead of resetting with the queue. */}
+          {recentActions.length > 0 && (
+            <Card>
+              <CardBody>
+                <h2 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                  <Icon.Clock size={14} className="text-[var(--muted)]" /> Recent moderation activity
+                </h2>
+                <div className="space-y-1">
+                  {recentActions.map((a, i) => (
+                    <div key={a.id} className={cn("flex items-center justify-between gap-3 text-xs px-3 py-2 rounded-lg", i % 2 === 1 && "bg-[var(--surface-2)]/40")}>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", a.action === "remove" ? "bg-red-500" : "bg-[var(--muted-2)]")} />
+                        <span className="truncate">{a.snippet ?? a.type ?? "Flagged item"}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0 text-[var(--muted)]">
+                        <span className={cn("font-semibold", a.action === "remove" ? "text-red-600 dark:text-red-400" : "text-[var(--foreground)]")}>
+                          {a.action === "remove" ? "Removed" : "Dismissed"}
+                        </span>
+                        <span>·</span>
+                        <span>{a.byName}</span>
+                        <span>·</span>
+                        <span>{relativeTime(a.at)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardBody>
+            </Card>
           )}
         </div>
       )}

@@ -15,6 +15,7 @@ import {
   useToast,
 } from "@/components/ui";
 import Icon from "@/components/icons";
+import { useAdmin } from "@/lib/store";
 import { cn, relativeTime } from "@/lib/utils";
 
 type NotifType = "assignment" | "announcement" | "reminder" | "achievement";
@@ -62,6 +63,8 @@ function exportCSV(items: Notif[]) {
 
 export default function AdminNotificationsPage() {
   const toast = useToast();
+  const admin = useAdmin();
+  const students = admin.listStudents();
 
   const [notifs,        setNotifs]        = React.useState<Notif[]>([]);
   const [stats,         setStats]         = React.useState<Stats>({ total: 0, broadcast: 0, targeted: 0, unread: 0 });
@@ -74,9 +77,10 @@ export default function AdminNotificationsPage() {
 
   // Compose modal
   const [compose,      setCompose]      = React.useState(false);
-  const [form,         setForm]         = React.useState({ type: "announcement" as NotifType, title: "", message: "" });
+  const [form,         setForm]         = React.useState({ type: "announcement" as NotifType, title: "", message: "", targetUserId: "" });
   const [formErr,      setFormErr]      = React.useState("");
   const [sending,      setSending]      = React.useState(false);
+  const [studentQuery, setStudentQuery] = React.useState("");
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -139,21 +143,33 @@ export default function AdminNotificationsPage() {
     setFormErr("");
     if (!form.title.trim()) { setFormErr("Title is required."); return; }
     if (!form.message.trim()) { setFormErr("Message is required."); return; }
+    if (form.targetUserId === "pending") { setFormErr("Select a student to send to."); return; }
     setSending(true);
     try {
       const res = await fetch("/api/admin/notifications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ type: form.type, title: form.title.trim(), message: form.message.trim() }),
+        body: JSON.stringify({
+          type: form.type,
+          title: form.title.trim(),
+          message: form.message.trim(),
+          targetUserId: form.targetUserId || null,
+        }),
       });
       const data = await res.json();
       if (!res.ok) { setFormErr(data.error ?? "Failed to send."); return; }
       setNotifs((prev) => [data.notification, ...prev]);
-      setStats((s) => ({ ...s, total: s.total + 1, broadcast: s.broadcast + 1 }));
+      setStats((s) => ({
+        ...s,
+        total: s.total + 1,
+        broadcast: form.targetUserId ? s.broadcast : s.broadcast + 1,
+        targeted: form.targetUserId ? s.targeted + 1 : s.targeted,
+      }));
       setCompose(false);
-      setForm({ type: "announcement", title: "", message: "" });
-      toast.push({ title: "Broadcast notification sent", tone: "success" });
+      setForm({ type: "announcement", title: "", message: "", targetUserId: "" });
+      setStudentQuery("");
+      toast.push({ title: form.targetUserId ? "Notification sent" : "Broadcast notification sent", tone: "success" });
     } catch {
       setFormErr("Failed to send notification.");
     } finally {
@@ -167,27 +183,44 @@ export default function AdminNotificationsPage() {
     return counts;
   }, [notifs]);
 
+  const selectedStudent = React.useMemo(
+    () => students.find((s) => s.id === form.targetUserId) ?? null,
+    [students, form.targetUserId],
+  );
+
+  const studentResults = React.useMemo(() => {
+    const q = studentQuery.trim().toLowerCase();
+    if (!q) return students.slice(0, 8);
+    return students.filter((s) => s.name.toLowerCase().includes(q) || s.email.toLowerCase().includes(q)).slice(0, 8);
+  }, [students, studentQuery]);
+
   return (
     <div className="space-y-6 fade-in">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Manage</p>
-          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">Notifications</h1>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            View all platform notifications. Send broadcasts to all users or specific students.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="outline" onClick={() => { exportCSV(filtered); toast.push({ title: "Exported", tone: "success" }); }}>
-            <Icon.Download size={15} />
-            <span className="hidden sm:inline">Export CSV</span>
-          </Button>
-          <Button onClick={() => setCompose(true)}>
-            <Icon.Send size={15} />
-            <span className="hidden sm:inline">Send broadcast</span>
-            <span className="sm:hidden">Broadcast</span>
-          </Button>
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-gradient-to-br from-[var(--primary)]/10 via-[var(--surface)] to-[var(--surface)] px-5 sm:px-7 py-6">
+        <div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-[var(--primary)]/10 blur-2xl" />
+        <div className="pointer-events-none absolute -right-24 bottom-0 h-40 w-40 rounded-full bg-[var(--accent)]/10 blur-2xl" />
+        <div className="relative flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">
+              <Icon.Bell size={12} /> Manage
+            </div>
+            <h1 className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight">Notifications</h1>
+            <p className="mt-1 text-sm text-[var(--muted)] max-w-md">
+              View all platform notifications. Send broadcasts to all users or specific students.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button variant="outline" onClick={() => { exportCSV(filtered); toast.push({ title: "Exported", tone: "success" }); }} className="bg-[var(--surface)]/80 backdrop-blur">
+              <Icon.Download size={15} />
+              <span className="hidden sm:inline">Export CSV</span>
+            </Button>
+            <Button onClick={() => setCompose(true)} className="shadow-lg shadow-[var(--primary)]/25">
+              <Icon.Send size={15} />
+              <span className="hidden sm:inline">Send broadcast</span>
+              <span className="sm:hidden">Broadcast</span>
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -231,9 +264,9 @@ export default function AdminNotificationsPage() {
       </div>
 
       {/* Controls */}
-      <div className="flex flex-col gap-3">
-        <div className="overflow-x-auto pb-1">
-          <div className="flex p-1 rounded-xl bg-[var(--surface-2)] gap-1 w-max min-w-full">
+      <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+        <div className="overflow-x-auto pb-1 lg:pb-0 lg:shrink-0">
+          <div className="flex p-1 rounded-xl bg-[var(--surface-2)]/70 border border-[var(--border)]/60 gap-1 w-max min-w-full lg:min-w-0">
             {([
               { value: "all",          label: "All",           count: notifs.length },
               { value: "announcement", label: "Announcements", count: typeCounts.announcement ?? 0 },
@@ -247,14 +280,14 @@ export default function AdminNotificationsPage() {
                 className={cn(
                   "px-3 h-9 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap",
                   tab === o.value
-                    ? "bg-[var(--surface)] text-[var(--foreground)] shadow-sm"
-                    : "text-[var(--muted)] hover:text-[var(--foreground)]",
+                    ? "bg-[var(--primary)] text-white shadow-sm"
+                    : "text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--foreground)]",
                 )}
               >
                 {o.label}
                 <span className={cn(
                   "text-[10px] px-1.5 py-0.5 rounded-full",
-                  tab === o.value ? "bg-[var(--primary-soft)] text-[var(--primary)]" : "bg-[var(--surface-2)]",
+                  tab === o.value ? "bg-white/20 text-white" : "bg-[var(--surface)]",
                 )}>
                   {o.count}
                 </span>
@@ -262,25 +295,27 @@ export default function AdminNotificationsPage() {
             ))}
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap lg:ml-auto lg:shrink-0">
           <button
             onClick={() => setBroadcastOnly((v) => !v)}
             className={cn(
               "flex items-center gap-1.5 h-9 px-3 rounded-xl border text-xs font-medium transition shrink-0",
               broadcastOnly
-                ? "bg-[var(--primary)] text-white border-[var(--primary)]"
+                ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-sm"
                 : "border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)] hover:border-[var(--border-strong)]",
             )}
           >
             <Icon.Megaphone size={13} /> Broadcast only
           </button>
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search…"
-            icon={<Icon.Search size={15} />}
-            className="flex-1 !min-w-[160px] sm:!w-52 sm:flex-none sm:ml-auto"
-          />
+          <div className="flex-1 min-w-[160px] sm:flex-none sm:w-56 lg:w-64">
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search…"
+              icon={<Icon.Search size={15} />}
+              className="!h-9"
+            />
+          </div>
         </div>
       </div>
 
@@ -311,9 +346,9 @@ export default function AdminNotificationsPage() {
       ) : (
         <>
           <Card>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-[var(--surface-2)] text-[var(--muted)] text-xs uppercase tracking-wider">
+            <div className="overflow-x-auto rounded-xl">
+              <table className="w-full text-sm border-collapse">
+                <thead className="bg-[var(--surface-2)]/70 text-[var(--muted)] text-[11px] uppercase tracking-wide">
                   <tr>
                     <Th>Type</Th>
                     <Th>Title / Message</Th>
@@ -324,12 +359,18 @@ export default function AdminNotificationsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {paginated.map((n) => {
+                  {paginated.map((n, i) => {
                     const info = TYPE_INFO[n.type];
                     return (
-                      <tr key={n.id} className="border-t border-[var(--border)] hover:bg-[var(--surface-2)]/50 transition group">
+                      <tr
+                        key={n.id}
+                        className={cn(
+                          "border-t border-[var(--border)] hover:bg-[var(--primary-soft)]/40 transition-colors group",
+                          i % 2 === 1 && "bg-[var(--surface-2)]/25",
+                        )}
+                      >
                         <Td>
-                          <div className={cn("h-8 w-8 rounded-xl flex items-center justify-center shrink-0", info.bg, info.color)}>
+                          <div className={cn("h-8 w-8 rounded-xl flex items-center justify-center shrink-0 shadow-sm ring-2 ring-[var(--surface)]", info.bg, info.color)}>
                             {info.icon}
                           </div>
                         </Td>
@@ -383,7 +424,8 @@ export default function AdminNotificationsPage() {
             {totalPages > 1 && (
               <div className="px-4 py-3 border-t border-[var(--border)] flex items-center justify-between gap-2">
                 <p className="text-xs text-[var(--muted)] shrink-0">
-                  {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
+                  <span className="font-medium text-[var(--foreground)]">{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)}</span> of{" "}
+                  <span className="font-medium text-[var(--foreground)]">{filtered.length}</span>
                 </p>
                 <div className="flex items-center gap-1">
                   <button
@@ -409,7 +451,7 @@ export default function AdminNotificationsPage() {
       {/* Compose / Send broadcast modal */}
       <Modal
         open={compose}
-        onClose={() => { if (!sending) { setCompose(false); setFormErr(""); } }}
+        onClose={() => { if (!sending) { setCompose(false); setFormErr(""); setStudentQuery(""); } }}
         title="Send broadcast notification"
         size="md"
       >
@@ -437,13 +479,99 @@ export default function AdminNotificationsPage() {
                   {TYPE_INFO[form.type].label}
                 </span>
                 <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-[var(--primary-soft)] text-[var(--primary)] flex items-center gap-1">
-                  <Icon.Users size={9} /> All users
+                  {selectedStudent ? <><Icon.User size={9} /> {selectedStudent.name}</> : <><Icon.Users size={9} /> All users</>}
                 </span>
               </div>
             </div>
           </div>
 
           <div className="p-5 sm:p-6 space-y-5">
+            {/* Recipient picker */}
+            <div>
+              <label className="text-sm font-medium block mb-2">Recipient</label>
+              <div className="grid grid-cols-2 gap-2 mb-2.5">
+                <button
+                  type="button"
+                  onClick={() => { setForm((f) => ({ ...f, targetUserId: "" })); setStudentQuery(""); }}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-medium transition-all",
+                    !form.targetUserId
+                      ? "bg-[var(--primary-soft)] text-[var(--primary)] border-current shadow-sm"
+                      : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)] hover:border-[var(--border-strong)]",
+                  )}
+                >
+                  <Icon.Users size={14} /> All users
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, targetUserId: f.targetUserId || "pending" }))}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-medium transition-all",
+                    form.targetUserId
+                      ? "bg-[var(--primary-soft)] text-[var(--primary)] border-current shadow-sm"
+                      : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)] hover:border-[var(--border-strong)]",
+                  )}
+                >
+                  <Icon.User size={14} /> Specific student
+                </button>
+              </div>
+
+              {form.targetUserId && (
+                <div className="space-y-2">
+                  {selectedStudent ? (
+                    <div className="flex items-center gap-2.5 p-2.5 rounded-xl border border-[var(--primary)]/30 bg-[var(--primary-soft)]">
+                      <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white text-xs font-bold flex items-center justify-center shrink-0">
+                        {selectedStudent.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold truncate">{selectedStudent.name}</p>
+                        <p className="text-[11px] text-[var(--muted)] truncate">{selectedStudent.email}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, targetUserId: "pending" }))}
+                        className="text-xs font-medium text-[var(--primary)] hover:underline shrink-0"
+                      >
+                        Change
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <Input
+                        value={studentQuery}
+                        onChange={(e) => setStudentQuery(e.target.value)}
+                        placeholder="Search by name or email…"
+                        icon={<Icon.Search size={14} />}
+                        autoFocus
+                      />
+                      <div className="max-h-40 overflow-y-auto scrollbar-thin rounded-xl border border-[var(--border)] divide-y divide-[var(--border)]">
+                        {studentResults.length === 0 ? (
+                          <p className="text-sm text-[var(--muted)] p-3 text-center">No students match.</p>
+                        ) : (
+                          studentResults.map((s) => (
+                            <button
+                              key={s.id}
+                              type="button"
+                              onClick={() => setForm((f) => ({ ...f, targetUserId: s.id }))}
+                              className="w-full flex items-center gap-2.5 p-2.5 text-left hover:bg-[var(--surface-2)] transition"
+                            >
+                              <div className="h-7 w-7 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white text-[11px] font-bold flex items-center justify-center shrink-0">
+                                {s.name.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-xs font-medium truncate">{s.name}</p>
+                                <p className="text-[11px] text-[var(--muted)] truncate">{s.email}</p>
+                              </div>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Type picker */}
             <div>
               <label className="text-sm font-medium block mb-2">Type</label>
@@ -513,11 +641,13 @@ export default function AdminNotificationsPage() {
             {/* Reach info */}
             <div className="flex items-start gap-3 p-3.5 rounded-xl bg-[var(--primary-soft)] border border-[var(--primary)]/15">
               <div className="h-7 w-7 rounded-lg bg-[var(--primary)]/15 text-[var(--primary)] flex items-center justify-center shrink-0 mt-0.5">
-                <Icon.Users size={14} />
+                {selectedStudent ? <Icon.User size={14} /> : <Icon.Users size={14} />}
               </div>
               <p className="text-xs text-[var(--muted)] leading-relaxed">
                 This notification will be delivered to{" "}
-                <span className="font-bold text-[var(--foreground)]">all users</span>{" "}
+                <span className="font-bold text-[var(--foreground)]">
+                  {selectedStudent ? selectedStudent.name : "all users"}
+                </span>{" "}
                 and will appear in their notification inbox immediately.
               </p>
             </div>
@@ -535,8 +665,13 @@ export default function AdminNotificationsPage() {
             <Button variant="outline" type="button" onClick={() => setCompose(false)} disabled={sending} className="w-full sm:w-auto">
               Cancel
             </Button>
-            <Button type="submit" loading={sending} disabled={!form.title.trim() || !form.message.trim()} className="w-full sm:w-auto">
-              <Icon.Send size={14} /> Send to all users
+            <Button
+              type="submit"
+              loading={sending}
+              disabled={!form.title.trim() || !form.message.trim() || form.targetUserId === "pending"}
+              className="w-full sm:w-auto"
+            >
+              <Icon.Send size={14} /> {selectedStudent ? `Send to ${selectedStudent.name}` : "Send to all users"}
             </Button>
           </div>
         </form>

@@ -34,18 +34,48 @@ type Template = {
   updatedAt: string;
 };
 
-const CHANNEL_META: Record<Channel, { label: string; icon: React.ReactNode; cls: string; badge: "info" | "primary" | "success" }> = {
-  email: { label: "Email", icon: <Icon.Mail size={11} />, cls: "bg-sky-500/10 text-sky-600 dark:text-sky-400", badge: "info" },
-  sms: { label: "SMS", icon: <Icon.MessageSquare size={11} />, cls: "bg-violet-500/10 text-violet-600 dark:text-violet-400", badge: "primary" },
-  both: { label: "Email + SMS", icon: <Icon.Send size={11} />, cls: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400", badge: "success" },
+const CHANNEL_META: Record<Channel, { label: string; icon: React.ReactNode; cls: string; accent: string; badge: "info" | "primary" | "success" }> = {
+  email: { label: "Email", icon: <Icon.Mail size={11} />, cls: "bg-sky-500/10 text-sky-600 dark:text-sky-400", accent: "border-l-sky-500", badge: "info" },
+  sms: { label: "SMS", icon: <Icon.MessageSquare size={11} />, cls: "bg-violet-500/10 text-violet-600 dark:text-violet-400", accent: "border-l-violet-500", badge: "primary" },
+  both: { label: "Email + SMS", icon: <Icon.Send size={11} />, cls: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400", accent: "border-l-emerald-500", badge: "success" },
 };
 
-// Substitute {{var}} tokens with a readable sample so admins see how the
-// rendered message will look.
+// Realistic stand-in values for common template variables, so previews read
+// like a real message instead of a wall of brackets. Falls back to a
+// humanized placeholder for anything not in this list.
+const SAMPLE_VALUES: Record<string, string> = {
+  name: "Jordan Lee",
+  firstName: "Jordan",
+  lastName: "Lee",
+  fullName: "Jordan Lee",
+  email: "jordan.lee@example.com",
+  courseTitle: "Intro to Data Science",
+  course: "Intro to Data Science",
+  amount: "$49.00",
+  price: "$49.00",
+  date: "August 3, 2026",
+  dueDate: "August 10, 2026",
+  link: "https://eduportal.app/courses/data-science",
+  url: "https://eduportal.app/courses/data-science",
+  code: "SAVE20",
+  couponCode: "SAVE20",
+  phone: "+1 (555) 013-4782",
+  instructor: "Dr. Amara Chen",
+  certificateId: "CERT-8841",
+  supportEmail: "support@eduportal.app",
+};
+
+function sampleValueFor(v: string): string {
+  if (SAMPLE_VALUES[v]) return SAMPLE_VALUES[v];
+  const key = Object.keys(SAMPLE_VALUES).find((k) => k.toLowerCase() === v.toLowerCase());
+  if (key) return SAMPLE_VALUES[key];
+  return `[${v.replace(/_/g, " ")}]`;
+}
+
+// Substitute {{var}} tokens with a realistic sample so admins see how the
+// rendered message will actually look, not just the raw placeholder names.
 function renderPreview(text: string): string {
-  return text.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, v: string) =>
-    `[${v.replace(/_/g, " ")}]`,
-  );
+  return text.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, v: string) => sampleValueFor(v));
 }
 
 function extractVariables(...parts: string[]): string[] {
@@ -87,6 +117,9 @@ export default function AdminTemplatesPage() {
   // Preview + delete
   const [viewing, setViewing] = React.useState<Template | null>(null);
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
+
+  // Send test
+  const [sendingTestId, setSendingTestId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     (async () => {
@@ -201,6 +234,32 @@ export default function AdminTemplatesPage() {
     }
   }
 
+  // Fire a real email using the template's sample-filled subject/body to the
+  // signed-in admin's own inbox, via the existing Resend-backed sender in
+  // lib/email.ts. SMS-only templates are rejected server-side since no SMS
+  // provider is wired up.
+  async function sendTest(t: Template) {
+    setSendingTestId(t.id);
+    try {
+      const res = await fetch(`/api/admin/templates/${t.id}/send-test`, { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        toast.push({
+          title: data.simulated
+            ? `Simulated send — no email provider configured (would go to ${data.to})`
+            : `Test email sent to ${data.to}`,
+          tone: data.simulated ? "warning" : "success",
+        });
+      } else {
+        toast.push({ title: data.error ?? "Could not send test email.", tone: "danger" });
+      }
+    } catch {
+      toast.push({ title: "Network error, please try again.", tone: "danger" });
+    } finally {
+      setSendingTestId(null);
+    }
+  }
+
   async function confirmDelete() {
     if (!deletingId) return;
     const res = await fetch(`/api/admin/templates/${deletingId}`, { method: "DELETE" });
@@ -245,17 +304,23 @@ export default function AdminTemplatesPage() {
   return (
     <div className="space-y-6 fade-in">
       {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Operations</p>
-          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">Message Templates</h1>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            Manage reusable email &amp; SMS templates. Use <code className="px-1 py-0.5 rounded bg-[var(--surface-2)] text-[var(--foreground)] text-xs">{"{{variable}}"}</code> placeholders for dynamic content.
-          </p>
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-gradient-to-br from-[var(--primary)]/10 via-[var(--surface)] to-[var(--surface)] px-5 sm:px-7 py-6">
+        <div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-[var(--primary)]/10 blur-2xl" />
+        <div className="pointer-events-none absolute -right-24 bottom-0 h-40 w-40 rounded-full bg-[var(--accent)]/10 blur-2xl" />
+        <div className="relative flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">
+              <Icon.FilePen size={12} /> Operations
+            </div>
+            <h1 className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight">Message Templates</h1>
+            <p className="mt-1 text-sm text-[var(--muted)] max-w-md">
+              Manage reusable email &amp; SMS templates. Use <code className="px-1 py-0.5 rounded bg-[var(--surface-2)] text-[var(--foreground)] text-xs">{"{{variable}}"}</code> placeholders for dynamic content.
+            </p>
+          </div>
+          <Button onClick={openCreate} className="w-full sm:w-auto justify-center shadow-lg shadow-[var(--primary)]/25">
+            <Icon.Plus size={16} /> New template
+          </Button>
         </div>
-        <Button onClick={openCreate} className="w-full sm:w-auto justify-center">
-          <Icon.Plus size={16} /> New template
-        </Button>
       </div>
 
       {/* ── Stats ── */}
@@ -267,25 +332,26 @@ export default function AdminTemplatesPage() {
       </div>
 
       {/* ── Controls ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <Tabs
-          value={filter}
-          onChange={(v) => setFilter(v as Channel | "all")}
-          className="overflow-x-auto sm:overflow-visible"
-          options={[
-            { value: "all", label: "All", count: counts.all },
-            { value: "email", label: "Email", count: counts.email },
-            { value: "sms", label: "SMS", count: counts.sms },
-            { value: "both", label: "Both", count: counts.both },
-          ]}
-        />
-        <div className="w-full sm:w-72 sm:shrink-0 sm:ml-auto">
+      <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+        <div className="overflow-x-auto -mx-1 px-1 lg:shrink-0">
+          <Tabs
+            value={filter}
+            onChange={(v) => setFilter(v as Channel | "all")}
+            options={[
+              { value: "all", label: "All", count: counts.all },
+              { value: "email", label: "Email", count: counts.email },
+              { value: "sms", label: "SMS", count: counts.sms },
+              { value: "both", label: "Both", count: counts.both },
+            ]}
+          />
+        </div>
+        <div className="w-full sm:w-56 lg:w-64 lg:ml-auto lg:shrink-0">
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search templates…"
             icon={<Icon.Search size={16} />}
-            className="w-full"
+            className="!h-9"
           />
         </div>
       </div>
@@ -311,7 +377,14 @@ export default function AdminTemplatesPage() {
           {filtered.map((t) => {
             const cm = CHANNEL_META[t.channel];
             return (
-              <Card key={t.id} className={cn("hover:shadow-sm transition-shadow group", !t.enabled && "opacity-70")}>
+              <Card
+                key={t.id}
+                className={cn(
+                  "group hover:shadow-md hover:-translate-y-0.5 transition-all border-l-4",
+                  cm.accent,
+                  !t.enabled && "opacity-70",
+                )}
+              >
                 <CardBody>
                   <div className="flex items-start gap-4">
                     <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center shrink-0", cm.cls)}>
@@ -593,6 +666,10 @@ export default function AdminTemplatesPage() {
               </div>
             </div>
 
+            <div className="flex items-center gap-1.5 text-[11px] text-[var(--muted)]">
+              <Icon.Eye size={11} /> Rendered below with sample data — actual sends fill in the real recipient's details.
+            </div>
+
             {viewing.channel !== "sms" && viewing.subject && (
               <div>
                 <p className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">Subject</p>
@@ -616,11 +693,23 @@ export default function AdminTemplatesPage() {
               </div>
             )}
 
-            <div className="flex gap-2 pt-2 border-t border-[var(--border)]">
-              <Button variant="outline" onClick={() => setViewing(null)} className="flex-1">Close</Button>
-              <Button variant="outline" onClick={() => { const v = viewing; setViewing(null); setTimeout(() => openEdit(v), 60); }}>
-                <Icon.Edit size={14} /> Edit
+            <div className="flex flex-col gap-2 pt-2 border-t border-[var(--border)]">
+              <Button
+                variant="outline"
+                loading={sendingTestId === viewing.id}
+                disabled={viewing.channel === "sms"}
+                title={viewing.channel === "sms" ? "SMS delivery isn't configured yet — test sending is available for email channels." : undefined}
+                onClick={() => sendTest(viewing)}
+                className="w-full justify-center"
+              >
+                <Icon.Send size={14} /> Send test email to me
               </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setViewing(null)} className="flex-1">Close</Button>
+                <Button variant="outline" onClick={() => { const v = viewing; setViewing(null); setTimeout(() => openEdit(v), 60); }}>
+                  <Icon.Edit size={14} /> Edit
+                </Button>
+              </div>
             </div>
           </div>
         </Modal>

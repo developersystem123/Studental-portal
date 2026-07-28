@@ -84,8 +84,10 @@ export default function AdminSubscriptionsPage() {
   const [sortDir,        setSortDir]        = React.useState<SortDir>("asc");
   const [page,           setPage]           = React.useState(1);
   const [cancelTarget,   setCancelTarget]   = React.useState<Sub | null>(null);
+  const [cancelMode,     setCancelMode]     = React.useState<"period_end" | "immediate">("period_end");
   const [canceling,      setCanceling]      = React.useState(false);
   const [detailSub,      setDetailSub]      = React.useState<Sub | null>(null);
+  const [resumingId,     setResumingId]     = React.useState<string | null>(null);
 
   const load = React.useCallback(async () => {
     try {
@@ -158,23 +160,37 @@ export default function AdminSubscriptionsPage() {
     return <Icon.ChevronDown size={11} className={cn("text-[var(--primary)]", sortDir === "asc" && "rotate-180")} />;
   }
 
+  function openCancel(s: Sub, mode: "period_end" | "immediate" = "period_end") {
+    setCancelMode(mode);
+    setCancelTarget(s);
+  }
+
   async function confirmCancel() {
     if (!cancelTarget) return;
     setCanceling(true);
+    const immediate = cancelMode === "immediate";
     try {
       const res = await fetch(`/api/admin/subscriptions/${cancelTarget.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ status: "canceled" }),
+        body: JSON.stringify(immediate ? { status: "canceled" } : { cancelAtPeriodEnd: true }),
       });
       if (!res.ok) {
         const d = await res.json();
         toast.push({ title: d.error ?? "Failed to cancel.", tone: "danger" });
         return;
       }
-      setSubs((prev) => prev.map((s) => s.id === cancelTarget.id ? { ...s, status: "canceled" as SubStatus } : s));
-      toast.push({ title: "Subscription cancelled", description: `${cancelTarget.user}'s plan has been cancelled.`, tone: "success" });
+      setSubs((prev) => prev.map((s) => s.id === cancelTarget.id
+        ? (immediate ? { ...s, status: "canceled" as SubStatus } : { ...s, cancelAtPeriodEnd: true })
+        : s));
+      toast.push({
+        title: immediate ? "Subscription cancelled" : "Cancellation scheduled",
+        description: immediate
+          ? `${cancelTarget.user}'s plan has been cancelled immediately.`
+          : `${cancelTarget.user}'s plan will end on ${formatDate(cancelTarget.renewsAt)} and won't renew.`,
+        tone: "success",
+      });
       setCancelTarget(null);
     } catch {
       toast.push({ title: "Failed to cancel.", tone: "danger" });
@@ -189,32 +205,69 @@ export default function AdminSubscriptionsPage() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ status: "active" }),
+        body: JSON.stringify({ status: "active", cancelAtPeriodEnd: false }),
       });
       if (!res.ok) {
         const d = await res.json();
         toast.push({ title: d.error ?? "Failed to reactivate.", tone: "danger" });
         return;
       }
-      setSubs((prev) => prev.map((sub) => sub.id === s.id ? { ...sub, status: "active" as SubStatus } : sub));
+      setSubs((prev) => prev.map((sub) => sub.id === s.id ? { ...sub, status: "active" as SubStatus, cancelAtPeriodEnd: false } : sub));
       toast.push({ title: "Subscription reactivated", description: `${s.user}'s plan is now active.`, tone: "success" });
     } catch {
       toast.push({ title: "Failed to reactivate.", tone: "danger" });
     }
   }
 
+  // Undo a scheduled "cancel at period end" — resumes auto-renew without a
+  // full reactivation flow, since the subscription never actually stopped.
+  async function resumeAutoRenew(s: Sub) {
+    setResumingId(s.id);
+    try {
+      const res = await fetch(`/api/admin/subscriptions/${s.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ cancelAtPeriodEnd: false }),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        toast.push({ title: d.error ?? "Failed to resume auto-renew.", tone: "danger" });
+        return;
+      }
+      setSubs((prev) => prev.map((sub) => sub.id === s.id ? { ...sub, cancelAtPeriodEnd: false } : sub));
+      toast.push({ title: "Auto-renew resumed", description: `${s.user}'s plan will continue renewing on ${formatDate(s.renewsAt)}.`, tone: "success" });
+    } catch {
+      toast.push({ title: "Failed to resume auto-renew.", tone: "danger" });
+    } finally {
+      setResumingId(null);
+    }
+  }
+
   return (
     <div className="space-y-6 fade-in">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Manage</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">Subscriptions</h1>
-          <p className="mt-1 text-[var(--muted)]">Manage all active plans, track MRR, and handle billing issues.</p>
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-gradient-to-br from-[var(--primary)]/10 via-[var(--surface)] to-[var(--surface)] px-5 sm:px-7 py-6">
+        <div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-[var(--primary)]/10 blur-2xl" />
+        <div className="pointer-events-none absolute -right-24 bottom-0 h-40 w-40 rounded-full bg-[var(--accent)]/10 blur-2xl" />
+        <div className="relative flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">
+              <Icon.Crown size={12} /> Manage
+            </div>
+            <h1 className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight">Subscriptions</h1>
+            <p className="mt-1 text-sm text-[var(--muted)] max-w-md">Manage all active plans, track MRR, and handle billing issues.</p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => { exportCSV(filtered); toast.push({ title: "CSV exported", tone: "success" }); }}
+              className="bg-[var(--surface)]/80 backdrop-blur"
+            >
+              <Icon.Download size={15} /> Export CSV
+            </Button>
+          </div>
         </div>
-        <Button variant="outline" onClick={() => { exportCSV(filtered); toast.push({ title: "CSV exported", tone: "success" }); }}>
-          <Icon.Download size={15} /> Export CSV
-        </Button>
       </div>
 
       {/* Stats */}
@@ -293,10 +346,10 @@ export default function AdminSubscriptionsPage() {
       {/* Table */}
       <Card>
         <CardBody className="space-y-4">
-          <div className="space-y-3">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-3">
             {/* Scrollable tab bar */}
-            <div className="overflow-x-auto pb-1">
-              <div className="flex p-1 rounded-xl bg-[var(--surface-2)] gap-1 w-max min-w-full">
+            <div className="overflow-x-auto pb-1 lg:pb-0 lg:shrink-0">
+              <div className="flex p-1 rounded-xl bg-[var(--surface-2)]/70 border border-[var(--border)]/60 gap-1 w-max min-w-full lg:min-w-0">
                 {([
                   { value: "all",      label: "All",       count: subs.length },
                   { value: "active",   label: "Active",    count: stats.activeCount },
@@ -308,15 +361,15 @@ export default function AdminSubscriptionsPage() {
                     onClick={() => setTab(o.value)}
                     className={`px-3 h-9 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
                       tab === o.value
-                        ? "bg-[var(--surface)] text-[var(--foreground)] shadow-sm"
-                        : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                        ? "bg-[var(--primary)] text-white shadow-sm"
+                        : "text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--foreground)]"
                     }`}
                   >
                     {o.label}
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
                       tab === o.value
-                        ? "bg-[var(--primary-soft)] text-[var(--primary)]"
-                        : "bg-[var(--surface-2)]"
+                        ? "bg-white/20 text-white"
+                        : "bg-[var(--surface)]"
                     }`}>
                       {o.count}
                     </span>
@@ -326,26 +379,26 @@ export default function AdminSubscriptionsPage() {
             </div>
 
             {/* Search + filters */}
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Input
-                placeholder="Search by name or email…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                icon={<Icon.Search size={15} />}
-                className="!h-9 flex-1"
-              />
-              <div className="flex gap-2">
-                <Select value={planFilter} onChange={(e) => setPlanFilter(e.target.value)} className="!h-9 flex-1 sm:!w-28">
-                  <option value="all">All plans</option>
-                  <option value="pro">Pro</option>
-                  <option value="team">Team</option>
-                </Select>
-                <Select value={intervalFilter} onChange={(e) => setIntervalFilter(e.target.value)} className="!h-9 flex-1 sm:!w-32">
-                  <option value="all">All intervals</option>
-                  <option value="monthly">Monthly</option>
-                  <option value="annual">Annual</option>
-                </Select>
+            <div className="flex flex-col sm:flex-row gap-2 lg:ml-auto lg:shrink-0">
+              <div className="w-full sm:w-56 lg:w-64">
+                <Input
+                  placeholder="Search by name or email…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  icon={<Icon.Search size={15} />}
+                  className="!h-9"
+                />
               </div>
+              <Select value={planFilter} onChange={(e) => setPlanFilter(e.target.value)} className="!h-9 sm:!w-28 sm:shrink-0">
+                <option value="all">All plans</option>
+                <option value="pro">Pro</option>
+                <option value="team">Team</option>
+              </Select>
+              <Select value={intervalFilter} onChange={(e) => setIntervalFilter(e.target.value)} className="!h-9 sm:!w-32 sm:shrink-0">
+                <option value="all">All intervals</option>
+                <option value="monthly">Monthly</option>
+                <option value="annual">Annual</option>
+              </Select>
             </div>
           </div>
 
@@ -359,10 +412,10 @@ export default function AdminSubscriptionsPage() {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
-                <table className="w-full text-sm">
+              <div className="overflow-x-auto rounded-xl border border-[var(--border)] shadow-sm">
+                <table className="w-full text-sm border-collapse">
                   <thead>
-                    <tr className="border-b border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted)] text-xs uppercase tracking-wider">
+                    <tr className="border-b border-[var(--border)] bg-[var(--surface-2)]/70 text-[var(--muted)] text-[11px] uppercase tracking-wide">
                       <th className="px-4 py-3 text-left font-semibold">
                         <button onClick={() => toggleSort("user")} className="flex items-center gap-1 hover:text-[var(--foreground)] transition">
                           User <SortIcon col="user" />
@@ -387,15 +440,15 @@ export default function AdminSubscriptionsPage() {
                       <th className="px-4 py-3 text-right font-semibold">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[var(--border)]">
-                    {paginated.map((s) => {
+                  <tbody>
+                    {paginated.map((s, i) => {
                       const sm       = STATUS_META[s.status];
                       const expiring = s.status === "active" && isExpiringSoon(s.renewsAt);
                       return (
-                        <tr key={s.id} className="hover:bg-[var(--surface-2)]/60 transition-colors group">
+                        <tr key={s.id} className={cn("border-b border-[var(--border)] last:border-0 hover:bg-[var(--primary-soft)]/40 transition-colors group", i % 2 === 1 && "bg-[var(--surface-2)]/25")}>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2.5">
-                              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white text-xs font-bold shrink-0">
+                              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm ring-2 ring-[var(--surface)]">
                                 {s.user.charAt(0).toUpperCase()}
                               </div>
                               <div className="min-w-0">
@@ -428,7 +481,9 @@ export default function AdminSubscriptionsPage() {
                               </p>
                             )}
                             {s.cancelAtPeriodEnd && s.status === "active" && (
-                              <p className="text-[10px] text-rose-500 font-medium mt-0.5">Cancels at period end</p>
+                              <p className="text-[10px] text-rose-500 font-medium flex items-center gap-1 mt-0.5">
+                                <Icon.AlertCircle size={10} /> Cancels at period end
+                              </p>
                             )}
                           </td>
                           <td className="px-4 py-3">
@@ -445,15 +500,25 @@ export default function AdminSubscriptionsPage() {
                               >
                                 <Icon.Eye size={14} />
                               </button>
-                              {s.status === "active" && (
+                              {s.status === "active" && s.cancelAtPeriodEnd && (
                                 <button
-                                  onClick={() => setCancelTarget(s)}
+                                  onClick={() => resumeAutoRenew(s)}
+                                  disabled={resumingId === s.id}
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 transition opacity-100 sm:opacity-0 sm:group-hover:opacity-100 disabled:opacity-50"
+                                  title="Undo the scheduled cancellation and keep auto-renewing"
+                                >
+                                  {resumingId === s.id ? <Icon.Loader size={11} className="animate-spin" /> : <Icon.CheckCircle size={11} />} Resume
+                                </button>
+                              )}
+                              {s.status === "active" && !s.cancelAtPeriodEnd && (
+                                <button
+                                  onClick={() => openCancel(s)}
                                   className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-red-600 dark:text-red-400 bg-red-500/10 hover:bg-red-500/20 transition opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                                 >
                                   <Icon.X size={11} /> Cancel
                                 </button>
                               )}
-                              {s.status === "canceled" && (
+                              {(s.status === "canceled" || s.status === "expired") && (
                                 <button
                                   onClick={() => reactivate(s)}
                                   className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 transition opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
@@ -471,10 +536,10 @@ export default function AdminSubscriptionsPage() {
               </div>
 
               {/* Pagination */}
-              <div className="flex items-center justify-between gap-4 pt-1 flex-wrap">
+              <div className="flex items-center justify-between gap-4 pt-3 border-t border-[var(--border)] flex-wrap">
                 <p className="text-xs text-[var(--muted)]">
-                  Showing <span className="font-semibold text-[var(--foreground)]">{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)}</span> of{" "}
-                  <span className="font-semibold text-[var(--foreground)]">{filtered.length}</span> subscriptions
+                  Showing <span className="font-medium text-[var(--foreground)]">{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)}</span> of{" "}
+                  <span className="font-medium text-[var(--foreground)]">{filtered.length}</span> subscriptions
                 </p>
                 <div className="flex items-center gap-1">
                   <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage(1)} title="First">
@@ -545,9 +610,18 @@ export default function AdminSubscriptionsPage() {
             </div>
 
             {detailSub.cancelAtPeriodEnd && detailSub.status === "active" && (
-              <div className="flex items-center gap-2 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-sm text-rose-600 dark:text-rose-400">
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-sm text-rose-600 dark:text-rose-400 flex-wrap">
                 <Icon.AlertCircle size={14} className="shrink-0" />
-                Scheduled to cancel at period end ({formatDate(detailSub.renewsAt)}).
+                <span className="flex-1 min-w-[12rem]">Scheduled to cancel at period end ({formatDate(detailSub.renewsAt)}).</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="!border-rose-500/30 !text-emerald-600 dark:!text-emerald-400"
+                  loading={resumingId === detailSub.id}
+                  onClick={() => resumeAutoRenew(detailSub)}
+                >
+                  <Icon.CheckCircle size={13} /> Resume auto-renew
+                </Button>
               </div>
             )}
 
@@ -559,13 +633,18 @@ export default function AdminSubscriptionsPage() {
             )}
 
             <div className="flex justify-end gap-2 pt-2 border-t border-[var(--border)]">
-              {detailSub.status === "canceled" && (
+              {(detailSub.status === "canceled" || detailSub.status === "expired") && (
                 <Button onClick={() => { reactivate(detailSub); setDetailSub(null); }}>
                   <Icon.CheckCircle size={14} /> Reactivate
                 </Button>
               )}
-              {detailSub.status === "active" && (
-                <Button variant="danger" onClick={() => { setCancelTarget(detailSub); setDetailSub(null); }}>
+              {detailSub.status === "active" && detailSub.cancelAtPeriodEnd && (
+                <Button variant="danger" onClick={() => { openCancel(detailSub, "immediate"); setDetailSub(null); }}>
+                  <Icon.X size={14} /> Cancel now
+                </Button>
+              )}
+              {detailSub.status === "active" && !detailSub.cancelAtPeriodEnd && (
+                <Button variant="danger" onClick={() => { openCancel(detailSub); setDetailSub(null); }}>
                   <Icon.X size={14} /> Cancel plan
                 </Button>
               )}
@@ -578,20 +657,60 @@ export default function AdminSubscriptionsPage() {
       <Modal open={!!cancelTarget} onClose={() => !canceling && setCancelTarget(null)} title="Cancel subscription?">
         <div className="p-5 space-y-4">
           {cancelTarget && (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="p-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm space-y-1">
                 <p><span className="text-[var(--muted)]">User:</span> <span className="font-semibold">{cancelTarget.user}</span></p>
                 <p><span className="text-[var(--muted)]">Plan:</span> <span className="font-semibold">{cancelTarget.plan} ({cancelTarget.interval})</span></p>
                 <p><span className="text-[var(--muted)]">Amount:</span> <span className="font-semibold">{money(cancelTarget.amount)}</span></p>
               </div>
-              <p className="text-sm text-[var(--muted)]">
-                They will retain access until the end of the current billing period (<strong>{formatDate(cancelTarget.renewsAt)}</strong>). You can reactivate anytime.
-              </p>
+
+              <div className="space-y-2">
+                {!cancelTarget.cancelAtPeriodEnd && (
+                  <button
+                    type="button"
+                    onClick={() => setCancelMode("period_end")}
+                    className={cn(
+                      "w-full text-left p-3 rounded-xl border transition flex items-start gap-3",
+                      cancelMode === "period_end"
+                        ? "border-[var(--primary)] bg-[var(--primary-soft)]/40 ring-1 ring-[var(--primary)]"
+                        : "border-[var(--border)] hover:bg-[var(--surface-2)]",
+                    )}
+                  >
+                    <Icon.Clock size={16} className="shrink-0 mt-0.5 text-[var(--primary)]" />
+                    <span>
+                      <span className="block text-sm font-semibold">Cancel at period end (recommended)</span>
+                      <span className="block text-xs text-[var(--muted)] mt-0.5">
+                        They keep access until <strong>{formatDate(cancelTarget.renewsAt)}</strong> and the plan won&apos;t renew. Reversible anytime before then.
+                      </span>
+                    </span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setCancelMode("immediate")}
+                  className={cn(
+                    "w-full text-left p-3 rounded-xl border transition flex items-start gap-3",
+                    cancelMode === "immediate"
+                      ? "border-red-500 bg-red-500/10 ring-1 ring-red-500"
+                      : "border-[var(--border)] hover:bg-[var(--surface-2)]",
+                  )}
+                >
+                  <Icon.AlertCircle size={16} className="shrink-0 mt-0.5 text-red-500" />
+                  <span>
+                    <span className="block text-sm font-semibold">Cancel immediately</span>
+                    <span className="block text-xs text-[var(--muted)] mt-0.5">
+                      Access is revoked right away, even though time remains on the current billing period.
+                    </span>
+                  </span>
+                </button>
+              </div>
             </div>
           )}
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setCancelTarget(null)} disabled={canceling}>Keep active</Button>
-            <Button variant="danger" loading={canceling} onClick={confirmCancel}><Icon.X size={14} /> Cancel plan</Button>
+            <Button variant="danger" loading={canceling} onClick={confirmCancel}>
+              <Icon.X size={14} /> {cancelMode === "immediate" ? "Cancel immediately" : "Schedule cancellation"}
+            </Button>
           </div>
         </div>
       </Modal>

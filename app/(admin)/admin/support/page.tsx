@@ -16,7 +16,7 @@ import {
   useToast,
 } from "@/components/ui";
 import Icon from "@/components/icons";
-import { formatDate, relativeTime } from "@/lib/utils";
+import { relativeTime, cn } from "@/lib/utils";
 
 type TicketStatus = "open" | "in_progress" | "resolved" | "closed";
 type TicketPriority = "low" | "medium" | "high" | "urgent";
@@ -133,6 +133,9 @@ export default function AdminSupportPage() {
   const [sortKey, setSortKey] = React.useState<SortKey>("updated");
   const [priorityFilter, setPriorityFilter] = React.useState<TicketPriority | "all">("all");
   const [page, setPage] = React.useState(1);
+  const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const [bulkAction, setBulkAction] = React.useState<TicketStatus | null>(null);
+  const [bulkSubmitting, setBulkSubmitting] = React.useState(false);
 
   const [openId, setOpenId] = React.useState<string | null>(null);
   const [detail, setDetail] = React.useState<TicketDetail | null>(null);
@@ -157,7 +160,7 @@ export default function AdminSupportPage() {
   }, [toast]);
 
   React.useEffect(() => { load(); }, [load]);
-  React.useEffect(() => { setPage(1); }, [filter, query, sortKey, priorityFilter]);
+  React.useEffect(() => { setPage(1); setSelected(new Set()); }, [filter, query, sortKey, priorityFilter]);
 
   React.useEffect(() => {
     if (!openId) { setDetail(null); setReplyText(""); return; }
@@ -219,6 +222,58 @@ export default function AdminSupportPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const allPageSelected = paginated.length > 0 && paginated.every((t) => selected.has(t.id));
+
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allPageSelected) {
+        paginated.forEach((t) => next.delete(t.id));
+      } else {
+        paginated.forEach((t) => next.add(t.id));
+      }
+      return next;
+    });
+  }
+
+  async function confirmBulk() {
+    if (!bulkAction || selected.size === 0) return;
+    setBulkSubmitting(true);
+    const ids = Array.from(selected);
+    let okCount = 0;
+    for (const id of ids) {
+      try {
+        const res = await fetch(`/api/admin/support/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ status: bulkAction }),
+        });
+        if (res.ok) okCount += 1;
+      } catch {
+        // continue with remaining tickets
+      }
+    }
+    const idSet = new Set(ids);
+    setTickets((prev) => prev.map((t) => (idSet.has(t.id) ? { ...t, status: bulkAction } : t)));
+    setSelected(new Set());
+    setBulkSubmitting(false);
+    setBulkAction(null);
+    toast.push({
+      title: `${okCount} of ${ids.length} ticket${ids.length !== 1 ? "s" : ""} marked ${STATUS_LABEL[bulkAction].toLowerCase()}`,
+      tone: okCount === ids.length ? "success" : "danger",
+    });
+  }
 
   async function sendReply() {
     if (!detail || !replyText.trim()) return;
@@ -282,17 +337,27 @@ export default function AdminSupportPage() {
   return (
     <div className="space-y-6 fade-in">
       {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">Manage</p>
-          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">Support tickets</h1>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            Respond to student requests, set priorities, and track each ticket to resolution.
-          </p>
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-gradient-to-br from-[var(--primary)]/10 via-[var(--surface)] to-[var(--surface)] px-5 sm:px-7 py-6">
+        <div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-[var(--primary)]/10 blur-2xl" />
+        <div className="pointer-events-none absolute -right-24 bottom-0 h-40 w-40 rounded-full bg-[var(--accent)]/10 blur-2xl" />
+        <div className="relative flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">
+              <Icon.Inbox size={12} /> Manage
+            </div>
+            <h1 className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight">Support tickets</h1>
+            <p className="mt-1 text-sm text-[var(--muted)] max-w-md">
+              Respond to student requests, set priorities, and track each ticket to resolution.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => exportCSV(filtered)}
+            className="shrink-0 bg-[var(--surface)]/80 backdrop-blur"
+          >
+            <Icon.Download size={15} /> Export CSV
+          </Button>
         </div>
-        <Button variant="outline" onClick={() => exportCSV(filtered)}>
-          <Icon.Download size={15} /> Export CSV
-        </Button>
       </div>
 
       {/* ── Stats ── */}
@@ -310,57 +375,61 @@ export default function AdminSupportPage() {
 
       {/* ── Controls ── */}
       <div className="space-y-3">
-        {/* Scrollable tab bar */}
-        <div className="overflow-x-auto pb-1">
-          <div className="flex p-1 rounded-xl bg-[var(--surface-2)] gap-1 w-max min-w-full">
-            {([
-              { value: "all",         label: "All",         count: counts.all },
-              { value: "open",        label: "Open",        count: counts.open },
-              { value: "in_progress", label: "In progress", count: counts.in_progress },
-              { value: "resolved",    label: "Resolved",    count: counts.resolved },
-              { value: "closed",      label: "Closed",      count: counts.closed },
-            ] as { value: Filter; label: string; count: number }[]).map((o) => (
-              <button
-                key={o.value}
-                onClick={() => setFilter(o.value)}
-                className={`px-3 h-9 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
-                  filter === o.value
-                    ? "bg-[var(--surface)] text-[var(--foreground)] shadow-sm"
-                    : "text-[var(--muted)] hover:text-[var(--foreground)]"
-                }`}
-              >
-                {o.label}
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                  filter === o.value
-                    ? "bg-[var(--primary-soft)] text-[var(--primary)]"
-                    : "bg-[var(--surface-2)]"
-                }`}>
-                  {o.count}
-                </span>
-              </button>
-            ))}
+        <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+          {/* Scrollable tab bar */}
+          <div className="overflow-x-auto pb-1 lg:pb-0 lg:shrink-0">
+            <div className="flex p-1 rounded-xl bg-[var(--surface-2)]/70 border border-[var(--border)]/60 gap-1 w-max min-w-full lg:min-w-0">
+              {([
+                { value: "all",         label: "All",         count: counts.all },
+                { value: "open",        label: "Open",        count: counts.open },
+                { value: "in_progress", label: "In progress", count: counts.in_progress },
+                { value: "resolved",    label: "Resolved",    count: counts.resolved },
+                { value: "closed",      label: "Closed",      count: counts.closed },
+              ] as { value: Filter; label: string; count: number }[]).map((o) => (
+                <button
+                  key={o.value}
+                  onClick={() => setFilter(o.value)}
+                  className={`px-3 h-9 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
+                    filter === o.value
+                      ? "bg-[var(--primary)] text-white shadow-sm"
+                      : "text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--foreground)]"
+                  }`}
+                >
+                  {o.label}
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                    filter === o.value
+                      ? "bg-white/20 text-white"
+                      : "bg-[var(--surface)]"
+                  }`}>
+                    {o.count}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Search + Sort */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search tickets…"
-            icon={<Icon.Search size={16} />}
-            className="flex-1 sm:!w-52 sm:flex-none"
-          />
-          <Select
-            value={sortKey}
-            onChange={(e) => setSortKey(e.target.value as SortKey)}
-            className="h-9 text-xs !py-0 w-full sm:w-[148px]"
-          >
-            <option value="updated">Last updated</option>
-            <option value="newest">Newest first</option>
-            <option value="oldest">Oldest first</option>
-            <option value="priority">Priority (urgent first)</option>
-          </Select>
+          {/* Search + Sort */}
+          <div className="flex flex-col sm:flex-row gap-2 lg:ml-auto lg:shrink-0">
+            <div className="w-full sm:w-56 lg:w-64">
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search tickets…"
+                icon={<Icon.Search size={16} />}
+                className="!h-9"
+              />
+            </div>
+            <Select
+              value={sortKey}
+              onChange={(e) => setSortKey(e.target.value as SortKey)}
+              className="!h-9 text-xs !py-0 w-full sm:w-[148px] sm:shrink-0"
+            >
+              <option value="updated">Last updated</option>
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+              <option value="priority">Priority (urgent first)</option>
+            </Select>
+          </div>
         </div>
 
         {/* Priority filter chips */}
@@ -390,6 +459,24 @@ export default function AdminSupportPage() {
         </div>
       </div>
 
+      {/* ── Bulk action bar ── */}
+      {selected.size > 0 && (
+        <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-[var(--primary-soft)] border border-[var(--primary)]/20 flex-wrap">
+          <span className="text-sm font-semibold text-[var(--primary)]">{selected.size} selected</span>
+          <div className="flex gap-2 ml-auto flex-wrap">
+            <Button size="sm" onClick={() => setBulkAction("resolved")}>
+              <Icon.CheckCircle size={13} /> Mark resolved
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setBulkAction("closed")}>
+              <Icon.X size={13} /> Close all
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* ── Table ── */}
       {loading ? (
         <Card>
@@ -415,102 +502,128 @@ export default function AdminSupportPage() {
         </Card>
       ) : (
         <>
-          <Card>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-[var(--surface-2)] text-[var(--muted)] text-xs uppercase tracking-wider">
-                  <tr>
-                    <Th>Requester</Th>
-                    <Th>Subject</Th>
-                    <Th className="hidden md:table-cell">Category</Th>
-                    <Th>Priority</Th>
-                    <Th>Status</Th>
-                    <Th className="hidden lg:table-cell">Updated</Th>
-                    <Th className="text-right">Actions</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginated.map((t) => (
-                    <tr
-                      key={t.id}
-                      onClick={() => setOpenId(t.id)}
-                      className={`border-t border-[var(--border)] border-l-2 ${PRIORITY_BORDER[t.priority]} hover:bg-[var(--surface-2)]/50 transition cursor-pointer group`}
+          <div className="overflow-x-auto rounded-xl border border-[var(--border)] shadow-sm">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="border-b border-[var(--border)] bg-[var(--surface-2)]/70 text-[var(--muted)] text-[11px] uppercase tracking-wide">
+                  <Th className="w-10">
+                    <input
+                      type="checkbox"
+                      checked={allPageSelected}
+                      onChange={toggleSelectAll}
+                      className="rounded accent-[var(--primary)] cursor-pointer"
+                    />
+                  </Th>
+                  <Th>Requester</Th>
+                  <Th>Subject</Th>
+                  <Th className="hidden md:table-cell">Category</Th>
+                  <Th>Priority</Th>
+                  <Th>Status</Th>
+                  <Th className="hidden lg:table-cell">Updated</Th>
+                  <Th className="text-right">Actions</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginated.map((t, i) => (
+                  <tr
+                    key={t.id}
+                    onClick={() => setOpenId(t.id)}
+                    className={cn(
+                      "border-b border-[var(--border)] last:border-0 border-l-2 hover:bg-[var(--primary-soft)]/40 transition-colors cursor-pointer group",
+                      PRIORITY_BORDER[t.priority],
+                      i % 2 === 1 && !selected.has(t.id) && "bg-[var(--surface-2)]/25",
+                      selected.has(t.id) && "bg-[var(--primary-soft)]/40",
+                    )}
+                  >
+                    {/* Checkbox */}
+                    <Td onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selected.has(t.id)}
+                        onChange={() => toggleSelect(t.id)}
+                        className="rounded accent-[var(--primary)] cursor-pointer"
+                      />
+                    </Td>
+
+                    {/* Requester */}
+                    <Td>
+                      <div className="flex items-center gap-2.5">
+                        <Avatar
+                          src={t.userAvatar}
+                          name={t.userName}
+                          size={34}
+                          className="shadow-sm ring-2 ring-[var(--surface)]"
+                        />
+                        <div className="min-w-0">
+                          <div className="font-semibold truncate max-w-[14ch]">{t.userName}</div>
+                          <div className="text-xs text-[var(--muted)] truncate max-w-[16ch]">{t.userEmail}</div>
+                        </div>
+                      </div>
+                    </Td>
+
+                    {/* Subject */}
+                    <Td>
+                      <div className="font-semibold truncate max-w-[26ch]">{t.subject}</div>
+                      <div className="text-xs text-[var(--muted)] flex items-center gap-1 mt-0.5">
+                        <Icon.MessageSquare size={10} />
+                        {t.replyCount} {t.replyCount === 1 ? "reply" : "replies"}
+                      </div>
+                    </Td>
+
+                    {/* Category */}
+                    <Td className="hidden md:table-cell">
+                      <span className="text-[11px] font-medium capitalize px-2 py-0.5 rounded-full bg-[var(--surface-2)] text-[var(--muted)]">
+                        {t.category}
+                      </span>
+                    </Td>
+
+                    {/* Priority */}
+                    <Td>
+                      <span className={`text-[11px] font-semibold capitalize px-2 py-0.5 rounded-full ${PRIORITY_CLS[t.priority]}`}>
+                        {t.priority === "urgent" && (
+                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-current animate-pulse mr-1 -mb-0.5" />
+                        )}
+                        {t.priority}
+                      </span>
+                    </Td>
+
+                    {/* Status */}
+                    <Td>
+                      <Badge variant={STATUS_BADGE[t.status]}>{STATUS_LABEL[t.status]}</Badge>
+                    </Td>
+
+                    {/* Updated */}
+                    <Td className="hidden lg:table-cell text-xs text-[var(--muted)]">
+                      {relativeTime(t.updatedAt)}
+                    </Td>
+
+                    {/* Actions */}
+                    <Td
+                      className="text-right"
+                      onClick={(e: React.MouseEvent) => e.stopPropagation()}
                     >
-                      {/* Requester */}
-                      <Td>
-                        <div className="flex items-center gap-2.5">
-                          <Avatar src={t.userAvatar} name={t.userName} size={34} />
-                          <div className="min-w-0">
-                            <div className="font-semibold truncate max-w-[14ch]">{t.userName}</div>
-                            <div className="text-xs text-[var(--muted)] truncate max-w-[16ch]">{t.userEmail}</div>
-                          </div>
-                        </div>
-                      </Td>
-
-                      {/* Subject */}
-                      <Td>
-                        <div className="font-semibold truncate max-w-[26ch]">{t.subject}</div>
-                        <div className="text-xs text-[var(--muted)] flex items-center gap-1 mt-0.5">
-                          <Icon.MessageSquare size={10} />
-                          {t.replyCount} {t.replyCount === 1 ? "reply" : "replies"}
-                        </div>
-                      </Td>
-
-                      {/* Category */}
-                      <Td className="hidden md:table-cell">
-                        <span className="text-[11px] font-medium capitalize px-2 py-0.5 rounded-full bg-[var(--surface-2)] text-[var(--muted)]">
-                          {t.category}
-                        </span>
-                      </Td>
-
-                      {/* Priority */}
-                      <Td>
-                        <span className={`text-[11px] font-semibold capitalize px-2 py-0.5 rounded-full ${PRIORITY_CLS[t.priority]}`}>
-                          {t.priority === "urgent" && (
-                            <span className="inline-block h-1.5 w-1.5 rounded-full bg-current animate-pulse mr-1 -mb-0.5" />
-                          )}
-                          {t.priority}
-                        </span>
-                      </Td>
-
-                      {/* Status */}
-                      <Td>
-                        <Badge variant={STATUS_BADGE[t.status]}>{STATUS_LABEL[t.status]}</Badge>
-                      </Td>
-
-                      {/* Updated */}
-                      <Td className="hidden lg:table-cell text-xs text-[var(--muted)]">
-                        {relativeTime(t.updatedAt)}
-                      </Td>
-
-                      {/* Actions */}
-                      <Td
-                        className="text-right"
-                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                      <button
+                        onClick={() => setOpenId(t.id)}
+                        className="h-8 px-3 rounded-lg text-xs font-medium bg-[var(--primary)]/10 text-[var(--primary)] hover:bg-[var(--primary)]/20 transition opacity-70 group-hover:opacity-100"
                       >
-                        <button
-                          onClick={() => setOpenId(t.id)}
-                          className="h-8 px-3 rounded-lg text-xs font-medium bg-[var(--primary)]/10 text-[var(--primary)] hover:bg-[var(--primary)]/20 transition opacity-70 group-hover:opacity-100"
-                        >
-                          Open
-                        </button>
-                      </Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        Open
+                      </button>
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-            {/* Pagination inside card */}
-            <div className="px-4 py-3 border-t border-[var(--border)]">
-              <TicketPagination
-                page={safePage}
-                totalPages={totalPages}
-                total={filtered.length}
-                onChange={setPage}
-              />
-            </div>
-          </Card>
+          {/* Pagination */}
+          <div className="pt-3 border-t border-[var(--border)]">
+            <TicketPagination
+              page={safePage}
+              totalPages={totalPages}
+              total={filtered.length}
+              onChange={setPage}
+            />
+          </div>
         </>
       )}
 
@@ -685,6 +798,31 @@ export default function AdminSupportPage() {
           )}
         </div>
       </Modal>
+
+      {/* ── Bulk action confirmation ── */}
+      <Modal
+        open={!!bulkAction}
+        onClose={() => setBulkAction(null)}
+        size="sm"
+        title={bulkAction ? `${STATUS_LABEL[bulkAction]} ${selected.size} ticket${selected.size !== 1 ? "s" : ""}?` : ""}
+      >
+        <div className="p-5 space-y-4">
+          <p className="text-sm text-[var(--muted)]">
+            This will set <strong className="text-[var(--foreground)]">{selected.size}</strong> selected ticket
+            {selected.size !== 1 ? "s" : ""} to{" "}
+            <strong className="text-[var(--foreground)]">{bulkAction ? STATUS_LABEL[bulkAction] : ""}</strong>.
+            {bulkAction === "resolved" && " A student reply will automatically reopen a resolved ticket."}
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setBulkAction(null)} disabled={bulkSubmitting}>
+              Cancel
+            </Button>
+            <Button loading={bulkSubmitting} onClick={confirmBulk}>
+              Confirm
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -699,7 +837,11 @@ function TicketPagination({
   page: number; totalPages: number; total: number; onChange: (p: number) => void;
 }) {
   if (totalPages <= 1) {
-    return <p className="text-xs text-[var(--muted)]">{total} ticket{total !== 1 ? "s" : ""}</p>;
+    return (
+      <p className="text-xs text-[var(--muted)]">
+        <span className="font-medium text-[var(--foreground)]">{total}</span> ticket{total !== 1 ? "s" : ""}
+      </p>
+    );
   }
 
   function getPages(): (number | "...")[] {
@@ -721,7 +863,10 @@ function TicketPagination({
 
   return (
     <div className="flex items-center justify-between">
-      <p className="text-xs text-[var(--muted)]">{start}–{end} of {total} tickets</p>
+      <p className="text-xs text-[var(--muted)]">
+        Showing <span className="font-medium text-[var(--foreground)]">{start}–{end}</span> of{" "}
+        <span className="font-medium text-[var(--foreground)]">{total}</span> tickets
+      </p>
       <div className="flex items-center gap-1">
         <button
           onClick={() => onChange(page - 1)} disabled={page === 1}

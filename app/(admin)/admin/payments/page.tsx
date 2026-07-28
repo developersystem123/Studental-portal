@@ -14,7 +14,7 @@ import {
   useToast,
 } from "@/components/ui";
 import Icon from "@/components/icons";
-import { formatDate, relativeTime } from "@/lib/utils";
+import { cn, formatDate, relativeTime } from "@/lib/utils";
 
 type PaymentStatus = "pending" | "completed" | "failed" | "refunded";
 
@@ -136,6 +136,37 @@ function exportCSV(payments: Payment[]) {
   const a = document.createElement("a");
   a.href = url;
   a.download = "payments.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Generates a plain-text receipt for a single transaction so admins can hand a
+// buyer proof of payment (or their own record) without leaving the console.
+function downloadReceipt(p: Payment) {
+  const lines = [
+    "========================================",
+    "           EDUPORTAL RECEIPT",
+    "========================================",
+    `Receipt #:   ${p.txnId ?? p.id}`,
+    `Date:        ${formatDate(p.createdAt)}`,
+    "----------------------------------------",
+    `Billed to:   ${p.userName}`,
+    `Email:       ${p.userEmail}`,
+    "----------------------------------------",
+    `Description: ${p.description}`,
+    p.courseTitle ? `Course:      ${p.courseTitle}` : null,
+    `Method:      ${p.method}`,
+    `Status:      ${STATUS_LABEL[p.status].toUpperCase()}`,
+    "----------------------------------------",
+    `Amount:      ${money(p.amount, p.currency)}`,
+    "========================================",
+    "Thank you for using EduPortal!",
+  ].filter(Boolean).join("\n");
+  const blob = new Blob([lines], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `receipt-${p.id.slice(0, 8)}.txt`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -279,23 +310,39 @@ export default function AdminPaymentsPage() {
     });
   }
 
+  const TABS: { value: Filter; label: string; count: number }[] = [
+    { value: "all", label: "All", count: counts.all },
+    { value: "completed", label: "Completed", count: counts.completed },
+    { value: "pending", label: "Pending", count: counts.pending },
+    { value: "failed", label: "Failed", count: counts.failed },
+    { value: "refunded", label: "Refunded", count: counts.refunded },
+  ];
+
   return (
     <div className="space-y-6 fade-in">
       {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">
-            Manage
-          </p>
-          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">Payments &amp; revenue</h1>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            Every transaction on the platform — track revenue, settle pending charges, and issue
-            refunds.
-          </p>
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-gradient-to-br from-[var(--primary)]/10 via-[var(--surface)] to-[var(--surface)] px-5 sm:px-7 py-6">
+        <div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-[var(--primary)]/10 blur-2xl" />
+        <div className="pointer-events-none absolute -right-24 bottom-0 h-40 w-40 rounded-full bg-[var(--accent)]/10 blur-2xl" />
+        <div className="relative flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider text-[var(--primary)] font-semibold">
+              <Icon.DollarSign size={12} /> Manage
+            </div>
+            <h1 className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight">Payments &amp; revenue</h1>
+            <p className="mt-1 text-sm text-[var(--muted)] max-w-md">
+              Every transaction on the platform — track revenue, settle pending charges, and issue
+              refunds.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => exportCSV(filtered)}
+            className="bg-[var(--surface)]/80 backdrop-blur"
+          >
+            <Icon.Download size={15} /> Export CSV
+          </Button>
         </div>
-        <Button variant="outline" onClick={() => exportCSV(filtered)}>
-          <Icon.Download size={15} /> Export CSV
-        </Button>
       </div>
 
       {/* ── StatCards ── */}
@@ -343,7 +390,7 @@ export default function AdminPaymentsPage() {
                 return (
                   <div
                     key={method}
-                    className="flex-1 min-w-[140px] rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3"
+                    className="flex-1 min-w-[140px] rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3 transition hover:-translate-y-0.5 hover:shadow-md"
                   >
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs font-semibold capitalize text-[var(--foreground)]">
@@ -367,92 +414,83 @@ export default function AdminPaymentsPage() {
         </Card>
       )}
 
-      {/* ── Controls ── */}
-      <div className="space-y-3">
-        {/* Scrollable tab bar */}
-        <div className="overflow-x-auto pb-1">
-          <div className="flex p-1 rounded-xl bg-[var(--surface-2)] gap-1 w-max min-w-full">
-            {([
-              { value: "all",       label: "All",       count: counts.all },
-              { value: "completed", label: "Completed", count: counts.completed },
-              { value: "pending",   label: "Pending",   count: counts.pending },
-              { value: "failed",    label: "Failed",    count: counts.failed },
-              { value: "refunded",  label: "Refunded",  count: counts.refunded },
-            ] as { value: Filter; label: string; count: number }[]).map((o) => (
+      {/* ── Controls + table ── */}
+      <Card>
+        <CardBody className="space-y-4">
+          {/* Toolbar: tabs + search + sort — one row on large screens */}
+          <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+            <div className="overflow-x-auto pb-1 lg:pb-0 lg:shrink-0">
+              <div className="flex p-1 rounded-xl bg-[var(--surface-2)]/70 border border-[var(--border)]/60 gap-1 w-max min-w-full lg:min-w-0">
+                {TABS.map((o) => (
+                  <button
+                    key={o.value}
+                    onClick={() => setFilter(o.value)}
+                    className={`px-3 h-9 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
+                      filter === o.value
+                        ? "bg-[var(--primary)] text-white shadow-sm"
+                        : "text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--foreground)]"
+                    }`}
+                  >
+                    {o.label}
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                      filter === o.value
+                        ? "bg-white/20 text-white"
+                        : "bg-[var(--surface)]"
+                    }`}>
+                      {o.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2 lg:ml-auto lg:shrink-0">
+              <div className="w-full sm:w-56 lg:w-64">
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search payments…"
+                  icon={<Icon.Search size={16} />}
+                  className="!h-9"
+                />
+              </div>
+              <Select
+                value={sortKey}
+                onChange={(e) => setSortKey(e.target.value as SortKey)}
+                className="!h-9 w-full sm:w-[150px] sm:shrink-0"
+              >
+                <option value="newest">Newest first</option>
+                <option value="oldest">Oldest first</option>
+                <option value="amount-desc">Highest amount</option>
+                <option value="amount-asc">Lowest amount</option>
+              </Select>
+            </div>
+          </div>
+
+          {/* Date range chips */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-xs text-[var(--muted)] shrink-0">Period:</span>
+            {(["all", "today", "week", "month"] as DateRange[]).map((r) => (
               <button
-                key={o.value}
-                onClick={() => setFilter(o.value)}
-                className={`px-3 h-9 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
-                  filter === o.value
-                    ? "bg-[var(--surface)] text-[var(--foreground)] shadow-sm"
-                    : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                key={r}
+                onClick={() => setDateRange(r)}
+                className={`h-7 px-3 rounded-full text-xs font-medium transition whitespace-nowrap ${
+                  dateRange === r
+                    ? "bg-[var(--primary)] text-white shadow-sm"
+                    : "bg-[var(--surface-2)]/70 text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--foreground)]"
                 }`}
               >
-                {o.label}
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                  filter === o.value
-                    ? "bg-[var(--primary-soft)] text-[var(--primary)]"
-                    : "bg-[var(--surface-2)]"
-                }`}>
-                  {o.count}
-                </span>
+                {DATE_RANGE_LABELS[r]}
               </button>
             ))}
           </div>
-        </div>
 
-        {/* Search + sort */}
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search payments…"
-            icon={<Icon.Search size={16} />}
-            className="flex-1 !h-9"
-          />
-          <Select
-            value={sortKey}
-            onChange={(e) => setSortKey(e.target.value as SortKey)}
-            className="!h-9 text-xs !py-0 w-full sm:w-[148px]"
-          >
-            <option value="newest">Newest first</option>
-            <option value="oldest">Oldest first</option>
-            <option value="amount-desc">Highest amount</option>
-            <option value="amount-asc">Lowest amount</option>
-          </Select>
-        </div>
-
-        {/* Date range chips */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-xs text-[var(--muted)] shrink-0">Period:</span>
-          {(["all", "today", "week", "month"] as DateRange[]).map((r) => (
-            <button
-              key={r}
-              onClick={() => setDateRange(r)}
-              className={`h-7 px-3 rounded-full text-xs font-medium transition whitespace-nowrap ${
-                dateRange === r
-                  ? "bg-[var(--primary)] text-white"
-                  : "bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--foreground)]"
-              }`}
-            >
-              {DATE_RANGE_LABELS[r]}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Table ── */}
-      {loading ? (
-        <Card>
-          <CardBody>
+          {/* ── Table ── */}
+          {loading ? (
             <div className="flex items-center justify-center gap-2 py-12 text-[var(--muted)]">
               <Icon.Loader size={18} className="animate-spin" /> Loading payments…
             </div>
-          </CardBody>
-        </Card>
-      ) : filtered.length === 0 ? (
-        <Card>
-          <CardBody>
+          ) : filtered.length === 0 ? (
             <EmptyState
               icon={<Icon.CreditCard size={28} />}
               title="No payments"
@@ -462,123 +500,132 @@ export default function AdminPaymentsPage() {
                   : "No payments match the current filter."
               }
             />
-          </CardBody>
-        </Card>
-      ) : (
-        <>
-          <Card>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-[var(--surface-2)] text-[var(--muted)] text-xs uppercase tracking-wider">
-                  <tr>
-                    <Th>User</Th>
-                    <Th className="hidden md:table-cell">Description</Th>
-                    <Th className="hidden sm:table-cell">Method</Th>
-                    <Th className="text-right">Amount</Th>
-                    <Th>Status</Th>
-                    <Th className="hidden lg:table-cell">Date</Th>
-                    <Th className="text-right">Actions</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginated.map((p) => (
-                    <tr
-                      key={p.id}
-                      onClick={() => openManage(p)}
-                      className={`border-t border-[var(--border)] border-l-2 ${STATUS_BORDER[p.status]} hover:bg-[var(--surface-2)]/50 transition cursor-pointer group`}
-                    >
-                      {/* User */}
-                      <Td>
-                        <div className="flex items-center gap-2.5">
-                          <div
-                            className={`h-8 w-8 rounded-full bg-gradient-to-br ${avatarColor(p.userName)} text-white font-bold text-xs flex items-center justify-center shrink-0`}
-                          >
-                            {p.userName.slice(0, 1).toUpperCase()}
-                          </div>
-                          <div className="min-w-0">
-                            <div className="font-semibold truncate max-w-[14ch]">{p.userName}</div>
-                            <div className="text-xs text-[var(--muted)] truncate max-w-[16ch]">
-                              {p.userEmail}
+          ) : (
+            <>
+              <div className="overflow-x-auto rounded-xl border border-[var(--border)] shadow-sm">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="text-left text-[var(--muted)] bg-[var(--surface-2)]/70 border-b border-[var(--border)] text-[11px] uppercase tracking-wide">
+                      <Th>User</Th>
+                      <Th className="hidden md:table-cell">Description</Th>
+                      <Th className="hidden sm:table-cell">Method</Th>
+                      <Th className="text-right">Amount</Th>
+                      <Th>Status</Th>
+                      <Th className="hidden lg:table-cell">Date</Th>
+                      <Th className="text-right">Actions</Th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginated.map((p, i) => (
+                      <tr
+                        key={p.id}
+                        onClick={() => openManage(p)}
+                        className={cn(
+                          "border-b border-[var(--border)] last:border-0 border-l-2 hover:bg-[var(--primary-soft)]/40 transition-colors cursor-pointer group",
+                          STATUS_BORDER[p.status],
+                          i % 2 === 1 && "bg-[var(--surface-2)]/25",
+                        )}
+                      >
+                        {/* User */}
+                        <Td>
+                          <div className="flex items-center gap-2.5">
+                            <div
+                              className={`h-8 w-8 rounded-full bg-gradient-to-br ${avatarColor(p.userName)} text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm ring-2 ring-[var(--surface)]`}
+                            >
+                              {p.userName.slice(0, 1).toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="font-semibold truncate max-w-[14ch]">{p.userName}</div>
+                              <div className="text-xs text-[var(--muted)] truncate max-w-[16ch]">
+                                {p.userEmail}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </Td>
+                        </Td>
 
-                      {/* Description */}
-                      <Td className="hidden md:table-cell">
-                        <div className="font-medium truncate max-w-[22ch]">{p.description}</div>
-                        {p.courseTitle && (
-                          <div className="text-xs text-[var(--muted)] truncate max-w-[22ch]">
-                            {p.courseTitle}
-                          </div>
-                        )}
-                        {p.txnId && (
-                          <div className="text-[10px] text-[var(--muted)] font-mono mt-0.5 truncate max-w-[18ch]">
-                            #{p.txnId}
-                          </div>
-                        )}
-                      </Td>
-
-                      {/* Method */}
-                      <Td className="hidden sm:table-cell">
-                        <span className="text-xs capitalize px-2 py-0.5 rounded-full bg-[var(--surface-2)] text-[var(--muted)] font-medium">
-                          {p.method}
-                        </span>
-                      </Td>
-
-                      {/* Amount */}
-                      <Td className="text-right">
-                        <span className={`font-bold tabular-nums ${STATUS_AMOUNT_CLS[p.status]}`}>
-                          {p.status === "refunded" && (
-                            <Icon.ArrowLeft size={11} className="inline mr-0.5 -mt-0.5" />
+                        {/* Description */}
+                        <Td className="hidden md:table-cell">
+                          <div className="font-medium truncate max-w-[22ch]">{p.description}</div>
+                          {p.courseTitle && (
+                            <div className="text-xs text-[var(--muted)] truncate max-w-[22ch]">
+                              {p.courseTitle}
+                            </div>
                           )}
-                          {money(p.amount, p.currency)}
-                        </span>
-                      </Td>
+                          {p.txnId && (
+                            <div className="text-[10px] text-[var(--muted)] font-mono mt-0.5 truncate max-w-[18ch]">
+                              #{p.txnId}
+                            </div>
+                          )}
+                        </Td>
 
-                      {/* Status */}
-                      <Td>
-                        <Badge variant={STATUS_BADGE[p.status]}>
-                          {STATUS_LABEL[p.status]}
-                        </Badge>
-                      </Td>
+                        {/* Method */}
+                        <Td className="hidden sm:table-cell">
+                          <span className="text-xs capitalize px-2 py-0.5 rounded-full bg-[var(--surface-2)] text-[var(--muted)] font-medium">
+                            {p.method}
+                          </span>
+                        </Td>
 
-                      {/* Date */}
-                      <Td className="hidden lg:table-cell text-xs text-[var(--muted)]">
-                        {formatDate(p.createdAt)}
-                      </Td>
+                        {/* Amount */}
+                        <Td className="text-right">
+                          <span className={`font-bold tabular-nums ${STATUS_AMOUNT_CLS[p.status]}`}>
+                            {p.status === "refunded" && (
+                              <Icon.ArrowLeft size={11} className="inline mr-0.5 -mt-0.5" />
+                            )}
+                            {money(p.amount, p.currency)}
+                          </span>
+                        </Td>
 
-                      {/* Actions */}
-                      <Td
-                        className="text-right"
-                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                      >
-                        <button
-                          onClick={() => openManage(p)}
-                          title="Manage payment"
-                          className="h-8 px-3 rounded-lg text-xs font-medium bg-[var(--primary)]/10 text-[var(--primary)] hover:bg-[var(--primary)]/20 transition opacity-70 group-hover:opacity-100"
+                        {/* Status */}
+                        <Td>
+                          <Badge variant={STATUS_BADGE[p.status]}>
+                            {STATUS_LABEL[p.status]}
+                          </Badge>
+                        </Td>
+
+                        {/* Date */}
+                        <Td className="hidden lg:table-cell text-xs text-[var(--muted)]">
+                          {formatDate(p.createdAt)}
+                        </Td>
+
+                        {/* Actions */}
+                        <Td
+                          className="text-right"
+                          onClick={(e: React.MouseEvent) => e.stopPropagation()}
                         >
-                          Manage
-                        </button>
-                      </Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                          <div className="inline-flex gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => openManage(p)}
+                              title="View / manage payment"
+                              className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-[var(--surface-2)] text-[var(--muted)] hover:text-sky-500 hover:shadow-sm transition"
+                            >
+                              <Icon.Eye size={14} />
+                            </button>
+                            <button
+                              onClick={() => downloadReceipt(p)}
+                              title="Download receipt"
+                              className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-[var(--surface-2)] text-[var(--muted)] hover:text-emerald-500 hover:shadow-sm transition"
+                            >
+                              <Icon.Download size={14} />
+                            </button>
+                          </div>
+                        </Td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-            {/* Table footer */}
-            <div className="px-4 py-3 border-t border-[var(--border)]">
+              {/* Table footer */}
               <PaymentPagination
                 page={safePage}
                 totalPages={totalPages}
                 total={filtered.length}
                 onChange={setPage}
               />
-            </div>
-          </Card>
-        </>
-      )}
+            </>
+          )}
+        </CardBody>
+      </Card>
 
       {/* ── Manage modal ── */}
       <Modal
@@ -674,17 +721,26 @@ export default function AdminPaymentsPage() {
               </button>
             )}
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-[var(--border)]">
-              <Button variant="outline" onClick={() => setManaging(null)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={saveStatus}
-                loading={saving}
-                disabled={nextStatus === managing.status}
+            <div className="flex items-center justify-between gap-2 pt-2 border-t border-[var(--border)]">
+              <button
+                onClick={() => downloadReceipt(managing)}
+                title="Download receipt"
+                className="h-9 px-3 inline-flex items-center gap-1.5 rounded-lg text-xs font-medium text-[var(--muted)] hover:text-emerald-500 hover:bg-emerald-500/10 transition"
               >
-                <Icon.Save size={16} /> Save changes
-              </Button>
+                <Icon.Download size={14} /> Receipt
+              </button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setManaging(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={saveStatus}
+                  loading={saving}
+                  disabled={nextStatus === managing.status}
+                >
+                  <Icon.Save size={16} /> Save changes
+                </Button>
+              </div>
             </div>
           </div>
         )}
@@ -710,8 +766,9 @@ function PaymentPagination({
 }) {
   if (totalPages <= 1) {
     return (
-      <p className="text-xs text-[var(--muted)]">
-        {total} transaction{total !== 1 ? "s" : ""}
+      <p className="text-xs text-[var(--muted)] pt-3 border-t border-[var(--border)]">
+        <span className="font-medium text-[var(--foreground)]">{total}</span> transaction
+        {total !== 1 ? "s" : ""}
       </p>
     );
   }
@@ -736,9 +793,11 @@ function PaymentPagination({
   const end = Math.min(page * PAGE_SIZE, total);
 
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex items-center justify-between pt-3 border-t border-[var(--border)]">
       <p className="text-xs text-[var(--muted)]">
-        {start}–{end} of {total} transactions
+        <span className="font-medium text-[var(--foreground)]">{start}</span>–
+        <span className="font-medium text-[var(--foreground)]">{end}</span> of{" "}
+        <span className="font-medium text-[var(--foreground)]">{total}</span> transactions
       </p>
       <div className="flex items-center gap-1">
         <button

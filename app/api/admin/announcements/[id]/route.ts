@@ -1,12 +1,6 @@
 import { prisma } from "@/lib/db";
 import { errorResponse, requireAdmin } from "@/lib/auth-server";
-
-const AUDIENCE_REACH: Record<string, number> = {
-  all: 12400,
-  students: 8600,
-  teachers: 340,
-  pro: 1240,
-};
+import { audienceSize, getAudienceSizes } from "@/lib/audience";
 
 // PATCH /api/admin/announcements/[id] — update (edit / re-send / schedule)
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -23,6 +17,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const isSent = status === "sent";
     const isScheduled = status === "scheduled";
 
+    // Only re-query segment sizes when this update actually sends the
+    // announcement — a fresh reach snapshot at the moment it goes out.
+    const reach = isSent
+      ? existing.sentAt
+        ? existing.reach
+        : audienceSize(await getAudienceSizes(), audience ?? existing.audience)
+      : existing.reach;
+
     const updated = await prisma.adminAnnouncement.update({
       where: { id },
       data: {
@@ -33,7 +35,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         ...(status !== undefined && { status }),
         sentAt: isSent ? (existing.sentAt ?? now) : existing.sentAt,
         scheduledAt: isScheduled && scheduledAt ? new Date(scheduledAt) : isScheduled ? existing.scheduledAt : null,
-        reach: isSent ? (AUDIENCE_REACH[audience ?? existing.audience] ?? 0) : existing.reach,
+        reach,
       },
     });
 
