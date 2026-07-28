@@ -47,17 +47,6 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
 
         {/* Footer strip */}
         <div className="relative space-y-3">
-          <div className="flex items-center justify-center gap-5 text-xs text-[var(--muted)]">
-            <span className="flex items-center gap-1.5">
-              <Icon.Lock size={11} className="text-[var(--primary)]" /> Secure & encrypted
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Icon.CheckCircle size={11} className="text-[var(--primary)]" /> Free to join
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Icon.Sparkles size={11} className="text-[var(--primary)]" /> AI-powered
-            </span>
-          </div>
           <p className="text-xs text-[var(--muted-2)] text-center">
             © {new Date().getFullYear()} EduPortal. By continuing, you agree to our{" "}
             <Link href="/terms" className="hover:text-[var(--primary)] transition-colors underline underline-offset-2">Terms</Link>

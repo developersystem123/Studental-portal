@@ -532,62 +532,64 @@ function AiChatInner() {
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4"
+          className="flex-1 overflow-y-auto p-4 sm:p-6"
         >
-          {(!active || active.messages.length === 0) && (
-            <Welcome onPick={(s) => setDraft(s)} />
-          )}
+          <div className="max-w-3xl mx-auto w-full space-y-4">
+            {(!active || active.messages.length === 0) && (
+              <Welcome onPick={(s) => setDraft(s)} />
+            )}
 
-          {active?.messages.map((m) => (
-            <div key={m.id} className={cn("flex gap-3 group", m.role === "user" ? "justify-end" : "")}>
-              {m.role === "assistant" && (
-                <div className="h-8 w-8 shrink-0 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white flex items-center justify-center mt-1">
-                  <Icon.Sparkles size={14} />
-                </div>
-              )}
+            {active?.messages.map((m) => (
+              <div key={m.id} className={cn("flex gap-3 group", m.role === "user" ? "justify-end" : "")}>
+                {m.role === "assistant" && (
+                  <div className="h-8 w-8 shrink-0 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] text-white flex items-center justify-center mt-1">
+                    <Icon.Sparkles size={14} />
+                  </div>
+                )}
 
-              <div className={cn("flex flex-col gap-1", m.role === "user" ? "items-end" : "items-start", "max-w-[78%]")}>
-                <div className={cn(
-                  "rounded-2xl px-4 py-3 text-sm fade-in",
-                  m.role === "user"
-                    ? "btn-primary"
-                    : "bg-[var(--surface-2)] text-[var(--foreground)]",
-                )}>
-                  {m.role === "assistant" ? (
-                    m.content ? (
-                      <Markdown text={m.content} />
+                <div className={cn("flex flex-col gap-1", m.role === "user" ? "items-end" : "items-start", "max-w-[85%] lg:max-w-[70%]")}>
+                  <div className={cn(
+                    "rounded-2xl px-4 py-3 text-sm fade-in",
+                    m.role === "user"
+                      ? "btn-primary"
+                      : "bg-[var(--surface-2)] text-[var(--foreground)]",
+                  )}>
+                    {m.role === "assistant" ? (
+                      m.content ? (
+                        <Markdown text={m.content} />
+                      ) : (
+                        <span className="flex gap-1 items-center text-[var(--muted)]">
+                          <span className="h-1.5 w-1.5 rounded-full bg-[var(--muted)] typing-dot" style={{ animationDelay: "0ms" }} />
+                          <span className="h-1.5 w-1.5 rounded-full bg-[var(--muted)] typing-dot" style={{ animationDelay: "200ms" }} />
+                          <span className="h-1.5 w-1.5 rounded-full bg-[var(--muted)] typing-dot" style={{ animationDelay: "400ms" }} />
+                        </span>
+                      )
                     ) : (
-                      <span className="flex gap-1 items-center text-[var(--muted)]">
-                        <span className="h-1.5 w-1.5 rounded-full bg-[var(--muted)] typing-dot" style={{ animationDelay: "0ms" }} />
-                        <span className="h-1.5 w-1.5 rounded-full bg-[var(--muted)] typing-dot" style={{ animationDelay: "200ms" }} />
-                        <span className="h-1.5 w-1.5 rounded-full bg-[var(--muted)] typing-dot" style={{ animationDelay: "400ms" }} />
-                      </span>
-                    )
-                  ) : (
-                    <p className="whitespace-pre-wrap">{m.content}</p>
+                      <p className="whitespace-pre-wrap">{m.content}</p>
+                    )}
+                  </div>
+
+                  {/* Copy button — appears on hover */}
+                  {m.content && (
+                    <button
+                      onClick={() => copyMessage(m.content, m.id)}
+                      className="flex items-center gap-1 text-[10px] text-[var(--muted)] hover:text-[var(--foreground)] transition px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100"
+                    >
+                      {copiedId === m.id ? (
+                        <><Icon.Check size={11} className="text-emerald-500" /> Copied</>
+                      ) : (
+                        <><Icon.Copy size={11} /> Copy</>
+                      )}
+                    </button>
                   )}
                 </div>
 
-                {/* Copy button — appears on hover */}
-                {m.content && (
-                  <button
-                    onClick={() => copyMessage(m.content, m.id)}
-                    className="flex items-center gap-1 text-[10px] text-[var(--muted)] hover:text-[var(--foreground)] transition px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100"
-                  >
-                    {copiedId === m.id ? (
-                      <><Icon.Check size={11} className="text-emerald-500" /> Copied</>
-                    ) : (
-                      <><Icon.Copy size={11} /> Copy</>
-                    )}
-                  </button>
+                {m.role === "user" && (
+                  <Avatar name={user?.name ?? "?"} src={user?.avatar ?? null} size={32} className="shrink-0 mt-1" />
                 )}
               </div>
-
-              {m.role === "user" && (
-                <Avatar name={user?.name ?? "?"} src={user?.avatar ?? null} size={32} className="shrink-0 mt-1" />
-              )}
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
         {/* Scroll-to-bottom button */}
@@ -603,7 +605,7 @@ function AiChatInner() {
         {/* Input area */}
         <form
           onSubmit={(e) => { e.preventDefault(); send(); }}
-          className="p-3 sm:p-4 border-t border-[var(--border)] flex gap-2 items-end"
+          className="p-3 sm:p-4 border-t border-[var(--border)] flex gap-2 items-end max-w-3xl mx-auto w-full"
         >
           <div className="flex-1 relative" ref={emojiRef}>
             {/* Emoji picker popover */}

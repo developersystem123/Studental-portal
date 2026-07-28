@@ -144,9 +144,6 @@ export default function RegisterPage() {
           <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-[var(--primary-soft)] text-[var(--primary)] font-medium">
             <Icon.Sparkles size={12} /> Free forever · No credit card needed
           </span>
-          <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium border border-blue-500/20">
-            <Icon.User size={11} /> Student registration
-          </span>
         </div>
         <h2 className="text-3xl font-bold leading-tight">
           Create your <span className="gradient-text">EduPortal</span> account

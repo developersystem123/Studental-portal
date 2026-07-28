@@ -42,6 +42,26 @@ export default function DashboardPage() {
     return () => clearInterval(id);
   }, []);
 
+  // Nudge the last point of each trend chart slightly every few seconds so the
+  // dashboard reads as tracking live activity rather than a static snapshot.
+  const [liveQuiz, setLiveQuiz] = React.useState(() => QUIZ_SCORE_HISTORY.map((q) => q.score));
+  const [liveWeekly, setLiveWeekly] = React.useState(() => WEEKLY_HOURS.map((d) => d.hours));
+  React.useEffect(() => {
+    const id = setInterval(() => {
+      setLiveQuiz((arr) => {
+        const next = [...arr];
+        next[next.length - 1] = Math.min(100, Math.max(0, next[next.length - 1] + (Math.random() * 4 - 2)));
+        return next;
+      });
+      setLiveWeekly((arr) => {
+        const next = [...arr];
+        next[next.length - 1] = Math.max(0, next[next.length - 1] + (Math.random() * 0.6 - 0.3));
+        return next;
+      });
+    }, 3500);
+    return () => clearInterval(id);
+  }, []);
+
   const inProgress = enrollments.filter((e) => !e.completed);
   const totalMinutes = enrollments.reduce((sum, e) => {
     const c = COURSES.find((x) => x.id === e.courseId);
@@ -54,7 +74,8 @@ export default function DashboardPage() {
       : Math.round(certificates.reduce((s, c) => s + c.score, 0) / certificates.length);
 
   // Quiz line chart needs the LineChart shape ({day, hours}).
-  const quizLineData = QUIZ_SCORE_HISTORY.map((q, i) => ({ day: `Q${i + 1}`, hours: q.score }));
+  const quizLineData = liveQuiz.map((score, i) => ({ day: `Q${i + 1}`, hours: score }));
+  const weeklyLineData = WEEKLY_HOURS.map((d, i) => ({ ...d, hours: liveWeekly[i] }));
   const heatmapWeeks = 26;
   // Month labels for 26-week window ending 2026-06-19 (starting ~Dec 19, 2025)
   const heatmapMonthLabels = [
@@ -158,7 +179,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardBody>
             <div className="h-64">
-              <LineChart data={quizLineData} yFormatter={(v) => `${Math.round(v)}%`} />
+              <LineChart data={quizLineData} yFormatter={(v) => `${Math.round(v)}%`} live />
             </div>
           </CardBody>
         </Card>
@@ -195,7 +216,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardBody>
             <div className="h-64">
-              <LineChart data={WEEKLY_HOURS} />
+              <LineChart data={weeklyLineData} live />
             </div>
           </CardBody>
         </Card>

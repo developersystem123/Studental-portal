@@ -627,6 +627,24 @@ input[type=range].pretty::-webkit-slider-thumb {
   box-shadow: 0 0 6px 2px color-mix(in oklab, var(--accent) 60%, transparent);
 }
 
+/* Line chart draw-in + point pop (components/charts.tsx LineChart) */
+@keyframes lcDraw {
+  from { stroke-dashoffset: 1; }
+  to   { stroke-dashoffset: 0; }
+}
+@keyframes lcArea {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes lcPop {
+  from { opacity: 0; transform: scale(0.3); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes lcLivePing {
+  0%   { transform: scale(1); opacity: 0.55; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+
 /* Notification badge pulse */
 @keyframes badgePulse {
   0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--danger) 40%, transparent); }

@@ -2,21 +2,46 @@
 
 import * as React from "react";
 
+/** Catmull-Rom -> cubic-bezier smoothing so the curve flows through every point. */
+function smoothPath(points: { x: number; y: number }[]) {
+  if (points.length === 0) return "";
+  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+  let d = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i - 1] ?? points[i];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[i + 2] ?? p2;
+    const c1x = p1.x + (p2.x - p0.x) / 6;
+    const c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6;
+    const c2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${c1x} ${c1y} ${c2x} ${c2y} ${p2.x} ${p2.y}`;
+  }
+  return d;
+}
+
 export function LineChart({
   data,
   height = 220,
   yFormatter,
+  live = false,
 }: {
   data: { day: string; hours: number }[];
   height?: number;
   yFormatter?: (v: number) => string;
+  /** Shows a pulsing "live" ring on the last point and animates position changes. */
+  live?: boolean;
 }) {
   const w = 600;
   const h = height;
-  const pad = { top: 20, right: 20, bottom: 30, left: 36 };
+  const pad = { top: 20, right: 20, bottom: 30, left: 40 };
   const maxY = Math.max(...data.map((d) => d.hours), 1);
   const stepX = (w - pad.left - pad.right) / Math.max(1, data.length - 1);
   const fmt = yFormatter ?? ((v: number) => `${v.toFixed(1)}h`);
+  const reactId = React.useId().replace(/[^a-z0-9]/gi, "");
+  const [active, setActive] = React.useState<number | null>(null);
+  const svgRef = React.useRef<SVGSVGElement>(null);
 
   const points = data.map((d, i) => ({
     x: pad.left + i * stepX,
@@ -24,32 +49,49 @@ export function LineChart({
     ...d,
   }));
 
-  const pathD = points
-    .map((p, i) => {
-      if (i === 0) return `M ${p.x} ${p.y}`;
-      const prev = points[i - 1];
-      const cx = (prev.x + p.x) / 2;
-      return `Q ${cx} ${prev.y} ${cx} ${(prev.y + p.y) / 2} T ${p.x} ${p.y}`;
-    })
-    .join(" ");
+  const pathD = smoothPath(points);
 
   if (points.length === 0) return <svg viewBox={`0 0 600 ${h}`} className="w-full h-full" />;
   const last = points[points.length - 1];
-  const areaD =
-    pathD +
-    ` L ${last.x} ${h - pad.bottom} L ${points[0].x} ${h - pad.bottom} Z`;
+  const areaD = `${pathD} L ${last.x} ${h - pad.bottom} L ${points[0].x} ${h - pad.bottom} Z`;
 
   const yTicks = 4;
   const tickVals = Array.from({ length: yTicks + 1 }, (_, i) => (maxY * (yTicks - i)) / yTicks);
 
+  const handleMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    const rect = svgRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const relX = ((e.clientX - rect.left) / rect.width) * w;
+    let nearest = 0;
+    let best = Infinity;
+    points.forEach((p, i) => {
+      const dist = Math.abs(p.x - relX);
+      if (dist < best) {
+        best = dist;
+        nearest = i;
+      }
+    });
+    setActive(nearest);
+  };
+
+  const activePoint = active !== null ? points[active] : null;
+
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-full" preserveAspectRatio="none">
+    <svg
+      ref={svgRef}
+      viewBox={`0 0 ${w} ${h}`}
+      className="w-full h-full"
+      preserveAspectRatio="none"
+      onMouseMove={handleMove}
+      onMouseLeave={() => setActive(null)}
+    >
       <defs>
-        <linearGradient id="lc-area" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.35" />
+        <linearGradient id={`lc-area-${reactId}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.4" />
+          <stop offset="55%" stopColor="var(--primary)" stopOpacity="0.08" />
           <stop offset="100%" stopColor="var(--primary)" stopOpacity="0" />
         </linearGradient>
-        <linearGradient id="lc-stroke" x1="0" y1="0" x2="1" y2="0">
+        <linearGradient id={`lc-stroke-${reactId}`} x1="0" y1="0" x2="1" y2="0">
           <stop offset="0%" stopColor="var(--primary)" />
           <stop offset="100%" stopColor="var(--accent)" />
         </linearGradient>
@@ -67,17 +109,93 @@ export function LineChart({
         );
       })}
 
-      <path d={areaD} fill="url(#lc-area)" />
-      <path d={pathD} fill="none" stroke="url(#lc-stroke)" strokeWidth="2.5" strokeLinecap="round" />
+      {activePoint && (
+        <line
+          x1={activePoint.x}
+          y1={pad.top}
+          x2={activePoint.x}
+          y2={h - pad.bottom}
+          stroke="var(--primary)"
+          strokeOpacity="0.25"
+          strokeWidth="1.5"
+        />
+      )}
 
-      {points.map((p, i) => (
-        <g key={i}>
-          <circle cx={p.x} cy={p.y} r="4" fill="var(--surface)" stroke="var(--primary)" strokeWidth="2" />
-          <text x={p.x} y={h - 8} textAnchor="middle" fontSize="10" fill="var(--muted)">
-            {p.day}
-          </text>
+      <path
+        d={areaD}
+        fill={`url(#lc-area-${reactId})`}
+        style={{ animation: "lcArea 0.9s ease-out 0.5s both", transition: "d 0.6s ease-out" }}
+      />
+      <path
+        d={pathD}
+        fill="none"
+        stroke={`url(#lc-stroke-${reactId})`}
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        pathLength={1}
+        strokeDasharray={1}
+        style={{ animation: "lcDraw 1.1s cubic-bezier(0.4, 0, 0.2, 1) both", transition: "d 0.6s ease-out" }}
+      />
+
+      {points.map((p, i) => {
+        const isLast = live && i === points.length - 1;
+        const isActive = active === i;
+        return (
+          <g key={i}>
+            {isLast && (
+              <circle
+                cx={p.x}
+                cy={p.y}
+                r="5"
+                fill="none"
+                stroke="var(--primary)"
+                strokeWidth="2"
+                style={{
+                  animation: "lcLivePing 1.8s ease-out infinite",
+                  transformOrigin: `${p.x}px ${p.y}px`,
+                  transition: "cx 0.6s ease-out, cy 0.6s ease-out",
+                }}
+              />
+            )}
+            <circle
+              cx={p.x}
+              cy={p.y}
+              r={isActive ? 6 : 4}
+              fill="var(--surface)"
+              stroke="var(--primary)"
+              strokeWidth="2"
+              style={{
+                animation: `lcPop 0.4s ease-out ${i * 45}ms both`,
+                transformOrigin: `${p.x}px ${p.y}px`,
+                transition: "cx 0.6s ease-out, cy 0.6s ease-out, r 0.15s ease-out",
+              }}
+            />
+            <text x={p.x} y={h - 8} textAnchor="middle" fontSize="10" fill="var(--muted)">
+              {p.day}
+            </text>
+          </g>
+        );
+      })}
+
+      {activePoint && (
+        <g style={{ transition: "transform 0.6s ease-out" }} transform={`translate(${activePoint.x} ${activePoint.y})`}>
+          {(() => {
+            const label = `${activePoint.day} · ${fmt(activePoint.hours)}`;
+            const boxW = label.length * 5.6 + 16;
+            const flip = activePoint.x + boxW + 10 > w;
+            const bx = flip ? -boxW - 10 : 10;
+            return (
+              <g transform={`translate(${bx} ${activePoint.y < pad.top + 20 ? 8 : -28})`}>
+                <rect width={boxW} height="20" rx="6" fill="var(--foreground)" opacity="0.92" />
+                <text x={boxW / 2} y="14" textAnchor="middle" fontSize="10" fontWeight="600" fill="var(--background)">
+                  {label}
+                </text>
+              </g>
+            );
+          })()}
         </g>
-      ))}
+      )}
     </svg>
   );
 }
@@ -267,32 +385,33 @@ export function Heatmap({
         </text>
       ))}
 
-      {cells.map((c) => {
-        const x = labelW + c.week * (cellSize + gap);
-        const y = topPad + c.day * (cellSize + gap);
-        const intensity = c.value / Math.max(1, maxValue);
-        const fill = c.value === 0 ? "var(--surface-2)" : "url(#hm-cell)";
-        const opacity = c.value === 0 ? 1 : 0.3 + intensity * 0.7;
-        const delay = (c.week * 7 + c.day) * 6;
-        return (
-          <rect
-            key={`${c.week}-${c.day}`}
-            x={x}
-            y={y}
-            width={cellSize}
-            height={cellSize}
-            rx={3}
-            fill={fill}
-            opacity={opacity}
-            style={{
-              animation: `fadeIn 0.35s ease-out ${delay}ms both`,
-              transformOrigin: `${x + cellSize / 2}px ${y + cellSize / 2}px`,
-            }}
-          >
-            <title>{`${c.value} session${c.value === 1 ? "" : "s"}`}</title>
-          </rect>
-        );
-      })}
+      {/* Single group-level fade — a per-cell staggered reveal left later cells
+          invisible for up to ~1s (looking like missing/narrower columns), and
+          CSS-animating each rect's own opacity permanently overrode its
+          intensity value once animation-fill-mode held the final keyframe. */}
+      <g style={{ animation: "fadeIn 0.4s ease-out both" }}>
+        {cells.map((c) => {
+          const x = labelW + c.week * (cellSize + gap);
+          const y = topPad + c.day * (cellSize + gap);
+          const intensity = c.value / Math.max(1, maxValue);
+          const fill = c.value === 0 ? "var(--surface-2)" : "url(#hm-cell)";
+          const opacity = c.value === 0 ? 1 : 0.3 + intensity * 0.7;
+          return (
+            <rect
+              key={`${c.week}-${c.day}`}
+              x={x}
+              y={y}
+              width={cellSize}
+              height={cellSize}
+              rx={3}
+              fill={fill}
+              opacity={opacity}
+            >
+              <title>{`${c.value} session${c.value === 1 ? "" : "s"}`}</title>
+            </rect>
+          );
+        })}
+      </g>
 
       {/* Legend */}
       <g transform={`translate(${labelW} ${topPad + 7 * (cellSize + gap) + 8})`}>
