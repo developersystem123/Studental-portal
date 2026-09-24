@@ -354,9 +354,12 @@ export default function RegisterPage() {
         </div>
 
         {errors.form && (
-          <div className="flex items-center gap-2.5 text-sm text-[var(--danger)] bg-red-500/8 border border-red-500/20 px-3.5 py-2.5 rounded-xl">
-            <Icon.X size={15} className="shrink-0" />
-            {errors.form}
+          <div
+            role="alert"
+            className="flex items-start gap-2.5 text-sm text-[var(--danger)] bg-red-500/8 border border-red-500/20 px-3.5 py-2.5 rounded-xl min-w-0"
+          >
+            <Icon.X size={15} className="shrink-0 mt-0.5" />
+            <p className="min-w-0 flex-1 break-words [overflow-wrap:anywhere] line-clamp-3">{errors.form}</p>
           </div>
         )}
 

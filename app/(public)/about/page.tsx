@@ -93,10 +93,10 @@ const team = [
 ];
 
 const stats = [
-  { value: "48k+", label: "Active learners", icon: <Icon.Users size={20} />, color: "text-violet-500" },
+  { value: "48k+", label: "Active learners", icon: <Icon.Users size={20} />, color: "text-emerald-500" },
   { value: "120+", label: "Expert courses",  icon: <Icon.Book size={20} />,  color: "text-emerald-500" },
-  { value: "92%",  label: "Completion rate", icon: <Icon.Award size={20} />, color: "text-amber-500"  },
-  { value: "4.8",  label: "Avg. rating",     icon: <Icon.Star size={20} />,  color: "text-sky-500"   },
+  { value: "92%",  label: "Completion rate", icon: <Icon.Award size={20} />, color: "text-emerald-500"  },
+  { value: "4.8",  label: "Avg. rating",     icon: <Icon.Star size={20} />,  color: "text-emerald-500"   },
 ];
 
 const milestones = [

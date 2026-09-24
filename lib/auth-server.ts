@@ -70,8 +70,30 @@ export function errorResponse(err: unknown): Response {
     return Response.json({ error: err.message }, { status: err.status });
   }
   console.error("[api] unexpected error:", err);
-  const message = err instanceof Error ? err.message : "Internal error.";
-  return Response.json({ error: message }, { status: 500 });
+  return Response.json({ error: publicErrorMessage(err) }, { status: 500 });
+}
+
+const GENERIC_ERROR = "Something went wrong. Please try again in a moment.";
+
+// Never leak raw internal errors (Prisma stack traces, DB credentials, file paths) to the client.
+function publicErrorMessage(err: unknown): string {
+  if (!(err instanceof Error)) return GENERIC_ERROR;
+  const name = err.constructor?.name ?? err.name ?? "";
+  const msg = err.message ?? "";
+
+  if (name.startsWith("PrismaClient") || /prisma|invocation/i.test(msg)) {
+    if (/Authentication failed|Can't reach database|connect|ECONNREFUSED|timed out/i.test(msg)) {
+      return "We couldn't connect to the server right now. Please try again later.";
+    }
+    if (/Unique constraint/i.test(msg)) return "This record already exists.";
+    return GENERIC_ERROR;
+  }
+
+  // Short, single-line messages thrown intentionally (e.g. "Invalid session date.") are safe to show.
+  if (msg && msg.length <= 120 && !msg.includes("\n") && !/[\\/]{2}|[A-Z]:\\|_KEY|SECRET/.test(msg)) {
+    return msg;
+  }
+  return GENERIC_ERROR;
 }
 
 export { HttpError };

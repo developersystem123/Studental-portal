@@ -766,9 +766,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
               {/* Body */}
               <div className="min-w-0 flex-1 pt-0.5">
-                <p className="text-sm font-semibold text-[var(--foreground)] leading-snug">{t.title}</p>
+                <p className="text-sm font-semibold text-[var(--foreground)] leading-snug break-words [overflow-wrap:anywhere]">{t.title}</p>
                 {t.description && (
-                  <p className="text-xs text-[var(--muted)] mt-1 leading-relaxed">{t.description}</p>
+                  <p className="text-xs text-[var(--muted)] mt-1 leading-relaxed break-words [overflow-wrap:anywhere] line-clamp-4">{t.description}</p>
                 )}
               </div>
 
